@@ -1,0 +1,5 @@
+*.cram
+*.bam
+*.fastq
+*.kmc_pre
+*.kmc_suf
