@@ -1,0 +1,13 @@
+configfile: "../config/config.yaml"
+include: "rules/kmc.smk"
+
+samples = csv.read(config["samples_table"], sep="\t")
+groups = sorted(set(s["group"] for s in samples))
+samples_by_group = {
+    g: [s["sample_id"] for s in samples if s["group"] == g]
+    for g in groups
+}
+
+rule all:
+    input:
+        expand("results/metaspades/{{group}}_assembly.fasta", group=groups)

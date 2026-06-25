@@ -1,0 +1,23 @@
+jobs: 100
+rerun-triggers:
+  - mtime
+  - params
+  - input
+  - software
+  - env-modules
+  - source
+
+local-cores: 4
+
+overwrite-conda-prefix: false
+conda-frontend: conda
+
+default-resources:
+  - mem_mb=4096
+  - thread=4
+  - time=02:00:00
+  - disk=10000
+
+cluster: "sbatch --mem={resources.mem_mb/1024}g --cpus-per-task={threads} --time={resources.time:time}"
+
+cluster-config: "profiles/default/cluster_config.json"
