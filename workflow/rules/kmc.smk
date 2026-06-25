@@ -13,10 +13,7 @@ rule fastp:
     input:
         "results/samtools/{ID}.fq",
     output:
-        pread1=temp("results/fastp/paired_R1_{ID}.fastq.gz"),
-        pread2=temp("results/fastp/paired_R2_{ID}.fastq.gz"),
-        uread1=temp("results/fastp/unpaired_R1_{ID}.fastq.gz"),
-        uread2=temp("results/fastp/unpaired_R2_{ID}.fastq.gz")
+        temp("results/fastp/{ID}.fastq.gz")
     conda:
         "../envs/fastp.yaml"
     params:
@@ -36,17 +33,13 @@ rule fastp:
             --cut_tail \
             --cut_tail_window_size {params.window_length} \
             --cut_tail_mean_quality {params.qual_thresh} \
-            -i {input.r1} -I {input.r2} \
-            -o {output.pread1} -O {output.pread2} \
-            --unpaired1 {output.uread1} --unpaired2 {output.uread2}
+            -i {input} \
+            -o {output}
         """
 
 rule kmc_count:
     input:
-        pread1="results/fastp/paired_R1_{ID}.fastq.gz",
-        pread2="results/fastp/paired_R2_{ID}.fastq.gz",
-        uread1="results/fastp/unpaired_R1_{ID}.fastq.gz",
-        uread2="results/fastp/unpaired_R2_{ID}.fastq.gz"
+        "results/fastp/{ID}.fastq.gz"
     output:
         pre=temp("results/kmc/{ID}/kmc_db.kmc_pre"),
         suf=temp("results/kmc/{ID}/kmc_db.kmc_suf")
@@ -62,20 +55,13 @@ rule kmc_count:
         mkdir -p "$local_tmp"
         mkdir -p results/kmc/{wildcards.ID}
 
-        cat > {output.pre}.inlist <<EOF
-        {input.pread1}
-        {input.pread2}
-        {input.uread1}
-        {input.uread2}
-        EOF
-
         if [ "{params.maxcount}" = "auto" ]; then
             kmc -m15 -t{threads} -ci{params.mincount} -k{params.k} \
-                @{output.pre}.inlist \
+                {input} \
                 results/kmc/{wildcards.ID}/kmc_db "$local_tmp"
         else
             kmc -m15 -t{threads} -ci{params.mincount} -cs{params.maxcount} -k{params.k} \
-                @{output.pre}.inlist \
+                {input} \
                 results/kmc/{wildcards.ID}/kmc_db "$local_tmp"
         fi
 
@@ -128,9 +114,9 @@ rule kmc_subtract:
 rule kmc_filter_reads:
     input:
         kmc_db="results/specific/{group}_specific.kmc_pre",
-        fastq="results/fastp/{read_type}_{ID}.fastq.gz"
+        fastq="results/fastp/{ID}.fastq.gz"
     output:
-        filtered="results/filtered/{group}/{read_type}_{ID}_filtered.fastq"
+        filtered="results/filtered/{group}/{ID}_filtered.fastq"
     conda: "../envs/kmc.yaml"
     params:
         min_support=config["filter_min_kmer_support"]
@@ -145,9 +131,8 @@ rule kmc_filter_reads:
 rule combine_group_reads:
     input:
         reads=lambda wildcards: expand(
-            "results/filtered/{group}/{read_type}_{ID}_filtered.fastq",
+            "results/filtered/{group}/{ID}_filtered.fastq",
             group=wildcards.group,
-            read_type=["paired_R1", "paired_R2", "unpaired_R1", "unpaired_R2"],
             ID=samples_by_group[wildcards.group]
         )
     output:
