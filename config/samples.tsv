@@ -1,2 +1,9 @@
 sample_id	cram_path	group
-425219	resources/cram/425219-JR1P_resub_1-Z0064-CATAGAGCCTCAGAT.cram	A
+1	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR1P_resub_1-Z0064-CATAGAGCCTCAGAT.cram	P
+2	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR1W_resub_1-Z0071-CGTGCGCAAGCAGAT.cram	W
+3	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR2P_resub_1-Z0066-CAATGCACTCGAGAT.cram	P
+4	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR2W_resub_1-Z0065-CTTGTGTCATGAGAT.cram	W
+5	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR3P_resub_1-Z0069-CATCACTGCAACGAT.cram	P
+6	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR3W_resub_1-Z0067-CTTATGAGCGCTGAT.cram	W
+7	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR4P_resub_1-Z0070-CTTGCATGCGATGCGAT.cram	P
+8	/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/resources/cram/425219-JR4W_resub_1-Z0068-CGTCATTGCACAGAT.cram	W

@@ -1,0 +1,58 @@
+host: ln002.brc
+Building DAG of jobs...
+Your conda installation is not configured to use strict channel priorities. This is however important for having robust and correct environments (for details, see https://conda-forge.org/docs/user/tipsandtricks.html). Please consider to configure strict priorities by executing 'conda config --set channel_priority strict'.
+Traceback (most recent call last):
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/cli.py", line 2193, in args_to_api
+    dag_api.execute_workflow(
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/api.py", line 634, in execute_workflow
+    workflow.execute(
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/workflow.py", line 1318, in execute
+    self.dag.create_conda_envs()
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/dag.py", line 544, in create_conda_envs
+    env.create(self.workflow.dryrun)
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/deployment/conda.py", line 451, in create
+    env_path = self.address
+               ^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/deployment/conda.py", line 289, in address
+    self.hash[:8],
+    ^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/deployment/conda.py", line 224, in hash
+    self._hash = self._get_hash(
+                 ^^^^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/deployment/conda.py", line 259, in _get_hash
+    md5hash.update(self.content)
+                   ^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/deployment/conda.py", line 203, in content
+    self._content = self._get_content()
+                    ^^^^^^^^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/deployment/conda.py", line 178, in _get_content
+    return self.workflow.sourcecache.open(self.file, "rb").read()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/sourcecache.py", line 379, in open
+    cache_entry = self._cache(source_file)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/sourcecache.py", line 409, in _cache
+    self._do_cache(source_file, cache_entry, retries=retries)
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/sourcecache.py", line 413, in _do_cache
+    mtime = source_file.mtime()
+            ^^^^^^^^^^^^^^^^^^^
+
+  File "/global/home/users/milesroberts/.local/share/mamba/envs/snakemake/lib/python3.12/site-packages/snakemake/sourcecache.py", line 134, in mtime
+    return os.stat(self.path).st_mtime
+           ^^^^^^^^^^^^^^^^^^
+
+FileNotFoundError: [Errno 2] No such file or directory: '/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/rules/../envs/fastp.yaml'
+

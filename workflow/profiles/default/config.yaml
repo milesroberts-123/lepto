@@ -1,63 +1,47 @@
+executor: slurm
 jobs: 100
-rerun-triggers:
-  - mtime
-  - params
-  - input
-  - software-env
-  - code
-
-local-cores: 4
-
-overwrite-conda-prefix: false
-conda-frontend: conda
 
 default-resources:
-  mem_mb: 4096
-  threads: 4
-  runtime: "02:00:00"
-  disk_mb: 10000
-
-cluster:
-  "sbatch --mem={resources.mem_mb}M --cpus-per-task={resources.threads} --time={resources.runtime} --job-name=smk-{rule}-{wildcards} --output=logs/slurm/{rule}-%j.out --error=logs/slurm/{rule}-%j.err --parsable"
+  mem_mb: 0
+  disk_mb: 0
+  cpus_per_task: 1
+  mem_per_cpu: 0
+  ntasks: 1
+  threads: 1
+  runtime: "01:00:00"
+  
+set-threads:
+   samtools_fastq: 4
+   fastp: 4
+   kmc_count: 4
+   kmc_intersect_group: 4
+   kmc_subtract: 4
+   kmc_filter_reads: 4
+   combine_group_reads: 1
+   metaspades: 4
 
 set-resources:
   samtools_fastq:
-    mem_mb: 8192
-    threads: 4
-    runtime: "02:00:00"
-    disk_mb: 5000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   fastp:
-    mem_mb: 8192
-    threads: 8
-    runtime: "04:00:00"
-    disk_mb: 5000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   kmc_count:
-    mem_mb: 16384
-    threads: 8
-    runtime: "04:00:00"
-    disk_mb: 20000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   kmc_intersect_group:
-    mem_mb: 32768
-    threads: 4
-    runtime: "08:00:00"
-    disk_mb: 50000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   kmc_subtract:
-    mem_mb: 32768
-    threads: 4
-    runtime: "08:00:00"
-    disk_mb: 50000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   kmc_filter_reads:
-    mem_mb: 16384
-    threads: 4
-    runtime: "04:00:00"
-    disk_mb: 20000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   combine_group_reads:
-    mem_mb: 4096
-    threads: 1
-    runtime: "02:00:00"
-    disk_mb: 20000
+    cpus_per_task: 4
+    runtime: "01:00:00"
   metaspades:
-    mem_mb: 65536
-    threads: 16
-    runtime: "24:00:00"
-    disk_mb: 100000
+    cpus_per_task: 4
+    runtime: "1:00:00"
