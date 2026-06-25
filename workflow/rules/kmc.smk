@@ -1,9 +1,9 @@
 rule samtools_fastq:
     input:
-        cram="../config/cram/{ID}.cram"
+        cram=lookup(query="sample_id == '{ID}'", within=samples, cols=["cram_path"])
     output:
-        r1=temp("results/samtools/{{ID}}_R1.fq"),
-        r2=temp("results/samtools/{{ID}}_R2.fq")
+        r1=temp("results/samtools/{ID}_R1.fq"),
+        r2=temp("results/samtools/{ID}_R2.fq")
     conda: "../envs/bcftools.yaml"
     shell:
         """

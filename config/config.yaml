@@ -21,7 +21,7 @@ metaspades:
   tmp_dir: "/tmp"
 
 # --- kmc_tools complex params ---
-kmc_intersect_depth: auto
+kmc_intersect_depth: 100
 
 # --- samples ---
 samples_table: "../config/samples.tsv"
