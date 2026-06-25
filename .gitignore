@@ -1,5 +1,9 @@
 *.cram
 *.bam
 *.fastq
+*.fq
+*.fa
 *.kmc_pre
 *.kmc_suf
+workflow/results
+*/.snakemake

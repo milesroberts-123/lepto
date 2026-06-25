@@ -2,18 +2,16 @@ rule samtools_fastq:
     input:
         cram=lambda wildcards: cram_paths[wildcards.ID]
     output:
-        r1=temp("results/samtools/{ID}_R1.fq"),
-        r2=temp("results/samtools/{ID}_R2.fq")
+        temp("results/samtools/{ID}.fq")
     conda: "../envs/bcftools.yaml"
     shell:
         """
-        samtools fastq -1 {output.r1} -2 {output.r2} -n {input.cram} -@ {threads}
+        samtools fastq -0 {output} -n {input.cram} -@ {threads}
         """
 
 rule fastp:
     input:
-        r1="results/samtools/{ID}_R1.fq",
-        r2="results/samtools/{ID}_R2.fq"
+        "results/samtools/{ID}.fq",
     output:
         pread1=temp("results/fastp/paired_R1_{ID}.fastq.gz"),
         pread2=temp("results/fastp/paired_R2_{ID}.fastq.gz"),
@@ -176,7 +174,7 @@ rule metaspades:
         rm -rf "$outdir"
         mkdir -p "$outdir"
 
-        metaspades.py \
+        spades.py \
             --meta \
             -m {params.mem} \
             -t {threads} \
