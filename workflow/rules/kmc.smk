@@ -1,163 +1,190 @@
 rule samtools_fastq:
     input:
-        cram=lookup(query="sample_id == '{ID}'", within=samples, cols=["cram_path"])
+        cram=lambda wildcards: cram_paths[wildcards.ID]
     output:
         r1=temp("results/samtools/{ID}_R1.fq"),
         r2=temp("results/samtools/{ID}_R2.fq")
     conda: "../envs/bcftools.yaml"
     shell:
         """
-        samtools fastq -1 {output.r1} -2 {output.r2} -n {input.cram} -@ {params.threads}
+        samtools fastq -1 {output.r1} -2 {output.r2} -n {input.cram} -@ {threads}
         """
 
-# ---- read trimming ----
 rule fastp:
     input:
-        r1=temp("results/samtools/{{ID}}_R1.fq"),
-        r2=temp("results/samtools/{{ID}}_R2.fq")
+        r1="results/samtools/{ID}_R1.fq",
+        r2="results/samtools/{ID}_R2.fq"
     output:
         pread1=temp("results/fastp/paired_R1_{ID}.fastq.gz"),
         pread2=temp("results/fastp/paired_R2_{ID}.fastq.gz"),
         uread1=temp("results/fastp/unpaired_R1_{ID}.fastq.gz"),
-        uread2=temp("results/fastp/unpaired_R2_{ID}.fastq.gz"),
-        jsonR1R2=temp("fastp_results/{ID}_R1R2.json"),
-        jsonU1=temp("fastp_results/{ID}_U1.json"),
-        jsonU2=temp("fastp_results/{ID}_U2.json"),
+        uread2=temp("results/fastp/unpaired_R2_{ID}.fastq.gz")
     conda:
         "../envs/fastp.yaml"
     params:
-        unqualLimit=config["unqualLimit"],
-        k=config["k"],
-        qualThresh=config["qualThresh"],
-        windowLength=config["windowLength"],
-        nBaseLimit=config["nBaseLimit"]
+        unqual_limit=config["fastp_unqual_limit"],
+        min_len=config["fastp_min_len"],
+        qual_thresh=config["fastp_qual_thresh"],
+        window_length=config["fastp_window_length"],
+        n_base_limit=config["fastp_n_base_limit"]
     shell:
         """
-        # remove duplicates, do read correction, drop low quality reads
-        fastp --thread {threads} --n_base_limit {params.nBaseLimit} -u {params.unqualLimit} -q {params.qualThresh} --dedup --correction -l {params.k} --cut_tail --cut_tail_window_size {params.windowLength} --cut_tail_mean_quality {params.qualThresh} -i {input.r1} -I {input.r2} -o {output.dpread1} -O {output.dpread2} --unpaired1 {output.duread1} --unpaired2 {output.duread2} --json {output.jsonR1R2}
+        fastp --thread {threads} \
+            --n_base_limit {params.n_base_limit} \
+            -u {params.unqual_limit} \
+            -q {params.qual_thresh} \
+            --dedup --correction \
+            -l {params.min_len} \
+            --cut_tail \
+            --cut_tail_window_size {params.window_length} \
+            --cut_tail_mean_quality {params.qual_thresh} \
+            -i {input.r1} -I {input.r2} \
+            -o {output.pread1} -O {output.pread2} \
+            --unpaired1 {output.uread1} --unpaired2 {output.uread2}
         """
 
-# ---- per-sample k-mer counting ----
 rule kmc_count:
     input:
-        dpread1=temp("results/fastp/dedup_paired_R1_{{ID}}.fastq.gz"),
-        dpread2=temp("results/fastp/dedup_paired_R2_{{ID}}.fastq.gz"),
-        uread1=temp("results/fastp/unpaired_R1_{{ID}}.fastq.gz"),
-        uread2=temp("results/fastp/unpaired_R2_{{ID}}.fastq.gz")
+        pread1="results/fastp/paired_R1_{ID}.fastq.gz",
+        pread2="results/fastp/paired_R2_{ID}.fastq.gz",
+        uread1="results/fastp/unpaired_R1_{ID}.fastq.gz",
+        uread2="results/fastp/unpaired_R2_{ID}.fastq.gz"
     output:
-        db=temp("results/kmc/{{ID}}/kmc_db")
+        pre=temp("results/kmc/{ID}/kmc_db.kmc_pre"),
+        suf=temp("results/kmc/{ID}/kmc_db.kmc_suf")
     conda: "../envs/kmc.yaml"
     params:
-        mincount=config["mincount"],
-        maxcount=config.get("maxcount", "auto"),
-        k=config["k"]
+        mincount=config["kmc_mincount"],
+        maxcount=config["kmc_maxcount"],
+        k=config["kmc_k"]
     shell:
         """
         local_tmp=tmp_kmc_{wildcards.ID}
         rm -rf "$local_tmp"
         mkdir -p "$local_tmp"
+        mkdir -p results/kmc/{wildcards.ID}
 
-        ls -d {input} > {log}.kmc_input
+        cat > {output.pre}.inlist <<EOF
+        {input.pread1}
+        {input.pread2}
+        {input.uread1}
+        {input.uread2}
+        EOF
 
         if [ "{params.maxcount}" = "auto" ]; then
-            kmc -m15 -t{threads} -ci{params.mincount} -k{params.k} \\
-                @{output.db}.inlist \\
-                {output.db} "$local_tmp"
+            kmc -m15 -t{threads} -ci{params.mincount} -k{params.k} \
+                @{output.pre}.inlist \
+                results/kmc/{wildcards.ID}/kmc_db "$local_tmp"
         else
-            kmc -m15 -t{threads} -ci{params.mincount} -cs{params.maxcount} -k{params.k} \\
-                @{output.db}.inlist \\
-                {output.db} "$local_tmp"
+            kmc -m15 -t{threads} -ci{params.mincount} -cs{params.maxcount} -k{params.k} \
+                @{output.pre}.inlist \
+                results/kmc/{wildcards.ID}/kmc_db "$local_tmp"
         fi
 
-        # remove tmp directory
         rm -rf "$local_tmp"
         """
 
-# ---- Union k-mers within a group ----
 rule kmc_intersect_group:
     input:
-        dbs=expand("results/kmc/{{ID}}/kmc_db", ID=lambda wildcards: samples_by_group[wildcards.group])
+        dbs=expand("results/kmc/{ID}/kmc_db.kmc_pre", ID=lambda wildcards: samples_by_group[wildcards.group])
     output:
-        pre="results/grouped/{{group}}.kmc_pre",
-        suf="results/grouped/{{group}}.kmc_suf"
+        pre="results/grouped/{group}.kmc_pre",
+        suf="results/grouped/{group}.kmc_suf"
     conda: "../envs/kmc.yaml"
     params:
         depth=config.get("kmc_intersect_depth", 100)
-    log:
-        "logs/kmc_group/{group}.log"
     shell:
         """
-        ls {input.dbs} > {log}.inlist
+        mkdir -p results/grouped
 
-        kmc_tools complex @{log}.inlist union -kci1 -kcs{params.depth} {output.pre}
+        printf '%s\\n' {input.dbs} | sed 's/\\.kmc_pre$//' > results/grouped/{wildcards.group}.inlist
+
+        kmc_tools complex @results/grouped/{wildcards.group}.inlist union -kci1 -kcs{params.depth} results/grouped/{wildcards.group}
         """
 
-# ---- Subtract non-target group k-mers ----
 rule kmc_subtract:
     input:
-        target_db="results/grouped/{{group}}.kmc_pre",
-        other_dbs=expand("results/grouped/{{group}}.kmc_pre",
-                        group=lambda wildcards: [g for g in groups if g != wildcards.group])
+        target_db="results/grouped/{group}.kmc_pre",
+        other_dbs=expand("results/grouped/{other}.kmc_pre",
+                        other=lambda wildcards: [g for g in groups if g != wildcards.group])
     output:
-        pre="results/grouped/{{group}}_specific.kmc_pre",
-        suf="results/grouped/{{group}}_specific.kmc_suf"
+        pre="results/specific/{group}_specific.kmc_pre",
+        suf="results/specific/{group}_specific.kmc_suf"
     conda: "../envs/kmc.yaml"
     shell:
         """
-        echo {input.target_db} kci1 > {log}.complex_input
-        printf '%s kci1\n' {input.other_dbs} >> {log}.complex_input
+        mkdir -p results/specific
 
-        kmc_tools complex @{log}.complex_input subtract {output.pre}
+        if [ -z "{input.other_dbs}" ]; then
+            cp {input.target_db} {output.pre}
+            cp results/grouped/{wildcards.group}.kmc_suf {output.suf}
+        else
+            target_prefix=$(echo {input.target_db} | sed 's/\\.kmc_pre$//')
+            echo "$target_prefix kci1" > results/specific/{wildcards.group}_specific.complex_input
+            printf '%s\\n' {input.other_dbs} | sed 's/\\.kmc_pre$//' | awk '{{print $0 " kci1"}}' >> results/specific/{wildcards.group}_specific.complex_input
+
+            kmc_tools complex @results/specific/{wildcards.group}_specific.complex_input subtract results/specific/{wildcards.group}_specific
+        fi
         """
 
-# ---- Filter reads containing group-specific k-mers (per sample) ----
 rule kmc_filter_reads:
     input:
-        kmc_db="results/grouped/{{group}}_specific.kmc_pre",
-        fastq="results/fastp/{{read_type}}/{{read_name}}.fastq.gz"
+        kmc_db="results/specific/{group}_specific.kmc_pre",
+        fastq="results/fastp/{read_type}_{ID}.fastq.gz"
     output:
-        filtered="results/filtered/{{group}}/{{read_type}}_{{ID}}_filtered.fastq"
+        filtered="results/filtered/{group}/{read_type}_{ID}_filtered.fastq"
     conda: "../envs/kmc.yaml"
     params:
         min_support=config["filter_min_kmer_support"]
     shell:
         """
-        kmc_tools extract -db {input.kmc_db} -ci {params.min_support} \\
-            {input.fastq} {output.filtered}
+        mkdir -p results/filtered/{wildcards.group}
+
+        db_prefix=$(echo {input.kmc_db} | sed 's/\\.kmc_pre$//')
+        kmc_tools filter "$db_prefix" {input.fastq} {output.filtered} -ci{params.min_support}
         """
 
-# ---- Combine filtered reads for a group and assemble ----
 rule combine_group_reads:
     input:
-        filtered=temp("results/filtered/{{group}}/dp_{{ID}}_filtered.fastq",
-                     ID=lambda wildcards: samples_by_group[wildcards.group]),
-        unfiltered=temp("results/filtered/{{group}}/u_{{ID}}_filtered.fastq",
-                       ID=lambda wildcards: samples_by_group[wildcards.group])
+        reads=lambda wildcards: expand(
+            "results/filtered/{group}/{read_type}_{ID}_filtered.fastq",
+            group=wildcards.group,
+            read_type=["paired_R1", "paired_R2", "unpaired_R1", "unpaired_R2"],
+            ID=samples_by_group[wildcards.group]
+        )
     output:
-        all_reads="{results/combined/{{group}}_combined.fastq.gz"
+        all_reads="results/combined/{group}_combined.fastq.gz"
     shell:
         """
-        cat {input.filtered} {input.unfiltered} | gzip > {output.all_reads}
+        mkdir -p results/combined
+        cat {input.reads} | gzip > {output.all_reads}
         """
 
-# ---- MetaSPAdes assembly of group-specific reads ----
 rule metaspades:
     input:
-        reads="results/combined/{{group}}_combined.fastq.gz"
+        reads="results/combined/{group}_combined.fastq.gz"
     output:
-        assembly="results/assembly/{{group}}_assembly.fasta"
+        assembly="results/assembly/{group}_assembly.fasta"
     conda: "../envs/metaspades.yaml"
     params:
-        kmers=config["metaspades"]["kmers"],
+        kmers=config["metaspades_kmers"],
+        mem=config["metaspades_mem"],
+        tmp_dir=config["metaspades_tmp_dir"]
     shell:
         """
-        mkdir -p {output.assembly}
+        outdir=$(dirname {output.assembly})/metaspades_{wildcards.group}
+        rm -rf "$outdir"
+        mkdir -p "$outdir"
 
-        metaspades.py \\
-            --meta \\
-            -m {params.mem} \\
-            -t {params.threads} \\
-            -k {params.kmers} \\
-            -1 {input.reads} \\
-            -o {output.assembly}
+        metaspades.py \
+            --meta \
+            -m {params.mem} \
+            -t {threads} \
+            -k {params.kmers} \
+            -s {input.reads} \
+            --tmp-dir {params.tmp_dir} \
+            -o "$outdir"
+
+        cp "$outdir"/scaffolds.fasta {output.assembly}
+        rm -rf "$outdir"
         """

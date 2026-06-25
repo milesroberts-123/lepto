@@ -1,0 +1,63 @@
+jobs: 100
+rerun-triggers:
+  - mtime
+  - params
+  - input
+  - software-env
+  - code
+
+local-cores: 4
+
+overwrite-conda-prefix: false
+conda-frontend: conda
+
+default-resources:
+  mem_mb: 4096
+  threads: 4
+  runtime: "02:00:00"
+  disk_mb: 10000
+
+cluster:
+  "sbatch --mem={resources.mem_mb}M --cpus-per-task={resources.threads} --time={resources.runtime} --job-name=smk-{rule}-{wildcards} --output=logs/slurm/{rule}-%j.out --error=logs/slurm/{rule}-%j.err --parsable"
+
+set-resources:
+  samtools_fastq:
+    mem_mb: 8192
+    threads: 4
+    runtime: "02:00:00"
+    disk_mb: 5000
+  fastp:
+    mem_mb: 8192
+    threads: 8
+    runtime: "04:00:00"
+    disk_mb: 5000
+  kmc_count:
+    mem_mb: 16384
+    threads: 8
+    runtime: "04:00:00"
+    disk_mb: 20000
+  kmc_intersect_group:
+    mem_mb: 32768
+    threads: 4
+    runtime: "08:00:00"
+    disk_mb: 50000
+  kmc_subtract:
+    mem_mb: 32768
+    threads: 4
+    runtime: "08:00:00"
+    disk_mb: 50000
+  kmc_filter_reads:
+    mem_mb: 16384
+    threads: 4
+    runtime: "04:00:00"
+    disk_mb: 20000
+  combine_group_reads:
+    mem_mb: 4096
+    threads: 1
+    runtime: "02:00:00"
+    disk_mb: 20000
+  metaspades:
+    mem_mb: 65536
+    threads: 16
+    runtime: "24:00:00"
+    disk_mb: 100000

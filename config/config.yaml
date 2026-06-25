@@ -1,14 +1,14 @@
 # --- KMC ---
-k: 31
-mincount: 1
-maxcount: auto
+kmc_k: 31
+kmc_mincount: 1
+kmc_maxcount: auto
 
 # --- fastp ---
-unqualLimit: 40
-qualThresh: 20
-windowLength: 4
-k: 31
-nBaseLimit: 5
+fastp_unqual_limit: 40
+fastp_qual_thresh: 20
+fastp_window_length: 4
+fastp_min_len: 31
+fastp_n_base_limit: 5
 
 # --- kmc_filter: how to build group-specific k-mer set ---
 subtract_groups: true
@@ -16,9 +16,9 @@ min_group_count: 0
 filter_min_kmer_support: 1
 
 # --- metaSPAdes ---
-metaspades:
-  kmers: "auto"
-  tmp_dir: "/tmp"
+metaspades_kmers: "auto"
+metaspades_mem: 200
+metaspades_tmp_dir: "/tmp"
 
 # --- kmc_tools complex params ---
 kmc_intersect_depth: 100
