@@ -32,13 +32,13 @@ set-resources:
     runtime: 60
   kmc_count:
     cpus_per_task: 8
-    runtime: 60
+    runtime: 120
   kmc_intersect_group:
     cpus_per_task: 4
-    runtime: 60
+    runtime: 120
   kmc_subtract:
     cpus_per_task: 4
-    runtime: 60
+    runtime: 120
   kmc_filter_reads:
     cpus_per_task: 4
     runtime: 60

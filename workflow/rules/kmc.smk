@@ -56,11 +56,11 @@ rule kmc_count:
         mkdir -p results/kmc/{wildcards.ID}
 
         if [ "{params.maxcount}" = "auto" ]; then
-            kmc -m15 -t{threads} -ci{params.mincount} -k{params.k} \
+            kmc -m28 -sm -t{threads} -ci{params.mincount} -k{params.k} \
                 {input} \
                 results/kmc/{wildcards.ID}/kmc_db "$local_tmp"
         else
-            kmc -m15 -t{threads} -ci{params.mincount} -cs{params.maxcount} -k{params.k} \
+            kmc -m28 -sm -t{threads} -ci{params.mincount} -cs{params.maxcount} -k{params.k} \
                 {input} \
                 results/kmc/{wildcards.ID}/kmc_db "$local_tmp"
         fi
@@ -93,7 +93,7 @@ rule kmc_intersect_group:
             echo "-cs{params.depth}"
         }} > {output.complex}
 
-        kmc_tools complex {output.complex}
+        kmc_tools -t{threads} complex {output.complex}
         """
 
 rule kmc_subtract:
@@ -125,7 +125,7 @@ rule kmc_subtract:
                 printf '%s\\n' {input.other_dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{printf " - set%d", NR}} END{{print ""}}'
             }} > {output.complex}
 
-            kmc_tools complex {output.complex}
+            kmc_tools -t{threads} complex {output.complex}
         fi
         """
 
@@ -143,7 +143,7 @@ rule kmc_filter_reads:
         mkdir -p results/filtered/{wildcards.group}
 
         db_prefix=$(echo {input.kmc_db[0]} | sed 's/\\.kmc_pre$//')
-        kmc_tools filter "$db_prefix" {input.fastq} {output.filtered} -ci{params.min_support}
+        kmc_tools -t{threads} filter "$db_prefix" {input.fastq} {output.filtered} -ci{params.min_support}
         """
 
 rule combine_group_reads:
