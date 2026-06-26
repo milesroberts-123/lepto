@@ -93,7 +93,7 @@ rule kmc_intersect_group:
             echo "-cs{params.depth}"
         }} > {output.complex}
 
-        kmc_tools complex @{output.complex}
+        kmc_tools complex {output.complex}
         """
 
 rule kmc_subtract:
@@ -125,7 +125,7 @@ rule kmc_subtract:
                 printf '%s\\n' {input.other_dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{printf " - set%d", NR}} END{{print ""}}'
             }} > {output.complex}
 
-            kmc_tools complex @{output.complex}
+            kmc_tools complex {output.complex}
         fi
         """
 
