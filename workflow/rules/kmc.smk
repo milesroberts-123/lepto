@@ -135,14 +135,14 @@ rule kmc_dump_kmers:
     input:
         kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"]
     output:
+        dump="results/specific/{group}.dump",
         fasta="results/specific/{group}_specific.fasta"
     conda: "../envs/kmc.yaml"
     shell:
         """
         db_prefix=$(echo {input.kmc_db[0]} | sed 's/\\.kmc_pre$//')
-        kmc_tools -t{threads} dump "$db_prefix" /dev/stdout \
-            | awk '{{print ">kmer_" NR "\\n" $1}}' \
-            > {output.fasta}
+        kmc_tools -t{threads} transform "$db_prefix" dump {output.dump}
+        cat {output.dump} | awk '{{print ">kmer_" NR "\\n" $1}}' > {output.fasta}
         """
 
 rule metaspades:
