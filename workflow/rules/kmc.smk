@@ -72,8 +72,9 @@ rule kmc_intersect_group:
     input:
         dbs=expand("results/kmc/{ID}/kmc_db.kmc_pre", ID=lambda wildcards: samples_by_group[wildcards.group])
     output:
-        pre="results/grouped/{group}.kmc_pre",
-        suf="results/grouped/{group}.kmc_suf"
+        pre=temp("results/grouped/{group}.kmc_pre"),
+        suf=temp("results/grouped/{group}.kmc_suf"),
+        complex=temp("results/grouped/{group}.complex")
     conda: "../envs/kmc.yaml"
     params:
         depth=config.get("kmc_intersect_depth", 100)
@@ -81,9 +82,17 @@ rule kmc_intersect_group:
         """
         mkdir -p results/grouped
 
-        printf '%s\\n' {input.dbs} | sed 's/\\.kmc_pre$//' > results/grouped/{wildcards.group}.inlist
+        {{
+            echo "INPUT:"
+            printf '%s\\n' {input.dbs} | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
+            echo "OUTPUT:"
+            printf "results/grouped/{wildcards.group} = "
+            printf '%s\\n' {input.dbs} | sed 's/\\.kmc_pre$//' | awk '{{printf "%sset%d", (NR>1?" + ":""), NR}} END{{print ""}}'
+            echo "OUTPUT_PARAMS:"
+            echo "-cs{params.depth}"
+        }} > {output.complex}
 
-        kmc_tools complex @results/grouped/{wildcards.group}.inlist union -kci1 -kcs{params.depth} results/grouped/{wildcards.group}
+        kmc_tools complex @{output.complex}
         """
 
 rule kmc_subtract:
@@ -92,8 +101,9 @@ rule kmc_subtract:
         other_dbs=expand("results/grouped/{other}.kmc_pre",
                         other=lambda wildcards: [g for g in groups if g != wildcards.group])
     output:
-        pre="results/specific/{group}_specific.kmc_pre",
-        suf="results/specific/{group}_specific.kmc_suf"
+        pre=temp("results/specific/{group}_specific.kmc_pre"),
+        suf=temp("results/specific/{group}_specific.kmc_suf"),
+        complex=temp("results/specific/{group}_specific.complex")
     conda: "../envs/kmc.yaml"
     shell:
         """
@@ -102,12 +112,19 @@ rule kmc_subtract:
         if [ -z "{input.other_dbs}" ]; then
             cp {input.target_db} {output.pre}
             cp results/grouped/{wildcards.group}.kmc_suf {output.suf}
+            touch {output.complex}
         else
-            target_prefix=$(echo {input.target_db} | sed 's/\\.kmc_pre$//')
-            echo "$target_prefix kci1" > results/specific/{wildcards.group}_specific.complex_input
-            printf '%s\\n' {input.other_dbs} | sed 's/\\.kmc_pre$//' | awk '{{print $0 " kci1"}}' >> results/specific/{wildcards.group}_specific.complex_input
+            {{
+                echo "INPUT:"
+                target_prefix=$(echo {input.target_db} | sed 's/\\.kmc_pre$//')
+                echo "target = $target_prefix -ci1"
+                printf '%s\\n' {input.other_dbs} | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
+                echo "OUTPUT:"
+                printf "results/specific/{wildcards.group}_specific = target"
+                printf '%s\\n' {input.other_dbs} | sed 's/\\.kmc_pre$//' | awk '{{printf " - set%d", NR}} END{{print ""}}'
+            }} > {output.complex}
 
-            kmc_tools complex @results/specific/{wildcards.group}_specific.complex_input subtract results/specific/{wildcards.group}_specific
+            kmc_tools complex @{output.complex}
         fi
         """
 
@@ -116,7 +133,7 @@ rule kmc_filter_reads:
         kmc_db="results/specific/{group}_specific.kmc_pre",
         fastq="results/fastp/{ID}.fastq.gz"
     output:
-        filtered="results/filtered/{group}/{ID}_filtered.fastq"
+        filtered=temp("results/filtered/{group}/{ID}_filtered.fastq")
     conda: "../envs/kmc.yaml"
     params:
         min_support=config["filter_min_kmer_support"]
@@ -136,7 +153,7 @@ rule combine_group_reads:
             ID=samples_by_group[wildcards.group]
         )
     output:
-        all_reads="results/combined/{group}_combined.fastq.gz"
+        all_reads=temp("results/combined/{group}_combined.fastq.gz")
     shell:
         """
         mkdir -p results/combined
