@@ -1,0 +1,50 @@
+executor: slurm
+jobs: 100
+
+default-resources:
+  slurm_account: "co_moilab"
+  slurm_partition: "savio3_htc"
+  slurm_qos: "savio_lowprio"
+  mem_mb: 0
+  disk_mb: 0
+  cpus_per_task: 1
+  mem_per_cpu: 0
+  ntasks: 1
+  threads: 1
+  runtime: 60
+  
+set-threads:
+   samtools_fastq: 4
+   fastp: 8
+   kmc_count: 8
+   kmc_intersect_group: 4
+   kmc_subtract: 4
+   kmc_filter_reads: 4
+   combine_group_reads: 1
+   metaspades: 4
+
+set-resources:
+  samtools_fastq:
+    cpus_per_task: 4
+    runtime: 60
+  fastp:
+    cpus_per_task: 8
+    runtime: 60
+  kmc_count:
+    cpus_per_task: 8
+    runtime: 120
+  kmc_intersect_group:
+    cpus_per_task: 4
+    runtime: 120
+  kmc_subtract:
+    cpus_per_task: 4
+    runtime: 120
+  kmc_filter_reads:
+    cpus_per_task: 4
+    runtime: 60
+  combine_group_reads:
+    cpus_per_task: 4
+    runtime: 60
+  metaspades:
+    cpus_per_task: 4
+    runtime: 60
