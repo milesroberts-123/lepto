@@ -131,41 +131,23 @@ rule kmc_subtract:
         fi
         """
 
-rule kmc_filter_reads:
+rule kmc_dump_kmers:
     input:
-        kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"],
-        fastq="results/fastp/{ID}.fastq"
+        kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"]
     output:
-        filtered=temp("results/filtered/{group}/{ID}_filtered.fastq")
+        fasta="results/specific/{group}_specific.fasta"
     conda: "../envs/kmc.yaml"
-    params:
-        min_support=config["filter_min_kmer_support"]
     shell:
         """
-        mkdir -p results/filtered/{wildcards.group}
-
         db_prefix=$(echo {input.kmc_db[0]} | sed 's/\\.kmc_pre$//')
-        kmc_tools -t{threads} filter "$db_prefix" {input.fastq} -ci{params.min_support} {output.filtered}
-        """
-
-rule combine_group_reads:
-    input:
-        reads=lambda wildcards: expand(
-            "results/filtered/{group}/{ID}_filtered.fastq",
-            group=wildcards.group,
-            ID=samples_by_group[wildcards.group]
-        )
-    output:
-        all_reads=temp("results/combined/{group}_combined.fastq")
-    shell:
-        """
-        mkdir -p results/combined
-        cat {input.reads} | gzip > {output.all_reads}
+        kmc_tools -t{threads} dump "$db_prefix" /dev/stdout \
+            | awk '{{print ">kmer_" NR "\\n" $1}}' \
+            > {output.fasta}
         """
 
 rule metaspades:
     input:
-        reads="results/combined/{group}_combined.fastq"
+        kmers="results/specific/{group}_specific.fasta"
     output:
         assembly="results/assembly/{group}_assembly.fasta"
     conda: "../envs/metaspades.yaml"
@@ -184,7 +166,7 @@ rule metaspades:
             -m {params.mem} \
             -t {threads} \
             -k {params.kmers} \
-            -s {input.reads} \
+            --trusted-contigs {input.kmers} \
             --tmp-dir {params.tmp_dir} \
             -o "$outdir"
 
