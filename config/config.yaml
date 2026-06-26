@@ -1,6 +1,6 @@
 # --- KMC ---
 kmc_k: 31
-kmc_mincount: 1
+kmc_mincount: 10
 kmc_maxcount: auto
 
 # --- fastp ---

@@ -13,7 +13,8 @@ rule fastp:
     input:
         "results/samtools/{ID}.fq",
     output:
-        temp("results/fastp/{ID}.fastq.gz")
+        fastq=temp("results/fastp/{ID}.fastq"),
+        json="results/fastp/{ID}.json"
     conda:
         "../envs/fastp.yaml"
     params:
@@ -33,13 +34,14 @@ rule fastp:
             --cut_tail \
             --cut_tail_window_size {params.window_length} \
             --cut_tail_mean_quality {params.qual_thresh} \
+            --json {output.json} \
             -i {input} \
-            -o {output}
+            -o {output.fastq}
         """
 
 rule kmc_count:
     input:
-        "results/fastp/{ID}.fastq.gz"
+        "results/fastp/{ID}.fastq"
     output:
         pre=temp("results/kmc/{ID}/kmc_db.kmc_pre"),
         suf=temp("results/kmc/{ID}/kmc_db.kmc_suf")
@@ -132,7 +134,7 @@ rule kmc_subtract:
 rule kmc_filter_reads:
     input:
         kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"],
-        fastq="results/fastp/{ID}.fastq.gz"
+        fastq="results/fastp/{ID}.fastq"
     output:
         filtered=temp("results/filtered/{group}/{ID}_filtered.fastq")
     conda: "../envs/kmc.yaml"
@@ -143,7 +145,7 @@ rule kmc_filter_reads:
         mkdir -p results/filtered/{wildcards.group}
 
         db_prefix=$(echo {input.kmc_db[0]} | sed 's/\\.kmc_pre$//')
-        kmc_tools -t{threads} filter "$db_prefix" {input.fastq} {output.filtered} -ci{params.min_support}
+        kmc_tools -t{threads} filter "$db_prefix" {input.fastq} -ci{params.min_support} {output.filtered}
         """
 
 rule combine_group_reads:
@@ -154,7 +156,7 @@ rule combine_group_reads:
             ID=samples_by_group[wildcards.group]
         )
     output:
-        all_reads=temp("results/combined/{group}_combined.fastq.gz")
+        all_reads=temp("results/combined/{group}_combined.fastq")
     shell:
         """
         mkdir -p results/combined
@@ -163,7 +165,7 @@ rule combine_group_reads:
 
 rule metaspades:
     input:
-        reads="results/combined/{group}_combined.fastq.gz"
+        reads="results/combined/{group}_combined.fastq"
     output:
         assembly="results/assembly/{group}_assembly.fasta"
     conda: "../envs/metaspades.yaml"
