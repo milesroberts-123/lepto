@@ -70,7 +70,8 @@ rule kmc_count:
 
 rule kmc_intersect_group:
     input:
-        dbs=expand("results/kmc/{ID}/kmc_db.kmc_pre", ID=lambda wildcards: samples_by_group[wildcards.group])
+        dbs=expand(["results/kmc/{ID}/kmc_db.kmc_pre", "results/kmc/{ID}/kmc_db.kmc_suf"],
+                   ID=lambda wildcards: samples_by_group[wildcards.group])
     output:
         pre=temp("results/grouped/{group}.kmc_pre"),
         suf=temp("results/grouped/{group}.kmc_suf"),
@@ -84,10 +85,10 @@ rule kmc_intersect_group:
 
         {{
             echo "INPUT:"
-            printf '%s\\n' {input.dbs} | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
+            printf '%s\\n' {input.dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
             echo "OUTPUT:"
             printf "results/grouped/{wildcards.group} = "
-            printf '%s\\n' {input.dbs} | sed 's/\\.kmc_pre$//' | awk '{{printf "%sset%d", (NR>1?" + ":""), NR}} END{{print ""}}'
+            printf '%s\\n' {input.dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{printf "%sset%d", (NR>1?" + ":""), NR}} END{{print ""}}'
             echo "OUTPUT_PARAMS:"
             echo "-cs{params.depth}"
         }} > {output.complex}
@@ -97,8 +98,8 @@ rule kmc_intersect_group:
 
 rule kmc_subtract:
     input:
-        target_db="results/grouped/{group}.kmc_pre",
-        other_dbs=expand("results/grouped/{other}.kmc_pre",
+        target_db=["results/grouped/{group}.kmc_pre", "results/grouped/{group}.kmc_suf"],
+        other_dbs=expand(["results/grouped/{other}.kmc_pre", "results/grouped/{other}.kmc_suf"],
                         other=lambda wildcards: [g for g in groups if g != wildcards.group])
     output:
         pre=temp("results/specific/{group}_specific.kmc_pre"),
@@ -110,18 +111,18 @@ rule kmc_subtract:
         mkdir -p results/specific
 
         if [ -z "{input.other_dbs}" ]; then
-            cp {input.target_db} {output.pre}
+            cp results/grouped/{wildcards.group}.kmc_pre {output.pre}
             cp results/grouped/{wildcards.group}.kmc_suf {output.suf}
             touch {output.complex}
         else
             {{
                 echo "INPUT:"
-                target_prefix=$(echo {input.target_db} | sed 's/\\.kmc_pre$//')
+                target_prefix=$(echo results/grouped/{wildcards.group}.kmc_pre | sed 's/\\.kmc_pre$//')
                 echo "target = $target_prefix -ci1"
-                printf '%s\\n' {input.other_dbs} | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
+                printf '%s\\n' {input.other_dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
                 echo "OUTPUT:"
                 printf "results/specific/{wildcards.group}_specific = target"
-                printf '%s\\n' {input.other_dbs} | sed 's/\\.kmc_pre$//' | awk '{{printf " - set%d", NR}} END{{print ""}}'
+                printf '%s\\n' {input.other_dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{printf " - set%d", NR}} END{{print ""}}'
             }} > {output.complex}
 
             kmc_tools complex @{output.complex}
@@ -130,7 +131,7 @@ rule kmc_subtract:
 
 rule kmc_filter_reads:
     input:
-        kmc_db="results/specific/{group}_specific.kmc_pre",
+        kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"],
         fastq="results/fastp/{ID}.fastq.gz"
     output:
         filtered=temp("results/filtered/{group}/{ID}_filtered.fastq")
@@ -141,7 +142,7 @@ rule kmc_filter_reads:
         """
         mkdir -p results/filtered/{wildcards.group}
 
-        db_prefix=$(echo {input.kmc_db} | sed 's/\\.kmc_pre$//')
+        db_prefix=$(echo {input.kmc_db[0]} | sed 's/\\.kmc_pre$//')
         kmc_tools filter "$db_prefix" {input.fastq} {output.filtered} -ci{params.min_support}
         """
 
