@@ -13,6 +13,6 @@ cram_paths = dict(zip(sample_ids, [s["cram_path"] for s in samples]))
 
 rule all:
     input:
-        expand("results/assembly/{group}_assembly.fasta", group=groups)
+        expand("results/assembly/{group}.unitigs.fa", group=groups)
 
 include: "rules/kmc.smk"

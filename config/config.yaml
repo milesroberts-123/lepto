@@ -1,5 +1,5 @@
 # --- KMC ---
-kmc_k: 31
+kmc_k: 51
 kmc_mincount: 10
 kmc_maxcount: auto
 
@@ -14,6 +14,10 @@ fastp_n_base_limit: 5
 subtract_groups: true
 min_group_count: 0
 
+# --- BCALM2 ---
+bcalm_k: 51
+bcalm_abundance_min: 1
+
 # --- metaSPAdes ---
 metaspades_kmers: "auto"
 metaspades_mem: 200
@@ -24,6 +28,3 @@ kmc_intersect_depth: 100
 
 # --- samples ---
 samples_table: "../config/samples.tsv"
-
-# --- general ---
-conda_prefix: "envs"

@@ -47,6 +47,9 @@ set-resources:
   combine_group_reads:
     cpus_per_task: 4
     runtime: 60
+  bcalm:
+    cpus_per_task: 4
+    runtime: 300
   metaspades:
     cpus_per_task: 4
     runtime: 60

@@ -145,31 +145,44 @@ rule kmc_dump_kmers:
         cat {output.dump} | awk '{{print ">kmer_" NR "\\n" $1}}' > {output.fasta}
         """
 
-rule metaspades:
+rule bcalm:
     input:
-        kmers="results/specific/{group}_specific.fasta"
+        "results/specific/{group}_specific.fasta"
     output:
-        assembly="results/assembly/{group}_assembly.fasta"
-    conda: "../envs/metaspades.yaml"
+        "results/assembly/{group}.unitigs.fa"
+    conda: "../envs/bcalm.yaml"
     params:
-        kmers=config["metaspades_kmers"],
-        mem=config["metaspades_mem"],
-        tmp_dir=config["metaspades_tmp_dir"]
+        k=config["bcalm_k"],
+        min=config["bcalm_abundance_min"]
     shell:
-        """
-        outdir=$(dirname {output.assembly})/metaspades_{wildcards.group}
-        rm -rf "$outdir"
-        mkdir -p "$outdir"
+        "bcalm -in {input} -kmer-size {params.k} -abundance-min {params.min} -out results/assembly/{wildcards.group}"
 
-        spades.py \
-            --meta \
-            -m {params.mem} \
-            -t {threads} \
-            -k {params.kmers} \
-            --trusted-contigs {input.kmers} \
-            --tmp-dir {params.tmp_dir} \
-            -o "$outdir"
-
-        cp "$outdir"/scaffolds.fasta {output.assembly}
-        rm -rf "$outdir"
-        """
+#rule metaspades:
+#    input:
+#        kmers="results/specific/{group}_specific.fasta"
+#    output:
+#        assembly="results/assembly/{group}_assembly.fasta"
+#    conda: "../envs/metaspades.yaml"
+#    params:
+#        kmers=config["metaspades_kmers"],
+#        mem=config["metaspades_mem"],
+#        tmp_dir=config["metaspades_tmp_dir"]
+#    shell:
+#        """
+#        outdir=$(dirname {output.assembly})/metaspades_{wildcards.group}
+#        rm -rf "$outdir"
+#        mkdir -p "$outdir"
+#
+#        spades.py \
+#            --meta \
+#            --only-assembler \
+#            -m {params.mem} \
+#            -t {threads} \
+#            -k {params.kmers} \
+#            -s {input.kmers} \
+#            --tmp-dir {params.tmp_dir} \
+#            -o "$outdir"
+#
+#        cp "$outdir"/scaffolds.fasta {output.assembly}
+#        rm -rf "$outdir"
+#        """
