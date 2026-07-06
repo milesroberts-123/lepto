@@ -1,0 +1,35 @@
+name: /global/scratch/users/milesroberts/conda/bbtools
+channels:
+  - agbiome
+  - bioconda
+  - conda-forge
+dependencies:
+  - _openmp_mutex=4.5=20_gnu
+  - bbtools=37.62=0
+  - bzip2=1.0.8=hda65f42_9
+  - c-ares=1.34.6=hb03c661_0
+  - ca-certificates=2026.6.17=hbd8a1cb_0
+  - htslib=1.23.1=h633afcb_0
+  - icu=78.3=h33c6efd_0
+  - java-jdk=8.0.112=1
+  - keyutils=1.6.3=hb9d3cd8_0
+  - krb5=1.22.2=hbde042b_1
+  - libcurl=8.21.0=hae6b9f4_2
+  - libdeflate=1.25=h17f619e_0
+  - libedit=3.1.20250104=pl5321h7949ede_0
+  - libev=4.33=hd590300_2
+  - libgcc=15.2.0=he0feb66_19
+  - libgcc-ng=15.2.0=h69a702a_19
+  - libgomp=15.2.0=he0feb66_19
+  - liblzma=5.8.3=hb03c661_0
+  - libnghttp2=1.68.1=h877daf1_0
+  - libpsl=0.22.0=hd9031aa_0
+  - libssh2=1.11.1=hcf80075_0
+  - libstdcxx=15.2.0=h934c35e_19
+  - libzlib=1.3.2=h25fd6f3_2
+  - ncurses=6.6=hdb14827_0
+  - openjdk=8.0.112=zulu8.19.0.1_3
+  - openssl=3.6.3=h35e630c_0
+  - samtools=1.23.1=ha83d96e_0
+  - zstd=1.5.7=hb78ec9c_6
+prefix: /global/scratch/users/milesroberts/conda/bbtools

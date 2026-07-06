@@ -149,13 +149,28 @@ rule bcalm:
     input:
         "results/specific/{group}_specific.fasta"
     output:
-        "results/assembly/{group}.unitigs.fa"
+        temp("results/assembly/{group}.unitigs.fa")
     conda: "../envs/bcalm.yaml"
     params:
         k=config["bcalm_k"],
         min=config["bcalm_abundance_min"]
     shell:
         "bcalm -in {input} -kmer-size {params.k} -abundance-min {params.min} -out results/assembly/{wildcards.group}"
+
+rule tadpole:
+    input:
+        contigs="results/assembly/{group}.unitigs.fa",
+        reads=expand("results/fastp/{ID}.fastq", ID=lambda wildcards: samples_by_group[wildcards.group])
+    output:
+        "results/tadpole/{group}.fa"
+    conda:
+        "../envs/bbtools.yaml"
+    params:
+        k=config["tadpole_k"],
+        el=config["tadpole_el"],
+        er=config["tadpole_er"]
+    shell:
+        "tadpole.sh in={input.contigs} out={output} el={params.el} er={params.er} mode=extend extra={input.reads} k={params.k}"
 
 #rule metaspades:
 #    input:

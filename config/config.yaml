@@ -26,5 +26,10 @@ metaspades_tmp_dir: "/tmp"
 # --- kmc_tools complex params ---
 kmc_intersect_depth: 100
 
+# --- tadpole ---
+tadpole_k: 41
+tadpole_el: 1000
+tadpole_er: 1000
+
 # --- samples ---
 samples_table: "../config/samples.tsv"
