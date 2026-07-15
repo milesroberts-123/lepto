@@ -157,21 +157,18 @@ rule bcalm:
     shell:
         "bcalm -in {input} -kmer-size {params.k} -abundance-min {params.min} -out results/assembly/{wildcards.group}"
 
-rule tadpole:
+rule minimap2:
     input:
         contigs="results/assembly/{group}.unitigs.fa",
-        reads=expand("results/fastp/{ID}.fastq", ID=lambda wildcards: samples_by_group[wildcards.group])
+        ref=config["minimap_ref"]
     output:
-        "results/tadpole/{group}.fa"
+        "results/minimap/{group}.bam"
     conda:
-        "../envs/bbtools.yaml"
+        "../envs/minimap2.yaml"
     params:
-        k=config["tadpole_k"],
-        el=config["tadpole_el"],
-        er=config["tadpole_er"],
-        inputs_comma = lambda wildcards, input: ",".join(input.reads)
+        k=config["minimap_k"]
     shell:
-        "tadpole.sh in={input.contigs} out={output} el={params.el} er={params.er} threads={threads} mode=extend extra={params.inputs_comma} k={params.k}"
+        "minimap2 -t {threads} -k {params.k} -ax sr --split-prefix temp_minimap_{wildcards.group} --secondary=no {input.ref} {input.contigs} | samtools sort -@ {threads} -o {output}"
 
 #rule metaspades:
 #    input:
