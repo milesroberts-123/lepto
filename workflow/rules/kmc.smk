@@ -168,9 +168,10 @@ rule tadpole:
     params:
         k=config["tadpole_k"],
         el=config["tadpole_el"],
-        er=config["tadpole_er"]
+        er=config["tadpole_er"],
+        inputs_comma = lambda wildcards, input: ",".join(input.reads)
     shell:
-        "tadpole.sh in={input.contigs} out={output} el={params.el} er={params.er} mode=extend extra={input.reads} k={params.k}"
+        "tadpole.sh in={input.contigs} out={output} el={params.el} er={params.er} threads={threads} mode=extend extra={params.inputs_comma} k={params.k}"
 
 #rule metaspades:
 #    input:

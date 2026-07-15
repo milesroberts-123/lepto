@@ -23,6 +23,7 @@ set-threads:
    kmc_filter_reads: 4
    combine_group_reads: 1
    metaspades: 4
+   tadpole: 8
 
 set-resources:
   samtools_fastq:
@@ -52,4 +53,7 @@ set-resources:
     runtime: 300
   metaspades:
     cpus_per_task: 4
+    runtime: 60
+  tadpole:
+    cpus_per_task: 8
     runtime: 60
