@@ -10,10 +10,11 @@ samples_by_group = {
 }
 sample_ids = [str(s["sample_id"]) for s in samples]
 cram_paths = dict(zip(sample_ids, [s["cram_path"] for s in samples]))
+ref_names = list(config["bwa_refs"].keys())
 
 rule all:
     input:
-        expand("results/bwa/{group}.bam.bai", group=groups)
+        expand("results/bwa/{ref_name}/{group}.bam.bai", group=groups, ref_name=ref_names)
         #expand("results/assembly/{group}.unitigs.fa", group=groups)
 
 include: "rules/kmc.smk"

@@ -165,13 +165,14 @@ rule dump_to_fasta:
 
 rule bwa_index:
     input:
-        config["bwa_ref"]
+        lambda wildcards: config["bwa_refs"][wildcards.ref_name]
     output:
-        amb=config["bwa_ref"] + ".amb",
-        ann=config["bwa_ref"] + ".ann",
-        bwt=config["bwa_ref"] + ".bwt",
-        pac=config["bwa_ref"] + ".pac",
-        sa=config["bwa_ref"] + ".sa"
+        ref=lambda wildcards: config["bwa_refs"][wildcards.ref_name],
+        amb=lambda wildcards: config["bwa_refs"][wildcards.ref_name] + ".amb",
+        ann=lambda wildcards: config["bwa_refs"][wildcards.ref_name] + ".ann",
+        bwt=lambda wildcards: config["bwa_refs"][wildcards.ref_name] + ".bwt",
+        pac=lambda wildcards: config["bwa_refs"][wildcards.ref_name] + ".pac",
+        sa=lambda wildcards: config["bwa_refs"][wildcards.ref_name] + ".sa"
     conda: "../envs/bwa.yaml"
     shell:
         "bwa index {input}"
@@ -179,10 +180,10 @@ rule bwa_index:
 rule bwa_mem:
     input:
         fasta="results/specific/{group}.40.fasta",
-        ref=config["bwa_ref"],
+        ref=lambda wildcards: config["bwa_refs"][wildcards.ref_name],
         index=rules.bwa_index.output
     output:
-        "results/bwa/{group}.bam"
+        "results/bwa/{ref_name}/{group}.bam"
     conda: "../envs/bwa.yaml"
     params:
         k=config["bwa_k"],
@@ -197,9 +198,9 @@ rule bwa_mem:
 
 rule samtools_index:
     input:
-        "results/bwa/{group}.bam"
+        "results/bwa/{ref_name}/{group}.bam"
     output:
-        "results/bwa/{group}.bam.bai"
+        "results/bwa/{ref_name}/{group}.bam.bai"
     conda: "../envs/bwa.yaml"
     shell:
         "samtools index {input}"
