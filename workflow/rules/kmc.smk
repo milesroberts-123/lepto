@@ -167,7 +167,6 @@ rule bwa_index:
     input:
         config["bwa_ref"]
     output:
-        ref=config["bwa_ref"],
         amb=config["bwa_ref"] + ".amb",
         ann=config["bwa_ref"] + ".ann",
         bwt=config["bwa_ref"] + ".bwt",

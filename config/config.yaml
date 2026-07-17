@@ -23,7 +23,7 @@ metaspades_tmp_dir: "/tmp"
 kmc_intersect_depth: 100
 
 # --- BWA ---
-bwa_ref: "resources/reference/all.fasta"
+bwa_ref: "../resources/reference/LPJR3B2_scaffolds_final.fa"
 bwa_count_threshold: 40
 bwa_k: 50
 bwa_A: 1
