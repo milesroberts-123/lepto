@@ -135,40 +135,75 @@ rule kmc_dump_kmers:
     input:
         kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"]
     output:
-        dump="results/specific/{group}.dump",
-        fasta="results/specific/{group}_specific.fasta"
+        "results/specific/{group}.dump"
     conda: "../envs/kmc.yaml"
     shell:
         """
         db_prefix=$(echo {input.kmc_db[0]} | sed 's/\\.kmc_pre$//')
-        kmc_tools -t{threads} transform "$db_prefix" dump {output.dump}
-        cat {output.dump} | awk '{{print ">kmer_" NR "\\n" $1}}' > {output.fasta}
+        kmc_tools -t{threads} transform "$db_prefix" dump {output}
         """
 
-rule bcalm:
+rule filter_dump:
     input:
-        "results/specific/{group}_specific.fasta"
+        "results/specific/{group}.dump"
     output:
-        temp("results/assembly/{group}.unitigs.fa")
-    conda: "../envs/bcalm.yaml"
+        "results/specific/{group}.40.dump"
+    conda: "../envs/kmc.yaml"
     params:
-        k=config["bcalm_k"],
-        min=config["bcalm_abundance_min"]
+        threshold=config["bwa_count_threshold"]
     shell:
-        "bcalm -in {input} -kmer-size {params.k} -abundance-min {params.min} -out results/assembly/{wildcards.group}"
+        "awk '($2 >= {params.threshold})' {input} > {output}"
 
-rule minimap2:
+rule dump_to_fasta:
     input:
-        contigs="results/assembly/{group}.unitigs.fa",
-        ref=config["minimap_ref"]
+        "results/specific/{group}.40.dump"
     output:
-        "results/minimap/{group}.bam"
-    conda:
-        "../envs/minimap2.yaml"
-    params:
-        k=config["minimap_k"]
+        "results/specific/{group}.40.fasta"
+    conda: "../envs/kmc.yaml"
     shell:
-        "minimap2 -t {threads} -k {params.k} -ax sr --split-prefix temp_minimap_{wildcards.group} --secondary=no {input.ref} {input.contigs} | samtools sort -@ {threads} -o {output}"
+        "awk '{{print \">kmer_\" NR \"\\n\" $1}}' {input} > {output}"
+
+rule bwa_index:
+    input:
+        config["bwa_ref"]
+    output:
+        ref=config["bwa_ref"],
+        amb=config["bwa_ref"] + ".amb",
+        ann=config["bwa_ref"] + ".ann",
+        bwt=config["bwa_ref"] + ".bwt",
+        pac=config["bwa_ref"] + ".pac",
+        sa=config["bwa_ref"] + ".sa"
+    conda: "../envs/bwa.yaml"
+    shell:
+        "bwa index {input}"
+
+rule bwa_mem:
+    input:
+        fasta="results/specific/{group}.40.fasta",
+        ref=config["bwa_ref"],
+        index=rules.bwa_index.output
+    output:
+        "results/bwa/{group}.bam"
+    conda: "../envs/bwa.yaml"
+    params:
+        k=config["bwa_k"],
+        A=config["bwa_A"],
+        B=config["bwa_B"],
+        O=config["bwa_O"],
+        E=config["bwa_E"],
+        L=config["bwa_L"],
+        T=config["bwa_T"]
+    shell:
+        "bwa mem -t {threads} -k {params.k} -A {params.A} -B {params.B} -O {params.O} -E {params.E} -L {params.L} -T {params.T} -a {input.ref} {input.fasta} | samtools sort -@ {threads} -o {output}"
+
+rule samtools_index:
+    input:
+        "results/bwa/{group}.bam"
+    output:
+        "results/bwa/{group}.bam.bai"
+    conda: "../envs/bwa.yaml"
+    shell:
+        "samtools index {input}"
 
 #rule metaspades:
 #    input:

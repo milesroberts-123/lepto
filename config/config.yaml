@@ -14,10 +14,6 @@ fastp_n_base_limit: 5
 subtract_groups: true
 min_group_count: 0
 
-# --- BCALM2 ---
-bcalm_k: 51
-bcalm_abundance_min: 1
-
 # --- metaSPAdes ---
 metaspades_kmers: "auto"
 metaspades_mem: 200
@@ -26,9 +22,16 @@ metaspades_tmp_dir: "/tmp"
 # --- kmc_tools complex params ---
 kmc_intersect_depth: 100
 
-# --- minimap2 ---
-minimap_ref: "resources/reference/all.fasta"
-minimap_k: 28
+# --- BWA ---
+bwa_ref: "resources/reference/all.fasta"
+bwa_count_threshold: 40
+bwa_k: 50
+bwa_A: 1
+bwa_B: 100
+bwa_O: 100
+bwa_E: 100
+bwa_L: 100
+bwa_T: 50
 
 # --- samples ---
 samples_table: "../config/samples.tsv"
