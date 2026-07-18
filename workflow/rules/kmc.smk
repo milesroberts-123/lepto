@@ -205,6 +205,17 @@ rule samtools_index:
     shell:
         "samtools index {input}"
 
+rule bam_to_bed:
+    input:
+        "results/bwa/{ref_name}/{group}.bam"
+    output:
+        "results/bwa/{ref_name}/{group}.bed"
+    conda: "../envs/bwa.yaml"
+    params:
+        merge_distance=config["bwa_merge_distance"]
+    shell:
+        "samtools view -b -F 4 {input} | bedtools bamtobed -i - | sort -k1,1 -k2,2n | bedtools merge -d {params.merge_distance} -i - > {output}"
+
 #rule metaspades:
 #    input:
 #        kmers="results/specific/{group}_specific.fasta"

@@ -14,7 +14,8 @@ ref_names = list(config["bwa_refs"].keys())
 
 rule all:
     input:
-        expand("results/bwa/{ref_name}/{group}.bam.bai", group=groups, ref_name=ref_names)
+        expand("results/bwa/{ref_name}/{group}.bam.bai", group=groups, ref_name=ref_names),
+        expand("results/bwa/{ref_name}/{group}.bed", group=groups, ref_name=ref_names)
         #expand("results/assembly/{group}.unitigs.fa", group=groups)
 
 include: "rules/kmc.smk"
