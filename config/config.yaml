@@ -33,8 +33,9 @@ bwa_B: 100
 bwa_O: 100
 bwa_E: 100
 bwa_L: 100
-bwa_T: 50
-bwa_merge_distance: 100
+bwa_T: 31
+bwa_merge_distance: 1000
+
 
 # --- samples ---
 samples_table: "../config/samples.tsv"

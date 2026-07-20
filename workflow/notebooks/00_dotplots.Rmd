@@ -1,0 +1,49 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+
+```{r}
+x <- read_tsv("~/Downloads/hap1_vs_hap2.1to1.coords", col_names = c("S1","E1" ,"S2","E2","LEN_1","LEN_2","PCT_IDY","LEN_R","LEN_Q","COV_R","COV_Q","REF_TAG","QUERY_TAG"))
+
+make_plot <- function(scaffold){
+  queery <- x|>
+    filter(REF_TAG == scaffold) |>
+    group_by(QUERY_TAG) |>
+    summarise(tot = sum(LEN_2))|>
+    mutate(prop = tot / sum(tot))|>
+    filter(prop > 0.02)|>
+    pull(QUERY_TAG)
+  ggplot(x|> filter(REF_TAG==scaffold,QUERY_TAG %in% queery),
+         aes(x = S1, xend = E1, y = S2, yend = E2 , color = QUERY_TAG))+
+    geom_segment(linewidth = 2)+
+    theme_tufte()+
+    theme(axis.line = element_line(color = "black"))+
+    ggtitle(scaffold)
+}
+
+
+
+scaffolds <- paste0("scaffold_", 1:18)
+
+pdf(
+  "~/Downloads/hap1_vs_hap2_scaffolds_1_to_18.pdf",
+  width = 10,
+  height = 7
+)
+
+purrr::walk(scaffolds, \(scaffold) {
+  print(make_plot(scaffold))
+})
+
+dev.off()
+```

@@ -19,3 +19,6 @@ workflow/attempt*
 resources
 *.fasta
 *.fai
+*.gff3
+*.txt
+results/

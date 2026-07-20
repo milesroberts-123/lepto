@@ -148,7 +148,7 @@ rule kmc_subtract:
         else
             {{
                 echo "INPUT:"
-                target_prefix=$(echo results/grouped/{wildcards.group}.kmc_pre | sed 's/\\.kmc_pre$//')
+                target_prefix=$(echo results/intersect/{wildcards.group}.kmc_pre | sed 's/\\.kmc_pre$//')
                 echo "target = $target_prefix -ci1"
                 printf '%s\\n' {input.other_dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
                 echo "OUTPUT:"
