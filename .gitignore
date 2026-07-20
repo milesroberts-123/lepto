@@ -14,6 +14,7 @@
 */old_files
 *.html
 workflow/results
+workflow/attempt*
 */.snakemake
 resources
 *.fasta

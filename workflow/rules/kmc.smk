@@ -75,12 +75,12 @@ rule kmc_intersect_group:
         dbs=expand(["results/kmc/{ID}/kmc_db.kmc_pre", "results/kmc/{ID}/kmc_db.kmc_suf"],
                    ID=lambda wildcards: samples_by_group[wildcards.group])
     output:
-        pre=temp("results/grouped/{group}.kmc_pre"),
-        suf=temp("results/grouped/{group}.kmc_suf"),
-        complex=temp("results/grouped/{group}.complex")
+        pre=temp("results/intersect/{group}.kmc_pre"),
+        suf=temp("results/intersect/{group}.kmc_suf"),
+        complex=temp("results/intersect/{group}.complex")
     conda: "../envs/kmc.yaml"
     params:
-        depth=config.get("kmc_intersect_depth", 100)
+        depth=config.get("kmc_intersect_depth", 1000)
     shell:
         """
         mkdir -p results/grouped
@@ -89,7 +89,35 @@ rule kmc_intersect_group:
             echo "INPUT:"
             printf '%s\\n' {input.dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
             echo "OUTPUT:"
-            printf "results/grouped/{wildcards.group} = "
+            printf "results/intersect/{wildcards.group} = "
+            printf '%s\\n' {input.dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{printf "%sset%d", (NR>1?" * ":""), NR}} END{{print ""}}'
+            echo "OUTPUT_PARAMS:"
+            echo "-cs{params.depth}"
+        }} > {output.complex}
+
+        kmc_tools -t{threads} complex {output.complex}
+        """
+
+rule kmc_union_group:
+    input:
+        dbs=expand(["results/kmc/{ID}/kmc_db.kmc_pre", "results/kmc/{ID}/kmc_db.kmc_suf"],
+                   ID=lambda wildcards: samples_by_group[wildcards.group])
+    output:
+        pre=temp("results/union/{group}.kmc_pre"),
+        suf=temp("results/union/{group}.kmc_suf"),
+        complex=temp("results/union/{group}.complex")
+    conda: "../envs/kmc.yaml"
+    params:
+        depth=config.get("kmc_intersect_depth", 1000)
+    shell:
+        """
+        mkdir -p results/grouped
+
+        {{
+            echo "INPUT:"
+            printf '%s\\n' {input.dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{print "set" NR " = " $0 " -ci1"}}'
+            echo "OUTPUT:"
+            printf "results/union/{wildcards.group} = "
             printf '%s\\n' {input.dbs} | grep '\\.kmc_pre$' | sed 's/\\.kmc_pre$//' | awk '{{printf "%sset%d", (NR>1?" + ":""), NR}} END{{print ""}}'
             echo "OUTPUT_PARAMS:"
             echo "-cs{params.depth}"
@@ -98,10 +126,11 @@ rule kmc_intersect_group:
         kmc_tools -t{threads} complex {output.complex}
         """
 
+
 rule kmc_subtract:
     input:
-        target_db=["results/grouped/{group}.kmc_pre", "results/grouped/{group}.kmc_suf"],
-        other_dbs=expand(["results/grouped/{other}.kmc_pre", "results/grouped/{other}.kmc_suf"],
+        target_db=["results/intersect/{group}.kmc_pre", "results/intersect/{group}.kmc_suf"],
+        other_dbs=expand(["results/union/{other}.kmc_pre", "results/union/{other}.kmc_suf"],
                         other=lambda wildcards: [g for g in groups if g != wildcards.group])
     output:
         pre=temp("results/specific/{group}_specific.kmc_pre"),
@@ -113,8 +142,8 @@ rule kmc_subtract:
         mkdir -p results/specific
 
         if [ -z "{input.other_dbs}" ]; then
-            cp results/grouped/{wildcards.group}.kmc_pre {output.pre}
-            cp results/grouped/{wildcards.group}.kmc_suf {output.suf}
+            cp results/intersect/{wildcards.group}.kmc_pre {output.pre}
+            cp results/intersect/{wildcards.group}.kmc_suf {output.suf}
             touch {output.complex}
         else
             {{
@@ -135,7 +164,7 @@ rule kmc_dump_kmers:
     input:
         kmc_db=["results/specific/{group}_specific.kmc_pre", "results/specific/{group}_specific.kmc_suf"]
     output:
-        "results/specific/{group}.dump"
+        temp("results/specific/{group}.dump")
     conda: "../envs/kmc.yaml"
     shell:
         """
@@ -147,7 +176,7 @@ rule filter_dump:
     input:
         "results/specific/{group}.dump"
     output:
-        "results/specific/{group}.40.dump"
+        temp("results/specific/{group}.40.dump")
     conda: "../envs/kmc.yaml"
     params:
         threshold=config["bwa_count_threshold"]
@@ -158,29 +187,28 @@ rule dump_to_fasta:
     input:
         "results/specific/{group}.40.dump"
     output:
-        "results/specific/{group}.40.fasta"
+        temp("results/specific/{group}.40.fasta")
     conda: "../envs/kmc.yaml"
     shell:
         "awk '{{print \">kmer_\" NR \"\\n\" $1}}' {input} > {output}"
 
 rule bwa_index:
     input:
-        lambda wildcards: config["bwa_refs"][wildcards.ref_name]
+        "../resources/reference/{ref_name}.fasta"
     output:
-        ref="results/bwa_index/{ref_name}.fasta",
-        amb="results/bwa_index/{ref_name}.fasta.amb",
-        ann="results/bwa_index/{ref_name}.fasta.ann",
-        bwt="results/bwa_index/{ref_name}.fasta.bwt",
-        pac="results/bwa_index/{ref_name}.fasta.pac",
-        sa="results/bwa_index/{ref_name}.fasta.sa"
+        amb="../resources/reference/{ref_name}.fasta.amb",
+        ann="../resources/reference/{ref_name}.fasta.ann",
+        bwt="../resources/reference/{ref_name}.fasta.bwt",
+        pac="../resources/reference/{ref_name}.fasta.pac",
+        sa="../resources/reference/{ref_name}.fasta.sa"
     conda: "../envs/bwa.yaml"
     shell:
-        "cp {input} {output.ref} && bwa index {output.ref}"
+        "bwa index {input}"
 
 rule bwa_mem:
     input:
         fasta="results/specific/{group}.40.fasta",
-        ref="results/bwa_index/{ref_name}.fasta",
+        ref="../resources/reference/{ref_name}.fasta",
         index=rules.bwa_index.output
     output:
         "results/bwa/{ref_name}/{group}.bam"
@@ -216,32 +244,3 @@ rule bam_to_bed:
     shell:
         "samtools view -b -F 4 {input} | bedtools bamtobed -i - | sort -k1,1 -k2,2n | bedtools merge -d {params.merge_distance} -i - > {output}"
 
-#rule metaspades:
-#    input:
-#        kmers="results/specific/{group}_specific.fasta"
-#    output:
-#        assembly="results/assembly/{group}_assembly.fasta"
-#    conda: "../envs/metaspades.yaml"
-#    params:
-#        kmers=config["metaspades_kmers"],
-#        mem=config["metaspades_mem"],
-#        tmp_dir=config["metaspades_tmp_dir"]
-#    shell:
-#        """
-#        outdir=$(dirname {output.assembly})/metaspades_{wildcards.group}
-#        rm -rf "$outdir"
-#        mkdir -p "$outdir"
-#
-#        spades.py \
-#            --meta \
-#            --only-assembler \
-#            -m {params.mem} \
-#            -t {threads} \
-#            -k {params.kmers} \
-#            -s {input.kmers} \
-#            --tmp-dir {params.tmp_dir} \
-#            -o "$outdir"
-#
-#        cp "$outdir"/scaffolds.fasta {output.assembly}
-#        rm -rf "$outdir"
-#        """

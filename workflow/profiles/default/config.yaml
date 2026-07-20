@@ -20,6 +20,7 @@ set-threads:
    kmc_count: 8
    kmc_intersect_group: 4
    kmc_subtract: 4
+   bwa_mem: 8
    kmc_filter_reads: 4
    combine_group_reads: 1
    metaspades: 4
@@ -40,6 +41,9 @@ set-resources:
     runtime: 120
   kmc_subtract:
     cpus_per_task: 4
+    runtime: 120
+  bwa_mem:
+    cpus_per_task: 8
     runtime: 120
   kmc_filter_reads:
     cpus_per_task: 4

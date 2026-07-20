@@ -1,5 +1,5 @@
 # --- KMC ---
-kmc_k: 51
+kmc_k: 31
 kmc_mincount: 10
 kmc_maxcount: auto
 
@@ -20,14 +20,14 @@ metaspades_mem: 200
 metaspades_tmp_dir: "/tmp"
 
 # --- kmc_tools complex params ---
-kmc_intersect_depth: 100
+kmc_intersect_depth: 1000000
 
 # --- BWA ---
 bwa_refs:
-  hap1: "../resources/reference/hap1.fasta"
-  hap2: "../resources/reference/hap2.fasta"
+  hap1: "../resources/reference/LPJR3B2_scaffolds_final_hap1.fa"
+  hap2: "../resources/reference/LPJR3B2_scaffolds_final_hap2.fa"
 bwa_count_threshold: 40
-bwa_k: 50
+bwa_k: 31
 bwa_A: 1
 bwa_B: 100
 bwa_O: 100
