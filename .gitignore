@@ -22,3 +22,4 @@ resources
 *.gff3
 *.txt
 results/
+*.bed
