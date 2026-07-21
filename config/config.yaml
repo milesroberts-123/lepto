@@ -36,6 +36,9 @@ bwa_L: 100
 bwa_T: 31
 bwa_merge_distance: 1000
 
+# --- minimap2 ---
+minimap2_f: 0.02
+
 
 # --- samples ---
 samples_table: "../config/samples.tsv"

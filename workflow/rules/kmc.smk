@@ -176,7 +176,7 @@ rule filter_dump:
     input:
         "results/specific/{group}.dump"
     output:
-        temp("results/specific/{group}.40.dump")
+        temp("results/specific/{group}_40.dump")
     conda: "../envs/kmc.yaml"
     params:
         threshold=config["bwa_count_threshold"]
@@ -185,9 +185,9 @@ rule filter_dump:
 
 rule dump_to_fasta:
     input:
-        "results/specific/{group}.40.dump"
+        "results/specific/{group}_40.dump"
     output:
-        temp("results/specific/{group}.40.fasta")
+        temp("results/specific/{group}_40.fasta")
     conda: "../envs/kmc.yaml"
     shell:
         "awk '{{print \">kmer_\" NR \"\\n\" $1}}' {input} > {output}"
@@ -207,7 +207,7 @@ rule bwa_index:
 
 rule bwa_mem:
     input:
-        fasta="results/specific/{group}.40.fasta",
+        fasta="results/specific/{group}_40.fasta",
         ref="../resources/reference/{ref_name}.fasta",
         index=rules.bwa_index.output
     output:
@@ -243,4 +243,16 @@ rule bam_to_bed:
         merge_distance=config["bwa_merge_distance"]
     shell:
         "samtools view -b -F 4 {input} | bedtools bamtobed -i - | sort -k1,1 -k2,2n | bedtools merge -d {params.merge_distance} -i - > {output}"
+
+rule minimap2_refs:
+    input:
+        query="../resources/reference/{query}.fasta",
+        target="../resources/reference/{target}.fasta"
+    output:
+        "results/minimap2/{query}_vs_{target}.paf"
+    conda: "../envs/minimap2.yaml"
+    params:
+        f=config["minimap2_f"]
+    shell:
+        "minimap2 -t {threads} -f {params.f} {input.target} {input.query} > {output}"
 
