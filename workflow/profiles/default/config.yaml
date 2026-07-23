@@ -65,6 +65,11 @@ set-resources:
   panther_hmmsearch:
     cpus_per_task: 8
     runtime: 60
+  orthofinder_stage:
+    runtime: 10
   orthofinder_run:
+    slurm_account: "co_moilab"
+    slurm_partition: "savio4_htc"
+    slurm_qos: "moilab_htc4_normal"
     cpus_per_task: 8
     runtime: 1440

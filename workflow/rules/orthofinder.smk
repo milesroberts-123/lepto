@@ -17,18 +17,14 @@ rule orthofinder_run:
     output:
         "results/orthofinder/Orthogroups.tsv"
     conda: "../envs/orthofinder.yaml"
-    params:
-        threads=config["orthofinder_threads"],
-        parallel=config["orthofinder_parallel"]
     shell:
         """
         orthofinder -f results/orthofinder/proteomes \
-            -b results/orthofinder \
-            -t {params.threads} \
-            -a {params.parallel} \
+            -t {threads} \
+            -a {threads} \
             -M msa \
             -S diamond \
             -A mafft \
             -T fasttree
-        ln -sf $(ls -d results/orthofinder/Results_*/Orthogroups/Orthogroups.tsv) {output}
+        ln -sf $(ls -d results/orthofinder/proteomes/OrthoFinder/Results_*/Orthogroups/Orthogroups.tsv) {output}
         """
