@@ -26,6 +26,7 @@ set-threads:
    metaspades: 4
    tadpole: 8
    panther_hmmsearch: 8
+   orthofinder_run: 8
 
 set-resources:
   samtools_fastq:
@@ -65,3 +66,6 @@ set-resources:
   panther_hmmsearch:
     cpus_per_task: 8
     runtime: 120
+  orthofinder_run:
+    cpus_per_task: 8
+    runtime: 1440

@@ -12,6 +12,7 @@ sample_ids = [str(s["sample_id"]) for s in samples]
 cram_paths = dict(zip(sample_ids, [s["cram_path"] for s in samples]))
 ref_names = list(config["bwa_refs"].keys())
 ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
+panther_species = list(config["panther_input_fastas"].keys())
 
 wildcard_constraints:
     group="[PW]"
@@ -25,8 +26,14 @@ rule all:
 
 rule panther_all:
     input:
-        expand("results/panther/hmmsearch/batch_{batch}.tblout",
+        expand("results/panther/{species}/hmmsearch/batch_{batch}.tblout",
+               species=panther_species,
                batch=range(1, config["panther_batches"] + 1))
+
+rule orthofinder_all:
+    input:
+        "results/orthofinder/Orthogroups.tsv"
 
 include: "rules/kmc.smk"
 include: "rules/panther.smk"
+include: "rules/orthofinder.smk"

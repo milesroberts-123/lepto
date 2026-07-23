@@ -41,13 +41,19 @@ minimap2_f: 0.02
 
 
 # --- PANTHER HMM search ---
-panther_input_fasta: "../resources/annotation/LPJR3B1_scaf_hap1_braker_aa.fasta"
+panther_input_fastas:
+  hap1: "../resources/annotation/LPJR3B1_scaf_hap1_braker_aa.fasta"
+  hap2: "../resources/annotation/LPJR3B1_scaf_hap2_braker_aa.fasta"
 panther_batches: 3000
 panther_hmmsearch_cpu: 8
 panther_hmmsearch_evalue: 0.001
 panther_hmmsearch_dome: 1e-8
 panther_hmmsearch_ince: 0.001
 panther_hmmsearch_incdome: 1e-8
+
+# --- OrthoFinder ---
+orthofinder_threads: 8
+orthofinder_parallel: 8
 
 # --- samples ---
 samples_table: "../config/samples.tsv"
