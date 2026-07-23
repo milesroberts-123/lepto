@@ -1,6 +1,19 @@
-rule orthofinder_stage:
+rule orthofinder_filter_t1:
     input:
         lambda wildcards: config["panther_input_fastas"][wildcards.species]
+    output:
+        "results/orthofinder/filtered/{species}.t1.faa"
+    conda: "../envs/orthofinder.yaml"
+    shell:
+        """
+        mkdir -p results/orthofinder/filtered
+        seqkit grep -n -r -p "\.t1$" {input} > {output}
+        """
+
+
+rule orthofinder_stage:
+    input:
+        "results/orthofinder/filtered/{species}.t1.faa"
     output:
         "results/orthofinder/proteomes/{species}.faa"
     shell:
