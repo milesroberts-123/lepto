@@ -25,7 +25,7 @@ rule panther_extract_hmm:
 
 rule panther_split_fasta:
     input:
-        lambda wildcards: config["panther_input_fastas"][wildcards.species]
+        "results/featurecounts/{species}_expressed.faa"
     output:
         expand("results/panther/{{species}}/batches/batch_{batch}.faa",
                batch=range(1, config["panther_batches"] + 1))

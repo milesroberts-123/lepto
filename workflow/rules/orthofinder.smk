@@ -1,6 +1,6 @@
 rule orthofinder_filter_t1:
     input:
-        lambda wildcards: config["panther_input_fastas"][wildcards.species]
+        "results/featurecounts/{species}_expressed.faa"
     output:
         "results/orthofinder/filtered/{species}.t1.faa"
     conda: "../envs/orthofinder.yaml"

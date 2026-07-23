@@ -27,6 +27,7 @@ set-threads:
    tadpole: 8
    panther_hmmsearch: 8
    orthofinder_run: 8
+   featurecounts_run: 8
 
 set-resources:
   samtools_fastq:
@@ -73,3 +74,6 @@ set-resources:
     slurm_qos: "moilab_htc4_normal"
     cpus_per_task: 8
     runtime: 1440
+  featurecounts_run:
+    cpus_per_task: 8
+    runtime: 120

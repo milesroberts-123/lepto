@@ -55,5 +55,19 @@ panther_hmmsearch_incdome: 1e-8
 orthofinder_threads: 8
 orthofinder_parallel: 8
 
+# --- featureCounts ---
+featurecounts_annotations:
+  hap1: "../resources/annotation/hap1.gff3"
+  hap2: "../resources/annotation/hap2.gff3"
+featurecounts_bams:
+  hap1:
+    - "../resources/annotation/rna_hap1/LP1_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap1/LP2_MAPQFiltered_CoordSort.bam"
+  hap2:
+    - "../resources/annotation/rna_hap2/LP1_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap2/LP2_MAPQFiltered_CoordSort.bam"
+featurecounts_gff_feature: "Parent"
+featurecounts_paired: true
+
 # --- samples ---
 samples_table: "../config/samples.tsv"
