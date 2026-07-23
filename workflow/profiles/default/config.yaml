@@ -1,5 +1,5 @@
 executor: slurm
-jobs: 100
+jobs: 100000
 
 default-resources:
   slurm_account: "co_moilab"
@@ -49,7 +49,6 @@ set-resources:
     runtime: 120
   kmc_filter_reads:
     cpus_per_task: 4
-    mem_mb_per_cpu: 200000
     runtime: 60
   combine_group_reads:
     cpus_per_task: 4
@@ -65,7 +64,7 @@ set-resources:
     runtime: 60
   panther_hmmsearch:
     cpus_per_task: 8
-    runtime: 120
+    runtime: 60
   orthofinder_run:
     cpus_per_task: 8
     runtime: 1440
