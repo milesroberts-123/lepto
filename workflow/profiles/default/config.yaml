@@ -25,6 +25,7 @@ set-threads:
    combine_group_reads: 1
    metaspades: 4
    tadpole: 8
+   panther_hmmsearch: 8
 
 set-resources:
   samtools_fastq:
@@ -61,3 +62,6 @@ set-resources:
   tadpole:
     cpus_per_task: 8
     runtime: 60
+  panther_hmmsearch:
+    cpus_per_task: 8
+    runtime: 120

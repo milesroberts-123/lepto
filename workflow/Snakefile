@@ -24,3 +24,4 @@ rule all:
         #expand("results/assembly/{group}.unitigs.fa", group=groups)
 
 include: "rules/kmc.smk"
+include: "rules/panther.smk"
