@@ -80,7 +80,6 @@ ggplot(paf_plot) +
 
 ## 5. specific scaffold
 for(tscaf in paste0("scaffold_", 1:51)){
-  print(
     
   ggplot(subset(paf_plot, qname == "scaffold_25" & tname == tscaf)) +
   geom_segment(aes(x = qstart, xend = qend,
@@ -94,7 +93,7 @@ for(tscaf in paste0("scaffold_", 1:51)){
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
   
-  )
+  ggsave(paste0("../../results/by-date/", today, "/dotplot_hap1_scaffold_25_vs_primary_scaffold_", tscaf, ".pdf"), width = 6, height = 6)
 }
 
 ```
@@ -142,7 +141,7 @@ ggplot(subset(paf_plot, tname == "scaffold_25" & qname == "scaffold_2")) +
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
 
-ggsave(paste0("../../results/by-date/", today, "/dotplot_hap2_scaffold2_vs_hap1_scaffold_25.pdf"))
+ggsave(paste0("../../results/by-date/", today, "/dotplot_hap2_scaffold2_vs_hap1_scaffold_25.pdf"), width = 6, height = 6)
 
 
 ```

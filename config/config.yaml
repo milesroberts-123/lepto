@@ -41,8 +41,8 @@ minimap2_f: 0.02
 
 
 # --- PANTHER HMM search ---
-panther_input_fasta: "../resources/proteins.faa"
-panther_batches: 10
+panther_input_fasta: "../resources/annotation/LPJR3B1_scaf_hap1_braker_aa.fasta"
+panther_batches: 3000
 panther_hmmsearch_cpu: 8
 panther_hmmsearch_evalue: 0.001
 panther_hmmsearch_dome: 1e-8

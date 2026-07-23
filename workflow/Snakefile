@@ -23,5 +23,10 @@ rule all:
         expand("results/minimap2/{query}_vs_{target}.paf", zip, query=[p[0] for p in ref_pairs], target=[p[1] for p in ref_pairs])
         #expand("results/assembly/{group}.unitigs.fa", group=groups)
 
+rule panther_all:
+    input:
+        expand("results/panther/hmmsearch/batch_{batch}.tblout",
+               batch=range(1, config["panther_batches"] + 1))
+
 include: "rules/kmc.smk"
 include: "rules/panther.smk"

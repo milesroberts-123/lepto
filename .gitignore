@@ -23,3 +23,9 @@ resources
 *.txt
 results/
 *.bed
+*.faa
+*.tgz
+*.tar.gz
+*.tree
+*.svg
+*.out

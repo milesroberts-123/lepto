@@ -1,18 +1,18 @@
 rule panther_download:
     output:
-        "resources/panther/PANTHER19.0_hmmscoring.tgz"
+        "results/panther/PANTHER19.0_hmmscoring.tgz"
     params:
         url="https://data.pantherdb.org/ftp/panther_library/current_release/PANTHER19.0_hmmscoring.tgz"
     shell:
         """
-        mkdir -p resources/panther
+        mkdir -p results/panther
         curl -L -o {output} {params.url}
         """
 
 
 rule panther_extract_hmm:
     input:
-        "resources/panther/PANTHER19.0_hmmscoring.tgz"
+        "results/panther/PANTHER19.0_hmmscoring.tgz"
     output:
         "results/panther/binHmm.h3m"
     shell:
@@ -100,7 +100,3 @@ rule panther_hmmsearch:
         """
 
 
-rule panther_all:
-    input:
-        expand("results/panther/hmmsearch/batch_{batch}.tblout",
-               batch=range(1, config["panther_batches"] + 1))
