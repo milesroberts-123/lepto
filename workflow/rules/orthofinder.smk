@@ -33,10 +33,22 @@ rule orthofinder_stage:
         """
 
 
+rule orthofinder_stage_external:
+    input:
+        lambda wildcards: config["orthofinder_external_proteomes"][wildcards.species]
+    output:
+        "results/orthofinder/proteomes/{species}.faa"
+    shell:
+        """
+        mkdir -p results/orthofinder/proteomes
+        ln -sf $(realpath {input}) {output}
+        """
+
+
 rule orthofinder_run:
     input:
         expand("results/orthofinder/proteomes/{species}.faa",
-               species=list(config["panther_input_fastas"].keys()))
+               species=list(config["panther_input_fastas"].keys()) + list(config.get("orthofinder_external_proteomes", {}).keys()))
     output:
         "results/orthofinder/Orthogroups.tsv"
     conda: "../envs/orthofinder.yaml"

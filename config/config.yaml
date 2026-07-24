@@ -54,6 +54,9 @@ panther_hmmsearch_incdome: 1e-8
 # --- OrthoFinder ---
 orthofinder_threads: 8
 orthofinder_parallel: 8
+orthofinder_external_proteomes:
+  arabidopsis: "../resources/proteomes/arabidopsis.faa"
+  rice: "../resources/proteomes/rice.faa"
 
 # --- featureCounts ---
 featurecounts_annotations:
