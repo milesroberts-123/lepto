@@ -63,9 +63,17 @@ featurecounts_bams:
   hap1:
     - "../resources/annotation/rna_hap1/LP1_MAPQFiltered_CoordSort.bam"
     - "../resources/annotation/rna_hap1/LP2_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap1/LP3_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap1/LP4_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap1/LP5_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap1/LP6_MAPQFiltered_CoordSort.bam"
   hap2:
     - "../resources/annotation/rna_hap2/LP1_MAPQFiltered_CoordSort.bam"
     - "../resources/annotation/rna_hap2/LP2_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap2/LP3_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap2/LP4_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap2/LP5_MAPQFiltered_CoordSort.bam"
+    - "../resources/annotation/rna_hap2/LP6_MAPQFiltered_CoordSort.bam"
 featurecounts_gff_feature: "Parent"
 featurecounts_paired: true
 

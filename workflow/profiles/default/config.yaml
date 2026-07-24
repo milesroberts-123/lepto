@@ -3,8 +3,10 @@ jobs: 100000
 
 default-resources:
   slurm_account: "co_moilab"
-  slurm_partition: "savio3_htc"
-  slurm_qos: "savio_lowprio"
+  #slurm_partition: "savio3_htc"
+  #slurm_qos: "savio_lowprio"
+  slurm_partition: "savio4_htc"
+  slurm_qos: "moilab_htc4_normal"
   mem_mb: 0
   mem_mb_per_cpu: 0
   disk_mb: 0
@@ -23,11 +25,9 @@ set-threads:
    bwa_mem: 8
    kmc_filter_reads: 4
    combine_group_reads: 1
-   metaspades: 4
-   tadpole: 8
    panther_hmmsearch: 8
-   orthofinder_run: 8
-   featurecounts_run: 8
+   orthofinder_run: 16
+   featurecounts_run: 4
 
 set-resources:
   samtools_fastq:
@@ -57,12 +57,6 @@ set-resources:
   bcalm:
     cpus_per_task: 4
     runtime: 300
-  metaspades:
-    cpus_per_task: 4
-    runtime: 60
-  tadpole:
-    cpus_per_task: 8
-    runtime: 60
   panther_hmmsearch:
     cpus_per_task: 8
     runtime: 60
@@ -72,8 +66,8 @@ set-resources:
     slurm_account: "co_moilab"
     slurm_partition: "savio4_htc"
     slurm_qos: "moilab_htc4_normal"
-    cpus_per_task: 8
+    cpus_per_task: 16
     runtime: 1440
   featurecounts_run:
-    cpus_per_task: 8
-    runtime: 120
+    cpus_per_task: 4
+    runtime: 60

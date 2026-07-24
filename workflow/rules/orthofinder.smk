@@ -10,10 +10,20 @@ rule orthofinder_filter_t1:
         seqkit grep -n -r -p "\.t1$" {input} > {output}
         """
 
+rule orthofinder_unique_prefix:
+    input:
+        "results/orthofinder/filtered/{species}.t1.faa"
+    output:
+        "results/orthofinder/prefixed/{species}.faa"
+    conda: "../envs/orthofinder.yaml"
+    shell:
+        """
+        seqkit replace -p '^' -r '{wildcards.species}.' {input} -o {output}
+        """
 
 rule orthofinder_stage:
     input:
-        "results/orthofinder/filtered/{species}.t1.faa"
+        "results/orthofinder/prefixed/{species}.faa"
     output:
         "results/orthofinder/proteomes/{species}.faa"
     shell:
@@ -35,9 +45,7 @@ rule orthofinder_run:
         orthofinder -f results/orthofinder/proteomes \
             -t {threads} \
             -a {threads} \
-            -M msa \
             -S diamond \
-            -A mafft \
-            -T fasttree
+            -og 
         ln -sf $(ls -d results/orthofinder/proteomes/OrthoFinder/Results_*/Orthogroups/Orthogroups.tsv) {output}
         """

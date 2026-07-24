@@ -13,6 +13,7 @@ rule featurecounts_run:
         mkdir -p results/featurecounts
         featureCounts -a {input.gff} \
             -o {output} \
+            -T {threads} \
             {params.paired} \
             -g {params.gff_feature} \
             {input.bams}
@@ -39,6 +40,5 @@ rule filter_expressed_fasta:
     conda: "../envs/featurecounts.yaml"
     shell:
         """
-        sed 's/^/^/; s/$/\\.t1\\b/' {input.genes} > results/featurecounts/{wildcards.species}_patterns.txt
-        seqkit grep -n -r -f results/featurecounts/{wildcards.species}_patterns.txt {input.fasta} > {output}
+        seqkit grep -n -r -f {input.genes} {input.fasta} > {output}
         """
