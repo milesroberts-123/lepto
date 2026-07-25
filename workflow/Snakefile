@@ -40,7 +40,13 @@ rule featurecounts_all:
         expand("results/featurecounts/{species}_expressed_genes.txt",
                species=panther_species)
 
+rule degenotate_all:
+    input:
+        expand("results/degenotate/{species}/degeneracy-all-sites.bed",
+               species=panther_species)
+
 include: "rules/kmc.smk"
 include: "rules/panther.smk"
 include: "rules/orthofinder.smk"
 include: "rules/featurecounts.smk"
+include: "rules/degenotate.smk"

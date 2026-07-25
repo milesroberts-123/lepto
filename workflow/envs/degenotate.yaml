@@ -1,0 +1,6 @@
+name: degenotate
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - degenotate

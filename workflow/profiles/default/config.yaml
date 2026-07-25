@@ -28,6 +28,7 @@ set-threads:
    panther_hmmsearch: 8
    orthofinder_run: 16
    featurecounts_run: 4
+   degenotate_run: 4
 
 set-resources:
   samtools_fastq:
@@ -71,3 +72,6 @@ set-resources:
   featurecounts_run:
     cpus_per_task: 4
     runtime: 60
+  degenotate_run:
+    cpus_per_task: 4
+    runtime: 120
