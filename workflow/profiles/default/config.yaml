@@ -15,7 +15,7 @@ default-resources:
   ntasks: 1
   threads: 1
   runtime: 60
-  
+
 set-threads:
    samtools_fastq: 4
    fastp: 8
@@ -29,6 +29,11 @@ set-threads:
    orthofinder_run: 16
    featurecounts_run: 4
    degenotate_run: 4
+   minimap2_asm_paf: 16
+   vg_autoindex: 32
+   vg_giraffe: 32
+   vg_surject: 32
+   grenedalf_diversity: 4
 
 set-resources:
   samtools_fastq:
@@ -75,3 +80,18 @@ set-resources:
   degenotate_run:
     cpus_per_task: 4
     runtime: 120
+  minimap2_asm_paf:
+    cpus_per_task: 16
+    runtime: 120
+  vg_autoindex:
+    cpus_per_task: 32
+    runtime: 120
+  vg_giraffe:
+    cpus_per_task: 32
+    runtime: 120
+  vg_surject:
+    cpus_per_task: 32
+    runtime: 120
+  grenedalf_diversity:
+    cpus_per_task: 4
+    runtime: 60

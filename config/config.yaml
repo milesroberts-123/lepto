@@ -80,5 +80,16 @@ featurecounts_bams:
 featurecounts_gff_feature: "Parent"
 featurecounts_paired: true
 
+# --- vg graph genome & diversity ---
+vg_ref_backbone: "hap2"
+vg_ref_variant: "hap1"
+vg_surject_prefixes:
+  - "hap2_scaffold_1"
+grenedalf_window_width: 1000
+grenedalf_pool_sizes: 100
+grenedalf_filter_min_count: 2
+grenedalf_filter_min_read_depth: 1
+grenedalf_window_average_policy: "valid-loci"
+
 # --- samples ---
 samples_table: "../config/samples.tsv"

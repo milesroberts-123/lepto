@@ -1,0 +1,6 @@
+name: grenedalf
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - grenedalf
