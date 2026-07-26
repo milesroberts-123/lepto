@@ -29,3 +29,14 @@ results/
 *.tree
 *.svg
 *.out
+*.maf
+*.paf
+*.gbz
+*.min
+*.dist
+*.gam
+*.anchors
+*.csv
+*.vcf.gz
+*.vcf.gz.tbi
+*.msa

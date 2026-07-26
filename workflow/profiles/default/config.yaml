@@ -3,10 +3,10 @@ jobs: 100000
 
 default-resources:
   slurm_account: "co_moilab"
-  #slurm_partition: "savio3_htc"
-  #slurm_qos: "savio_lowprio"
-  slurm_partition: "savio4_htc"
-  slurm_qos: "moilab_htc4_normal"
+  slurm_partition: "savio3_htc"
+  slurm_qos: "savio_lowprio"
+  #slurm_partition: "savio4_htc"
+  #slurm_qos: "moilab_htc4_normal"
   mem_mb: 0
   mem_mb_per_cpu: 0
   disk_mb: 0
@@ -65,8 +65,10 @@ set-resources:
     runtime: 300
   panther_hmmsearch:
     cpus_per_task: 8
-    runtime: 60
+    runtime: 20
   orthofinder_stage:
+    runtime: 10
+  orthofinder_stage_external:
     runtime: 10
   orthofinder_run:
     slurm_account: "co_moilab"

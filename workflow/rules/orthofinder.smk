@@ -54,10 +54,10 @@ rule orthofinder_run:
     conda: "../envs/orthofinder.yaml"
     shell:
         """
-        orthofinder -f results/orthofinder/proteomes \
-            -t {threads} \
-            -a {threads} \
-            -S diamond \
+        orthofinder -f results/orthofinder/proteomes \\
+            -t {threads} \\
+            -a {threads} \\
+            -S diamond \\
             -og 
         ln -sf $(ls -d results/orthofinder/proteomes/OrthoFinder/Results_*/Orthogroups/Orthogroups.tsv) {output}
         """

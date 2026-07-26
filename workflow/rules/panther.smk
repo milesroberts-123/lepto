@@ -37,7 +37,7 @@ rule panther_split_fasta:
         mkdir -p results/panther/{wildcards.species}/batches
         seqkit split2 -p {params.n_batches} -O results/panther/{wildcards.species}/batches {input}
         n=1
-        for f in results/panther/{wildcards.species}/batches/*.part_*.fasta; do
+        for f in results/panther/{wildcards.species}/batches/*.part_*.faa; do
             mv "$f" results/panther/{wildcards.species}/batches/batch_$n.faa
             n=$((n + 1))
         done
