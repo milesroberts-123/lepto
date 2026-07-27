@@ -40,3 +40,4 @@ results/
 *.vcf.gz
 *.vcf.gz.tbi
 *.msa
+*.vcf

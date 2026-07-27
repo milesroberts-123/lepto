@@ -7,7 +7,7 @@ rule orthofinder_filter_t1:
     shell:
         """
         mkdir -p results/orthofinder/filtered
-        seqkit grep -n -r -p "\.t1$" {input} > {output}
+        seqkit grep -n -r -p "\\.t1$" {input} > {output}
         """
 
 rule orthofinder_unique_prefix:

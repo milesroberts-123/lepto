@@ -2,10 +2,20 @@ vg_backbone = config["vg_ref_backbone"]
 vg_variant = config["vg_ref_variant"]
 
 
+rule add_prefix:
+    input:
+        lambda wildcards: config["bwa_refs"][wildcards.reference]
+    output:
+        "results/vg/{reference}_prefixed.fasta"
+    shell:
+        """
+        seqkit replace -p '^' -r '{wildcards.reference}_' {input} > {output}
+        """
+
 rule minimap2_asm_paf:
     input:
-        backbone=lambda wildcards: config["bwa_refs"][wildcards.backbone],
-        variant=lambda wildcards: config["bwa_refs"][wildcards.variant]
+        backbone="results/vg/{backbone}_prefixed.fasta",
+        variant="results/vg/{variant}_prefixed.fasta"
     output:
         "results/vg/{variant}_vs_{backbone}.paf"
     conda: "../envs/minimap2.yaml"
@@ -16,7 +26,7 @@ rule minimap2_asm_paf:
 rule paftools_call_vcf:
     input:
         paf="results/vg/{variant}_vs_{backbone}.paf",
-        backbone=lambda wildcards: config["bwa_refs"][wildcards.backbone]
+        backbone="results/vg/{backbone}_prefixed.fasta"
     output:
         "results/vg/{variant}_vs_{backbone}.vcf"
     conda: "../envs/minimap2.yaml"
@@ -37,13 +47,14 @@ rule bgzip_tabix_vcf:
 
 rule vg_autoindex:
     input:
-        backbone=lambda wildcards: config["bwa_refs"][wildcards.backbone],
+        backbone="results/vg/{backbone}_prefixed.fasta",
         vcfgz="results/vg/{variant}_vs_{backbone}.vcf.gz",
         tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
     output:
         gbz="results/vg/{variant}_{backbone}_giraffe.giraffe.gbz",
-        min="results/vg/{variant}_{backbone}_giraffe.min",
-        dist="results/vg/{variant}_{backbone}_giraffe.dist"
+        min="results/vg/{variant}_{backbone}_giraffe.shortread.withzip.min",
+        dist="results/vg/{variant}_{backbone}_giraffe.dist",
+        zip="results/vg/{variant}_{backbone}_giraffe.shortread.zipcodes"
     conda: "../envs/vg.yaml"
     params:
         prefix=lambda wildcards: f"results/vg/{wildcards.variant}_{wildcards.backbone}_giraffe"
@@ -54,14 +65,15 @@ rule vg_autoindex:
 rule vg_giraffe:
     input:
         gbz="results/vg/{variant}_{backbone}_giraffe.giraffe.gbz",
-        min="results/vg/{variant}_{backbone}_giraffe.min",
+        min="results/vg/{variant}_{backbone}_giraffe.shortread.withzip.min",
         dist="results/vg/{variant}_{backbone}_giraffe.dist",
+        zip="results/vg/{variant}_{backbone}_giraffe.shortread.zipcodes",
         fastq="results/fastp/{ID}.fastq"
     output:
         "results/vg/{variant}_vs_{backbone}/{ID}/mapped.gam"
     conda: "../envs/vg.yaml"
     shell:
-        "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -f {input.fastq} -p > {output}"
+        "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -z {input.zip} -f {input.fastq} -p -t {threads} -o gam > {output}"
 
 
 rule vg_surject:
@@ -71,10 +83,8 @@ rule vg_surject:
     output:
         "results/vg/{variant}_vs_{backbone}/{ID}/mapped.bam"
     conda: "../envs/vg.yaml"
-    params:
-        prefixes=lambda wildcards: " ".join(f"-p {p}" for p in config["vg_surject_prefixes"])
     shell:
-        "vg surject -x {input.gbz} {params.prefixes} -b -t {threads} {input.gam} > {output}"
+        "vg surject -x {input.gbz} -b -t {threads} {input.gam} > {output}"
 
 
 rule samtools_sort_index_vg:
@@ -90,7 +100,9 @@ rule samtools_sort_index_vg:
 
 rule grenedalf_diversity:
     input:
-        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam"
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam",
+        bed="results/degenotate/{backbone}/degeneracy-all-sites.bed",
+        fai=lambda wildcards: config["bwa_refs"][wildcards.backbone] + ".fai"
     output:
         directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity")
     conda: "../envs/grenedalf.yaml"
@@ -101,7 +113,7 @@ rule grenedalf_diversity:
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"]
     shell:
-        "grenedalf diversity --window-type sliding --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --window-average-policy {params.window_average_policy} --file-prefix {output}/ {input}"
+        "grenedalf diversity --window-type sliding --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-fai {input.fai} --file-prefix {output}/ {input.bam}"
 
 
 rule vg_diversity_all:

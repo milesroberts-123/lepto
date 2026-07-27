@@ -24,8 +24,8 @@ kmc_intersect_depth: 1000000
 
 # --- BWA ---
 bwa_refs:
-  hap1: "../resources/reference/LPJR3B2_scaffolds_final_hap1.fa"
-  hap2: "../resources/reference/LPJR3B2_scaffolds_final_hap2.fa"
+  hap1: "../resources/reference/hap1.fasta"
+  hap2: "../resources/reference/hap2.fasta"
 bwa_count_threshold: 40
 bwa_k: 31
 bwa_A: 1

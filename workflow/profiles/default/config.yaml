@@ -3,10 +3,10 @@ jobs: 100000
 
 default-resources:
   slurm_account: "co_moilab"
-  slurm_partition: "savio3_htc"
-  slurm_qos: "savio_lowprio"
-  #slurm_partition: "savio4_htc"
-  #slurm_qos: "moilab_htc4_normal"
+  #slurm_partition: "savio3_htc"
+  #slurm_qos: "savio_lowprio"
+  slurm_partition: "savio4_htc"
+  slurm_qos: "moilab_htc4_normal"
   mem_mb: 0
   mem_mb_per_cpu: 0
   disk_mb: 0
@@ -30,10 +30,10 @@ set-threads:
    featurecounts_run: 4
    degenotate_run: 4
    minimap2_asm_paf: 16
-   vg_autoindex: 32
-   vg_giraffe: 32
-   vg_surject: 32
-   grenedalf_diversity: 4
+   vg_autoindex: 8
+   vg_giraffe: 8
+   vg_surject: 4
+   grenedalf_diversity: 1
 
 set-resources:
   samtools_fastq:
@@ -86,14 +86,13 @@ set-resources:
     cpus_per_task: 16
     runtime: 120
   vg_autoindex:
-    cpus_per_task: 32
-    runtime: 120
+    cpus_per_task: 8
+    runtime: 240
   vg_giraffe:
-    cpus_per_task: 32
+    cpus_per_task: 8
     runtime: 120
   vg_surject:
-    cpus_per_task: 32
+    cpus_per_task: 4
     runtime: 120
   grenedalf_diversity:
-    cpus_per_task: 4
     runtime: 60
