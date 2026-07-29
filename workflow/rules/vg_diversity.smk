@@ -85,6 +85,9 @@ rule vg_autoindex:
             -p {params.prefix} \
             -t {threads} \
             --tmp-dir "$LOCAL_TMP"
+
+        # make indices read only so that vg giraffe isn't slow
+        chmod 444 {params.prefix}.giraffe.gbz {params.prefix}.shortread.withzip.min {params.prefix}.dist {params.prefix}.shortread.zipcodes
         """
 
 
