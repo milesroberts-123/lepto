@@ -2,6 +2,12 @@ vg_backbone = config["vg_ref_backbone"]
 vg_variant = config["vg_ref_variant"]
 
 
+def count_vcf_contigs(vcfgz):
+    import subprocess
+    result = subprocess.run(["tabix", "-l", vcfgz], capture_output=True, text=True)
+    return len(result.stdout.strip().split("\n"))
+
+
 rule add_prefix:
     input:
         lambda wildcards: config["bwa_refs"][wildcards.reference]
@@ -55,11 +61,31 @@ rule vg_autoindex:
         min="results/vg/{variant}_{backbone}_giraffe.shortread.withzip.min",
         dist="results/vg/{variant}_{backbone}_giraffe.dist",
         zip="results/vg/{variant}_{backbone}_giraffe.shortread.zipcodes"
+    threads: lambda wildcards, input: count_vcf_contigs(input.vcfgz)
     conda: "../envs/vg.yaml"
     params:
         prefix=lambda wildcards: f"results/vg/{wildcards.variant}_{wildcards.backbone}_giraffe"
     shell:
-        "vg autoindex --workflow sr-giraffe -r {input.backbone} -v {input.vcfgz} -p {params.prefix} -t {threads}"
+        """
+        # Split VCF by contig and use local scratch for temp files to speed up indexing.
+        # Passing one VCF per contig lets vg autoindex parallelize across contigs,
+        # and --tmp-dir on local storage avoids network filesystem overhead.
+        LOCAL_TMP=/tmp/$USER/vgtmp
+        mkdir -p "$LOCAL_TMP/vcf_split"
+        trap "rm -rf $LOCAL_TMP" EXIT
+
+        tabix -l {input.vcfgz} | while read contig; do
+            tabix -h {input.vcfgz} "$contig" | bgzip > "$LOCAL_TMP/vcf_split/$contig.vcf.gz"
+            tabix -p vcf "$LOCAL_TMP/vcf_split/$contig.vcf.gz"
+        done
+
+        vg autoindex --workflow sr-giraffe \
+            -r {input.backbone} \
+            $(for f in "$LOCAL_TMP/vcf_split"/*.vcf.gz; do echo -v "$f"; done) \
+            -p {params.prefix} \
+            -t {threads} \
+            --tmp-dir "$LOCAL_TMP"
+        """
 
 
 rule vg_giraffe:

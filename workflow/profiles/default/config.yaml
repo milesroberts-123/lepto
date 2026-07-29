@@ -29,9 +29,8 @@ set-threads:
    orthofinder_run: 16
    featurecounts_run: 4
    degenotate_run: 4
-   minimap2_asm_paf: 16
-   vg_autoindex: 8
-   vg_giraffe: 8
+    minimap2_asm_paf: 16
+    vg_giraffe: 8
    vg_surject: 4
    grenedalf_diversity: 1
 
@@ -86,7 +85,6 @@ set-resources:
     cpus_per_task: 16
     runtime: 120
   vg_autoindex:
-    cpus_per_task: 8
     runtime: 240
   vg_giraffe:
     cpus_per_task: 8
