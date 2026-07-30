@@ -29,9 +29,11 @@ set-threads:
    orthofinder_run: 16
    featurecounts_run: 4
    degenotate_run: 4
-    minimap2_asm_paf: 16
-    vg_giraffe: 8
-   vg_surject: 4
+   minimap2_asm_paf: 16
+   vg_autoindex: 8
+   vg_giraffe: 12
+   vg_surject: 8
+   samtools_sort_index_vg: 8
    grenedalf_diversity: 1
 
 set-resources:
@@ -87,10 +89,13 @@ set-resources:
   vg_autoindex:
     runtime: 240
   vg_giraffe:
-    cpus_per_task: 8
-    runtime: 120
+    cpus_per_task: 16
+    runtime: "max(4*input.size_mb/1024, 20)"
   vg_surject:
-    cpus_per_task: 4
-    runtime: 120
+    cpus_per_task: 8
+    runtime: "max(4*input.size_mb/1024, 20)"
+  samtools_sort_index_vg:
+    cpus_per_task: 8
+    runtime: 360
   grenedalf_diversity:
     runtime: 60

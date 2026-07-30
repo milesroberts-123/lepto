@@ -102,7 +102,7 @@ rule vg_giraffe:
         "results/vg/{variant}_vs_{backbone}/{ID}/mapped.gam"
     conda: "../envs/vg.yaml"
     shell:
-        "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -z {input.zip} -f {input.fastq} -p -t {threads} -o gam > {output}"
+        "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -z {input.zip} -f {input.fastq} -b fast --hit-cap 5 --hard-hit-cap 100 --max-alignments 2 --rescue-attempts 2 -t {threads} -p -o gam > {output}"
 
 
 rule vg_surject:

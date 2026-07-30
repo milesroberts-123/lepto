@@ -1,5 +1,5 @@
 ---
-title: "R Notebook"
+title: "Investigate pink/white polymorphism in Leptosiphon parviflorus"
 output: html_notebook
 ---
 
@@ -15,7 +15,6 @@ gc()
 library(ggplot2)
 library(tidyverse)
 library(data.table)
-
 today <- Sys.Date()
 ```
 
@@ -144,6 +143,51 @@ ggplot(subset(paf_plot, tname == "scaffold_25" & qname == "scaffold_2")) +
 ggsave(paste0("../../results/by-date/", today, "/dotplot_hap2_scaffold2_vs_hap1_scaffold_25.pdf"), width = 6, height = 6)
 
 
+```
+## haplotype 1 vs haplotype 1
+
+Given presence/absence variant of MYB cluster, maybe some scaffolds are not correctly incorporated into the largest 18 scaffolds
+
+```{r}
+paf_cols <- c("qname", "qlen", "qstart", "qend", "strand",
+              "tname", "tlen", "tstart", "tend",
+              "nmatch", "alen", "mapq")
+
+paf <- read_tsv("../../resources/dotplots/hap1_vs_hap1.paf", col_names = FALSE, col_types = cols(.default = "c"))
+paf <- paf[, 1:12]                      # keep only the 12 mandatory columns
+colnames(paf) <- paf_cols
+
+paf <- paf %>%
+  mutate(across(c(qlen, qstart, qend, tlen, tstart, tend, nmatch, alen, mapq), as.numeric),
+         pident = nmatch / alen)        # approximate % identity per alignment block
+
+# ---- 2. Filter low alignment blocks ----
+paf_f <- paf %>%
+  filter(alen >= 1000, mapq >= 1)
+
+# ---- 3. Orient reverse-strand alignments for correct diagonal direction ----
+paf_plot <- paf_f %>%
+  mutate(
+    tstart_plot = if_else(strand == "-", tend, tstart),
+    tend_plot   = if_else(strand == "-", tstart, tend)
+  )
+
+# ---- 4. Simple whole-genome dotplot ----
+ggplot(subset(paf_plot, tname == "scaffold_25" & tname != qname)) +
+  geom_segment(aes(x = qstart, xend = qend,
+                    y = tstart_plot, yend = tend_plot,
+                    color = strand),
+               linewidth = 0.6) +
+  scale_color_manual(values = c("+" = "steelblue", "-" = "firebrick")) +
+  geom_hline(yintercept = 10964369) +
+  geom_hline(yintercept = 12046688) +
+  labs(x = "Query sequence (bp)", y = "Pink (i.e. Haplotype 1), scaffold 25 (bp)",
+       title = "minimap2 whole-genome alignment of Pink vs Pink\nMyb cluster delinated with lines",
+       color = "Strand") +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+
+ggsave(paste0("../../results/by-date/", today, "/dotplot_hap2_scaffold2_vs_hap1_scaffold_25.pdf"), width = 6, height = 6)
 ```
 
 ## haplotype 1 and 2
