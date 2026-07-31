@@ -41,3 +41,4 @@ results/
 *.vcf.gz.tbi
 *.msa
 *.vcf
+*.dict

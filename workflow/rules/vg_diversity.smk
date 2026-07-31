@@ -124,13 +124,13 @@ rule samtools_sort_index_vg:
         bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam.bai"
     conda: "../envs/bcftools.yaml"
     shell:
-        "samtools sort -@ {threads} -o {output.bam} {input} && samtools index {output.bam}"
+        "samtools sort -m 2G -@ {threads} -o {output.bam} {input} && samtools index {output.bam}"
 
 
 rule grenedalf_diversity:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam",
-        bed="results/degenotate/{backbone}/degeneracy-all-sites.bed",
+        bed="results/degenotate/{backbone}/degeneracy-four-sites.bed",
         fai=lambda wildcards: config["bwa_refs"][wildcards.backbone] + ".fai"
     output:
         directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity")
@@ -142,7 +142,7 @@ rule grenedalf_diversity:
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"]
     shell:
-        "grenedalf diversity --window-type sliding --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-fai {input.fai} --file-prefix {output}/ {input.bam}"
+        "grenedalf diversity --window-type interval --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --filter-sample-min-count 2 --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-fai {input.fai} --out-dir {output}/ --file-prefix pi_windows {input.bam}"
 
 
 rule vg_diversity_all:
