@@ -18,6 +18,16 @@ rule add_prefix:
         seqkit replace -p '^' -r '{wildcards.reference}_' {input} > {output}
         """
 
+rule create_sequence_dict:
+    input:
+        "results/vg/{backbone}_prefixed.fasta"
+    output:
+        "results/vg/{backbone}_prefixed.dict"
+    conda: "../envs/bcftools.yaml"
+    shell:
+        "samtools dict {input} > {output}"
+
+
 rule minimap2_asm_paf:
     input:
         backbone="results/vg/{backbone}_prefixed.fasta",
@@ -127,9 +137,20 @@ rule samtools_sort_index_vg:
         "samtools sort -m 2G -@ {threads} -o {output.bam} {input} && samtools index {output.bam}"
 
 
-rule grenedalf_diversity:
+rule picard_reorder_sam:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam",
+        dict="results/vg/{backbone}_prefixed.dict"
+    output:
+        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam"
+    conda: "../envs/picard.yaml"
+    shell:
+        "picard ReorderSam INPUT={input.bam} OUTPUT={output} SEQUENCE_DICTIONARY={input.dict} ALLOW_CONTIG_LENGTH_DISCORDANCE=false ALLOW_INCOMPLETE_DICT_CONCORDANCE=false"
+
+
+rule grenedalf_diversity:
+    input:
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
         bed="results/degenotate/{backbone}/degeneracy-four-sites.bed",
         fai=lambda wildcards: config["bwa_refs"][wildcards.backbone] + ".fai"
     output:
@@ -142,7 +163,7 @@ rule grenedalf_diversity:
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"]
     shell:
-        "grenedalf diversity --window-type interval --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --filter-sample-min-count 2 --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-fai {input.fai} --out-dir {output}/ --file-prefix pi_windows {input.bam}"
+        "grenedalf diversity --window-type interval --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --filter-sample-min-count 2 --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-fai {input.fai} --out-dir {output}/ --file-prefix pi_windows_ --sam-path {input.bam}"
 
 
 rule vg_diversity_all:

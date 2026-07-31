@@ -1,0 +1,6 @@
+name: picard
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - picard
