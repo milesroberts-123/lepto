@@ -34,7 +34,7 @@ set-threads:
    vg_giraffe: 12
    vg_surject: 8
    samtools_sort_index_vg: 8
-   grenedalf_diversity: 1
+   grenedalf_diversity: 2
 
 set-resources:
   samtools_fastq:
@@ -97,5 +97,8 @@ set-resources:
   samtools_sort_index_vg:
     cpus_per_task: 8
     runtime: 360
+  picard_reorder_sam:
+    runtime: 360
   grenedalf_diversity:
-    runtime: 60
+    cpus_per_task: 4
+    runtime: 360

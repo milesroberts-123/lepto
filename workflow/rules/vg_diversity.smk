@@ -152,7 +152,7 @@ rule grenedalf_diversity:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
         bed="results/degenotate/{backbone}/degeneracy-four-sites.bed",
-        fai=lambda wildcards: config["bwa_refs"][wildcards.backbone] + ".fai"
+        dict="results/vg/{backbone}_prefixed.dict"
     output:
         directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity")
     conda: "../envs/grenedalf.yaml"
@@ -163,7 +163,12 @@ rule grenedalf_diversity:
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"]
     shell:
-        "grenedalf diversity --window-type interval --window-width {params.window_width} --pool-sizes {params.pool_sizes} --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --filter-sample-min-count 2 --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-fai {input.fai} --out-dir {output}/ --file-prefix pi_windows_ --sam-path {input.bam}"
+        """
+        grenedalf diversity --window-type interval \\
+            --window-width {params.window_width} \\
+            --pool-sizes {params.pool_sizes} \\
+            --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --filter-sample-min-count 2 --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-dict {input.dict} --out-dir {output}/ --file-prefix pi_windows_ --sam-path {input.bam}
+        """
 
 
 rule vg_diversity_all:
