@@ -148,9 +148,20 @@ rule picard_reorder_sam:
         "picard ReorderSam INPUT={input.bam} OUTPUT={output} SEQUENCE_DICTIONARY={input.dict} ALLOW_CONTIG_LENGTH_DISCORDANCE=false ALLOW_INCOMPLETE_DICT_CONCORDANCE=false"
 
 
+rule samtools_index_reordered:
+    input:
+        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam"
+    output:
+        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai"
+    conda: "../envs/bcftools.yaml"
+    shell:
+        "samtools index {input}"
+
+
 rule grenedalf_diversity:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai",
         bed="results/degenotate/{backbone}/degeneracy-four-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
