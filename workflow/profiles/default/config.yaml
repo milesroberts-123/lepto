@@ -81,7 +81,7 @@ set-resources:
     cpus_per_task: 4
     runtime: 60
   degenotate_run:
-    cpus_per_task: 4
+    cpus_per_task: 8
     runtime: 120
   minimap2_asm_paf:
     cpus_per_task: 16
@@ -100,7 +100,7 @@ set-resources:
   picard_reorder_sam:
     runtime: 1440
   samtools_index_reordered:
-    runtime: 60
+    runtime: 360
   grenedalf_diversity:
     cpus_per_task: 4
     runtime: 360

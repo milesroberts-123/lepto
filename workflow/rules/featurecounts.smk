@@ -30,6 +30,21 @@ rule featurecounts_filter_expressed:
         grep -v -P "\t0\t0\t0\t0\t0\t0$" {input} | cut -f 1 | grep "^g" > {output}
         """
 
+rule featurecounts_filter_gff:
+    input:
+        glist="results/featurecounts/{species}_expressed_genes.txt",
+        gff=lambda wildcards: config["featurecounts_annotations"][wildcards.species]
+    output:
+        "results/featurecounts/{species}_expressed.gff3"
+    shell:
+        """
+        awk -F'\t' 'NR==FNR{{genes[$1]=1; next}}
+            /^#/{{print; next}}
+            {{
+                match($9, /ID=([^;]+)/, id); match($9, /Parent=([^;]+)/, parent)
+                if (id[1] in genes || parent[1] in genes) print
+            }}' {input.glist} {input.gff} > {output}
+        """
 
 rule filter_expressed_fasta:
     input:

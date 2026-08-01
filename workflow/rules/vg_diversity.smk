@@ -194,4 +194,4 @@ rule grenedalf_diversity:
 rule vg_diversity_all:
     input:
         expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}",
-               variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids, site = ["all", "four", "zero"])
+               variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids, site = ["cds", "four", "zero"])

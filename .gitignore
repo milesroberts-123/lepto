@@ -42,3 +42,4 @@ results/
 *.msa
 *.vcf
 *.dict
+*.errlog

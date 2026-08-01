@@ -81,7 +81,7 @@ vg_ref_backbone: "hap2"
 vg_ref_variant: "hap1"
 vg_surject_prefixes:
   - "hap2_scaffold_1"
-grenedalf_window_width: 10000
+grenedalf_window_width: 50000
 grenedalf_pool_sizes: 100
 grenedalf_filter_min_count: 2
 grenedalf_filter_min_read_depth: 1
