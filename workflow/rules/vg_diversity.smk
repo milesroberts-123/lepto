@@ -162,27 +162,36 @@ rule grenedalf_diversity:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
         bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai",
-        bed="results/degenotate/{backbone}/degeneracy-four-sites.bed",
+        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
-        directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity")
+        directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}")
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
         pool_sizes=config["grenedalf_pool_sizes"],
         filter_min_count=config["grenedalf_filter_min_count"],
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
-        window_average_policy=config["grenedalf_window_average_policy"]
+        window_average_policy=config["grenedalf_window_average_policy"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"]
     shell:
         """
         grenedalf diversity --window-type interval \\
-            --window-width {params.window_width} \\
+            --window-interval-width {params.window_width} \\
             --pool-sizes {params.pool_sizes} \\
-            --filter-min-count {params.filter_min_count} --filter-min-read-depth {params.filter_min_read_depth} --filter-sample-min-count 2 --window-average-policy {params.window_average_policy} --filter-mask-total-bed {input.bed} --filter-mask-total-bed--invert --reference-genome-dict {input.dict} --out-dir {output}/ --file-prefix pi_windows_ --sam-path {input.bam}
+            --filter-sample-min-read-depth {params.filter_min_read_depth} \\
+            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --window-average-policy {params.window_average_policy} \\
+            --filter-mask-total-bed {input.bed} \\
+            --filter-mask-total-bed-invert \\
+            --reference-genome-dict {input.dict} \\
+            --out-dir {output}/ \\
+            --file-prefix pi_windows_ \\
+            --sam-path {input.bam}
         """
 
 
 rule vg_diversity_all:
     input:
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity",
-               variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids)
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}",
+               variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids, site = ["all", "four", "zero"])

@@ -98,7 +98,7 @@ set-resources:
     cpus_per_task: 8
     runtime: 360
   picard_reorder_sam:
-    runtime: 360
+    runtime: 1440
   samtools_index_reordered:
     runtime: 60
   grenedalf_diversity:
