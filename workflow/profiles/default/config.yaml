@@ -7,6 +7,7 @@ default-resources:
   #slurm_qos: "savio_lowprio"
   slurm_partition: "savio4_htc"
   slurm_qos: "moilab_htc4_normal"
+  slurm_extra: "'--exclude=n0050.savio4,n4252.savio4,n4254.savio4'"
   mem_mb: 0
   mem_mb_per_cpu: 0
   disk_mb: 0
@@ -28,7 +29,6 @@ set-threads:
    panther_hmmsearch: 8
    orthofinder_run: 16
    featurecounts_run: 4
-   degenotate_run: 4
    minimap2_asm_paf: 16
    vg_autoindex: 8
    vg_giraffe: 12

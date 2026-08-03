@@ -1,7 +1,18 @@
+
+rule prefix_gff:
+    input:
+        "results/featurecounts/{species}_expressed.gff3"
+    output:
+        "results/featurecounts/{species}_expressed_prefixed.gff3"
+    shell:
+        """
+        sed 's:^scaffold:{wildcards.species}_scaffold:g' {input} > {output}
+        """
+
 rule degenotate_run:
     input:
-        gff="results/featurecounts/{species}_expressed.gff3",
-        fasta=lambda wildcards: config["bwa_refs"][wildcards.species]
+        gff="results/featurecounts/{species}_expressed_prefixed.gff3",
+        fasta="results/vg/{species}_prefixed.fasta"
     output:
         "results/degenotate/{species}/degeneracy-all-sites.bed"
     conda: "../envs/degenotate.yaml"
