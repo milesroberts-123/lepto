@@ -187,6 +187,7 @@ rule grenedalf_diversity:
             --reference-genome-dict {input.dict} \\
             --out-dir {output}/ \\
             --file-prefix pi_windows_ \\
+            --allow-file-overwriting \\
             --sam-path {input.bam}
         """
 
@@ -209,17 +210,16 @@ rule grenedalf_frequency:
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"]
     shell:
         """
-        grenedalf frequency --window-type interval \\
-            --window-interval-width {params.window_width} \\
-            --pool-sizes {params.pool_sizes} \\
-            --filter-sample-min-read-depth {params.filter_min_read_depth} \\
-            --filter-sample-min-count {params.filter_sample_min_count} \\
-            --window-average-policy {params.window_average_policy} \\
-            --filter-mask-total-bed {input.bed} \\
+        grenedalf frequency --filter-mask-total-bed {input.bed} \\
             --filter-mask-total-bed-invert \\
+            --write-sample-counts \\
+            --write-sample-read-depth \\
+            --write-sample-alt-freq \\
+            --write-invariants \\
             --reference-genome-dict {input.dict} \\
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/{wildcards.ID}/frequency/{wildcards.site} \\
             --file-prefix grenedalf_results_ \\
+            --allow-file-overwriting \\
             --sam-path {input.bam}
         """
 
@@ -257,6 +257,7 @@ rule grenedalf_fst:
             --file-prefix grenedalf_results_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
+            --allow-file-overwriting \\
             --sam-path {input.bam}
         """
 
