@@ -87,6 +87,8 @@ grenedalf_filter_min_count: 2
 grenedalf_filter_min_read_depth: 1
 grenedalf_window_average_policy: "valid-loci"
 grenedalf_filter_sample_min_count: 2
+grenedalf_min_map_qual: 15
+grenedalf_min_base_qual: 15
 
 # --- samples ---
 samples_table: "../config/samples.tsv"

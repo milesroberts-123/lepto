@@ -39,10 +39,10 @@ set-threads:
 set-resources:
   samtools_fastq:
     cpus_per_task: 4
-    runtime: 60
+    runtime: 240
   fastp:
     cpus_per_task: 8
-    runtime: 60
+    runtime: "max(2*input.size_mb/(1024*threads), 10)"
   kmc_count:
     cpus_per_task: 8
     runtime: 120

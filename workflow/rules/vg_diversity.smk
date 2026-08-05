@@ -112,7 +112,7 @@ rule vg_giraffe:
         "results/vg/{variant}_vs_{backbone}/{ID}/mapped.gam"
     conda: "../envs/vg.yaml"
     shell:
-        "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -z {input.zip} -f {input.fastq} -b fast --hit-cap 5 --hard-hit-cap 100 --max-alignments 2 --rescue-attempts 2 -t {threads} -p -o gam > {output}"
+        "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -z {input.zip} -f {input.fastq} -b fast -t {threads} -p -o gam > {output}"
 
 
 rule vg_surject:
@@ -191,7 +191,89 @@ rule grenedalf_diversity:
         """
 
 
+rule grenedalf_frequency:
+    input:
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai",
+        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
+        dict="results/vg/{backbone}_prefixed.dict"
+    output:
+        "results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.txt"
+    conda: "../envs/grenedalf.yaml"
+    params:
+        window_width=config["grenedalf_window_width"],
+        pool_sizes=config["grenedalf_pool_sizes"],
+        filter_min_count=config["grenedalf_filter_min_count"],
+        filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
+        window_average_policy=config["grenedalf_window_average_policy"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"]
+    shell:
+        """
+        grenedalf frequency --window-type interval \\
+            --window-interval-width {params.window_width} \\
+            --pool-sizes {params.pool_sizes} \\
+            --filter-sample-min-read-depth {params.filter_min_read_depth} \\
+            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --window-average-policy {params.window_average_policy} \\
+            --filter-mask-total-bed {input.bed} \\
+            --filter-mask-total-bed-invert \\
+            --reference-genome-dict {input.dict} \\
+            --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/{wildcards.ID}/frequency/{wildcards.site} \\
+            --file-prefix grenedalf_results_ \\
+            --sam-path {input.bam}
+        """
+
+
+rule grenedalf_fst:
+    input:
+        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
+        dict="results/vg/{backbone}_prefixed.dict"
+    output:
+        "results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_fst.txt"
+    conda: "../envs/grenedalf.yaml"
+    params:
+        window_width=config["grenedalf_window_width"],
+        pool_sizes=config["grenedalf_pool_sizes"],
+        filter_min_count=config["grenedalf_filter_min_count"],
+        filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
+        window_average_policy=config["grenedalf_window_average_policy"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        min_map_qual=config["grenedalf_min_map_qual"],
+        min_base_qual=config["grenedalf_min_base_qual"]
+    shell:
+        """
+        grenedalf fst --window-type interval \\
+            --window-interval-width {params.window_width} \\
+            --pool-sizes {params.pool_sizes} \\
+            --filter-sample-min-read-depth {params.filter_min_read_depth} \\
+            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --window-average-policy {params.window_average_policy} \\
+            --filter-mask-total-bed {input.bed} \\
+            --filter-mask-total-bed-invert \\
+            --reference-genome-dict {input.dict} \\
+            --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/fst/{wildcards.site}/ \\
+            --file-prefix grenedalf_results_ \\
+            --sam-min-map-qual {params.min_map_qual} \\
+            --sam-min-base-qual {params.min_base_qual} \\
+            --sam-path {input.bam}
+        """
+
 rule vg_diversity_all:
     input:
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.txt",
+            variant=[vg_variant],
+            backbone=[vg_backbone],
+            ID=sample_ids,
+            site = ["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_fst.txt",
+            variant=[vg_variant],
+            backbone=[vg_backbone],
+            site = ["cds", "four", "zero"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}",
-               variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids, site = ["cds", "four", "zero"])
+            variant=[vg_variant],
+            backbone=[vg_backbone],
+            ID=sample_ids,
+            site = ["cds", "four", "zero"]),
+
