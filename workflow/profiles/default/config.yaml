@@ -35,6 +35,8 @@ set-threads:
    vg_surject: 8
    samtools_sort_index_vg: 8
    grenedalf_diversity: 2
+   grenedalf_frequency: 2
+   grenedalf_fst: 2
 
 set-resources:
   samtools_fastq:
@@ -102,5 +104,11 @@ set-resources:
   samtools_index_reordered:
     runtime: 360
   grenedalf_diversity:
+    cpus_per_task: 4
+    runtime: 360
+  grenedalf_frequency:
+    cpus_per_task: 4
+    runtime: 360
+  grenedalf_fst:
     cpus_per_task: 4
     runtime: 360

@@ -188,6 +188,7 @@ rule grenedalf_diversity:
             --out-dir {output}/ \\
             --file-prefix pi_windows_ \\
             --allow-file-overwriting \\
+            --threads {threads} \\
             --sam-path {input.bam}
         """
 
@@ -220,6 +221,7 @@ rule grenedalf_frequency:
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/{wildcards.ID}/frequency/{wildcards.site} \\
             --file-prefix grenedalf_results_ \\
             --allow-file-overwriting \\
+            --threads {threads} \\
             --sam-path {input.bam}
         """
 
@@ -258,6 +260,7 @@ rule grenedalf_fst:
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
+            --threads {threads} \\
             --sam-path {input.bam}
         """
 
