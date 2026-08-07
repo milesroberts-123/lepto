@@ -11,6 +11,8 @@ gc()
 .rs.restartR(clean = TRUE)
 ```
 
+# packages
+
 ```{r}
 library(ggplot2)
 library(tidyverse)
@@ -20,6 +22,7 @@ today <- Sys.Date()
 ```
 
 # global ggplot2 theme
+
 ```{r}
 theme_set(
   theme_minimal() +
@@ -254,6 +257,28 @@ purrr::walk(scaffolds, \(scaffold) {
 })
 
 dev.off()
+```
+
+# mapping bias
+
+```{r}
+idxstats <- list.files(path = "../results/vg/hap1_vs_hap2", pattern = "idxstats.txt", recursive = T, full.names = T)
+
+# Read and bind them while keeping the file names
+idxstats <- idxstats %>% 
+  set_names() %>% 
+    map_dfr(fread, .id = "source_file")
+
+# calculate 
+idxstats <- idxstats %>%
+  group_by(source_file) %>%
+  reframe(mapped = sum(V3),
+            unmapped = sum(V4)) %>%
+  summarize(sample = 1:8,
+            group = sample %% 2,
+            pct_mapped = mapped/(mapped+unmapped))
+
+wilcox.test()
 ```
 
 # genome scans: pi, fst, tajima's D
