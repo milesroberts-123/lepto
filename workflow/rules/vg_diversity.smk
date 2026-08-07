@@ -142,7 +142,7 @@ rule picard_reorder_sam:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
-        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam"
+        "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam"
     conda: "../envs/picard.yaml"
     shell:
         "picard ReorderSam INPUT={input.bam} OUTPUT={output} SEQUENCE_DICTIONARY={input.dict} ALLOW_CONTIG_LENGTH_DISCORDANCE=false ALLOW_INCOMPLETE_DICT_CONCORDANCE=false"
@@ -150,18 +150,26 @@ rule picard_reorder_sam:
 
 rule samtools_index_reordered:
     input:
-        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam"
+        "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam"
     output:
-        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai"
+        "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai"
     conda: "../envs/bcftools.yaml"
     shell:
         "samtools index {input}"
 
+rule samtools_idxstats:
+    input:
+        "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam"
+    output:
+        "results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt"
+    conda: "../envs/bcftools.yaml"
+    shell:
+        "samtools idxstats {input} > {output}"
 
 rule grenedalf_diversity:
     input:
-        bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
-        bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai",
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
@@ -173,7 +181,9 @@ rule grenedalf_diversity:
         filter_min_count=config["grenedalf_filter_min_count"],
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
-        filter_sample_min_count=config["grenedalf_filter_sample_min_count"]
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        min_map_qual=config["grenedalf_min_map_qual"],
+        min_base_qual=config["grenedalf_min_base_qual"]
     shell:
         """
         grenedalf diversity --window-type interval \\
@@ -187,6 +197,8 @@ rule grenedalf_diversity:
             --reference-genome-dict {input.dict} \\
             --out-dir {output}/ \\
             --file-prefix pi_windows_ \\
+            --sam-min-map-qual {params.min_map_qual} \\
+            --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
             --threads {threads} \\
             --sam-path {input.bam}
@@ -195,8 +207,8 @@ rule grenedalf_diversity:
 
 rule grenedalf_frequency:
     input:
-        bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam",
-        bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai",
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
@@ -208,7 +220,9 @@ rule grenedalf_frequency:
         filter_min_count=config["grenedalf_filter_min_count"],
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
-        filter_sample_min_count=config["grenedalf_filter_sample_min_count"]
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        min_map_qual=config["grenedalf_min_map_qual"],
+        min_base_qual=config["grenedalf_min_base_qual"]
     shell:
         """
         grenedalf frequency --filter-mask-total-bed {input.bed} \\
@@ -220,6 +234,8 @@ rule grenedalf_frequency:
             --reference-genome-dict {input.dict} \\
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/{wildcards.ID}/frequency/{wildcards.site} \\
             --file-prefix grenedalf_results_ \\
+            --sam-min-map-qual {params.min_map_qual} \\
+            --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
             --threads {threads} \\
             --sam-path {input.bam}
@@ -228,8 +244,8 @@ rule grenedalf_frequency:
 
 rule grenedalf_fst:
     input:
-        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
-        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/mapped.reordered.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
@@ -243,7 +259,8 @@ rule grenedalf_fst:
         window_average_policy=config["grenedalf_window_average_policy"],
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
-        min_base_qual=config["grenedalf_min_base_qual"]
+        min_base_qual=config["grenedalf_min_base_qual"],
+        method=config["grenedalf_fst_method"]
     shell:
         """
         grenedalf fst --window-type interval \\
@@ -259,6 +276,7 @@ rule grenedalf_fst:
             --file-prefix grenedalf_results_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
+            --method {params.method} \\
             --allow-file-overwriting \\
             --threads {threads} \\
             --sam-path {input.bam}
@@ -270,14 +288,18 @@ rule vg_diversity_all:
             variant=[vg_variant],
             backbone=[vg_backbone],
             ID=sample_ids,
-            site = ["cds", "four", "zero"]),
+            site = ["cds"]),
         expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_fst.txt",
             variant=[vg_variant],
             backbone=[vg_backbone],
-            site = ["cds", "four", "zero"]),
+            site = ["cds"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}",
             variant=[vg_variant],
             backbone=[vg_backbone],
             ID=sample_ids,
             site = ["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt",
+            variant=[vg_variant],
+            backbone=[vg_backbone],
+            ID=sample_ids)
 

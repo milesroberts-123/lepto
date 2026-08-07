@@ -3,10 +3,10 @@ jobs: 100000
 
 default-resources:
   slurm_account: "co_moilab"
-  #slurm_partition: "savio3_htc"
-  #slurm_qos: "savio_lowprio"
-  slurm_partition: "savio4_htc"
-  slurm_qos: "moilab_htc4_normal"
+  slurm_partition: "savio3_htc"
+  slurm_qos: "savio_lowprio"
+  #slurm_partition: "savio4_htc"
+  #slurm_qos: "moilab_htc4_normal"
   slurm_extra: "'--exclude=n0050.savio4,n4252.savio4,n4254.savio4'"
   mem_mb: 0
   mem_mb_per_cpu: 0

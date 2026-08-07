@@ -15,7 +15,26 @@ gc()
 library(ggplot2)
 library(tidyverse)
 library(data.table)
+library(ggforce)
 today <- Sys.Date()
+```
+
+# global ggplot2 theme
+```{r}
+theme_set(
+  theme_minimal() +
+    theme(
+      text = element_text(
+        size = 16,
+        family = "Helvetica",
+        colour = "black"
+      ),
+      axis.text = element_text(colour = "black"),
+      plot.title = element_text(hjust = 0.5),
+      strip.text = element_text(colour = "black"),
+      panel.grid.minor = element_blank()
+    )
+)
 ```
 
 # sift interproscan output
@@ -35,6 +54,7 @@ panther_results <- interproscan_results %>%
   filter(!str_detect(V6, "DUF"))
 
 ```
+
 # dotplots
 
 ## haplotype 1 vs primary
@@ -132,10 +152,13 @@ ggplot(subset(paf_plot, tname == "scaffold_25" & qname == "scaffold_2")) +
                     color = strand),
                linewidth = 0.6) +
   scale_color_manual(values = c("+" = "steelblue", "-" = "firebrick")) +
-  geom_hline(yintercept = 10964369) +
-  geom_hline(yintercept = 12046688) +
+  geom_hline(yintercept = 10964369, lty = 1, color = "pink") +
+  geom_hline(yintercept = 12046688, lty = 1, color = "pink") +
+  annotate("point", x = (258876087+258880517)/2, y = (10964369+12046688)/2, color = "grey", size = 0.5, shape = 17) +
+  #geom_vline(xintercept = , lty = 2, color = "grey") +
+  #geom_vline(xintercept = , lty = 2, color = "grey") +
   labs(x = "White (i.e. Haplotype 2), scaffold 2 (bp)", y = "Pink (i.e. Haplotype 1), scaffold 25 (bp)",
-       title = "minimap2 whole-genome White vs Pink\nMyb cluster delinated with lines",
+       title = "minimap2 white vs pink alignment\nMYB cluster delinated with pink lines",
        color = "Strand") +
   theme_minimal() +
   theme(panel.grid.minor = element_blank())
@@ -231,4 +254,72 @@ purrr::walk(scaffolds, \(scaffold) {
 })
 
 dev.off()
+```
+
+# genome scans: pi, fst, tajima's D
+
+```{r}
+div_scans <- list.files(path = "../results/vg/hap1_vs_hap2", pattern = "pi_windows_diversity", recursive = T, full.names = T)
+
+# Read and bind them while keeping the file names
+div_scans <- div_scans %>% 
+  set_names() %>% 
+  map_dfr(fread, .id = "source_file")
+
+# separate out sample and site class
+div_scans$sample <- gsub("../results/vg/hap1_vs_hap2/|/diversity.*", "", div_scans$source_file)
+
+div_scans$site_class <- gsub("../results/vg/hap1_vs_hap2/.*/diversity/|/pi_windows.*", "", div_scans$source_file)
+
+head(div_scans)
+
+#### plot total diversity ####
+
+cds_scans <- subset(div_scans, site_class == "cds")
+
+# 1. Split the data frame into a list of data frames by your variable
+data_list <- split(cds_scans, list(cds_scans$chrom, cds_scans$sample), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/nucleotide_diversity_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+p <- ggplot(sub_data,  aes(x = (start + end)/2, y = mapped.reordered.theta_pi)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+  labs(x = "Window midpoint (bp)", 
+       y = "Nucleotide diversity", 
+       title = paste0(unique(sub_data$chrom), ", Sample: ", unique(sub_data$sample)))
+  
+  print(p)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+#### plot tajima's D ####
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/tajimas_d_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+p <- ggplot(sub_data,  aes(x = (start + end)/2, y = mapped.reordered.tajimas_d)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess") +
+  geom_vline(xintercept = 258876087) +
+  geom_vline(xintercept = 258880517) +
+  labs(x = "Window midpoint (bp)", 
+       y = "Tajima's D", 
+       title = paste0(unique(sub_data$chrom), ", Sample: ", unique(sub_data$sample)))
+  
+  print(p)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+#### plot piN/piS ####
+
 ```
