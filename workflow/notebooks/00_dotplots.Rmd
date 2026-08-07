@@ -18,6 +18,7 @@ library(ggplot2)
 library(tidyverse)
 library(data.table)
 library(ggforce)
+library(ape)
 today <- Sys.Date()
 ```
 
@@ -257,6 +258,16 @@ purrr::walk(scaffolds, \(scaffold) {
 })
 
 dev.off()
+```
+
+# myb orthogroup gene tree
+
+```{r}
+# Read the tree
+my_tree <- read.tree("../OG0001281_with_g166640.tree")
+
+# Basic plot
+plot(my_tree)
 ```
 
 # mapping bias

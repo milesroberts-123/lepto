@@ -1,4 +1,5 @@
 import pandas as pd
+import csv
 
 configfile: "../config/config.yaml"
 
@@ -10,10 +11,21 @@ samples_by_group = {
 }
 sample_ids = [str(s["sample_id"]) for s in samples]
 cram_paths = dict(zip(sample_ids, [s["cram_path"] for s in samples]))
+sample_sizes = dict(zip(sample_ids, [s["sample_size"] for s in samples]))
 ref_names = list(config["bwa_refs"].keys())
 ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
 panther_species = list(config["panther_input_fastas"].keys())
 orthofinder_external_species = list(config.get("orthofinder_external_proteomes", {}).keys())
+
+print(sample_ids)
+print(sample_sizes)
+
+# format sample_sizes for grenedalf
+# Get the headers from the keys of the first dictionary
+with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
+    writer = csv.writer(file)    
+    for key, value in sample_sizes.items():
+        writer.writerow([key, value])
 
 wildcard_constraints:
     group="[PW]"

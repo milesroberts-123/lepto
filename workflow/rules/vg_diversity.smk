@@ -171,13 +171,13 @@ rule grenedalf_diversity:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
         bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
-        dict="results/vg/{backbone}_prefixed.dict"
+        dict="results/vg/{backbone}_prefixed.dict",
+        pool_sizes="pool_sizes.csv"
     output:
         directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}")
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
-        pool_sizes=config["grenedalf_pool_sizes"],
         filter_min_count=config["grenedalf_filter_min_count"],
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
@@ -188,7 +188,7 @@ rule grenedalf_diversity:
         """
         grenedalf diversity --window-type interval \\
             --window-interval-width {params.window_width} \\
-            --pool-sizes {params.pool_sizes} \\
+            --pool-sizes {input.pool_sizes} \\
             --filter-sample-min-read-depth {params.filter_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --window-average-policy {params.window_average_policy} \\
@@ -216,7 +216,6 @@ rule grenedalf_frequency:
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
-        pool_sizes=config["grenedalf_pool_sizes"],
         filter_min_count=config["grenedalf_filter_min_count"],
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
@@ -247,13 +246,13 @@ rule grenedalf_fst:
         bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
         bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
-        dict="results/vg/{backbone}_prefixed.dict"
+        dict="results/vg/{backbone}_prefixed.dict",
+        pool_sizes="pool_sizes.csv"
     output:
         "results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_fst.txt"
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
-        pool_sizes=config["grenedalf_pool_sizes"],
         filter_min_count=config["grenedalf_filter_min_count"],
         filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
@@ -265,7 +264,7 @@ rule grenedalf_fst:
         """
         grenedalf fst --window-type interval \\
             --window-interval-width {params.window_width} \\
-            --pool-sizes {params.pool_sizes} \\
+            --pool-sizes {input.pool_sizes} \\
             --filter-sample-min-read-depth {params.filter_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --window-average-policy {params.window_average_policy} \\
