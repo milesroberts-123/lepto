@@ -17,8 +17,8 @@ ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
 panther_species = list(config["panther_input_fastas"].keys())
 orthofinder_external_species = list(config.get("orthofinder_external_proteomes", {}).keys())
 
-print(sample_ids)
-print(sample_sizes)
+#print(sample_ids)
+#print(sample_sizes)
 
 # format sample_sizes for grenedalf
 # Get the headers from the keys of the first dictionary

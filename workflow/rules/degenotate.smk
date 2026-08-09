@@ -14,7 +14,7 @@ rule degenotate_run:
         gff="results/featurecounts/{species}_expressed_prefixed.gff3",
         fasta="results/vg/{species}_prefixed.fasta"
     output:
-        "results/degenotate/{species}/degeneracy-all-sites.bed"
+        temp("results/degenotate/{species}/degeneracy-all-sites.bed")
     conda: "../envs/degenotate.yaml"
     shell:
         """

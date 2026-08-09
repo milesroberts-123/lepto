@@ -46,8 +46,11 @@ rule paftools_call_vcf:
     output:
         "results/vg/{variant}_vs_{backbone}.vcf"
     conda: "../envs/minimap2.yaml"
+    params:
+        L=config["paftools_call_L"],
+        q=config["paftools_call_q"]
     shell:
-        "sort -k6,6 -k8,8n {input.paf} | paftools.js call -f {input.backbone} -s {wildcards.variant} - > {output}"
+        "sort -k6,6 -k8,8n {input.paf} | paftools.js call -f {input.backbone} -L {params.L} -q {params.q} -s {wildcards.variant} - > {output}"
 
 
 rule bgzip_tabix_vcf:
@@ -109,7 +112,7 @@ rule vg_giraffe:
         zip="results/vg/{variant}_{backbone}_giraffe.shortread.zipcodes",
         fastq="results/fastp/{ID}.fastq"
     output:
-        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.gam"
+        temp("results/vg/{variant}_vs_{backbone}/{ID}/mapped.gam")
     conda: "../envs/vg.yaml"
     shell:
         "vg giraffe -Z {input.gbz} -m {input.min} -d {input.dist} -z {input.zip} -f {input.fastq} -b fast -t {threads} -p -o gam > {output}"
@@ -120,7 +123,7 @@ rule vg_surject:
         gam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.gam",
         gbz="results/vg/{variant}_{backbone}_giraffe.giraffe.gbz"
     output:
-        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.bam"
+        temp("results/vg/{variant}_vs_{backbone}/{ID}/mapped.bam")
     conda: "../envs/vg.yaml"
     shell:
         "vg surject -x {input.gbz} -b -t {threads} {input.gam} > {output}"
@@ -130,8 +133,8 @@ rule samtools_sort_index_vg:
     input:
         "results/vg/{variant}_vs_{backbone}/{ID}/mapped.bam"
     output:
-        bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam",
-        bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam.bai"
+        bam=temp("results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam"),
+        bai=temp("results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam.bai")
     conda: "../envs/bcftools.yaml"
     shell:
         "samtools sort -m 2G -@ {threads} -o {output.bam} {input} && samtools index {output.bam}"

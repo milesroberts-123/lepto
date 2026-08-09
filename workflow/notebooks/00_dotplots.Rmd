@@ -267,7 +267,8 @@ dev.off()
 my_tree <- read.tree("../OG0001281_with_g166640.tree")
 
 # Basic plot
-plot(my_tree)
+plot(my_tree, 
+     type = "phylogram")
 ```
 
 # mapping bias
@@ -300,7 +301,7 @@ div_scans <- list.files(path = "../results/vg/hap1_vs_hap2", pattern = "pi_windo
 # Read and bind them while keeping the file names
 div_scans <- div_scans %>% 
   set_names() %>% 
-  map_dfr(fread, .id = "source_file")
+  map_dfr(~fread(.x, col.names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","missing","numeric","passed","theta_pi","theta_watterson","tajimas_d")), .id = "source_file")
 
 # separate out sample and site class
 div_scans$sample <- gsub("../results/vg/hap1_vs_hap2/|/diversity.*", "", div_scans$source_file)
@@ -310,7 +311,6 @@ div_scans$site_class <- gsub("../results/vg/hap1_vs_hap2/.*/diversity/|/pi_windo
 head(div_scans)
 
 #### plot total diversity ####
-
 cds_scans <- subset(div_scans, site_class == "cds")
 
 # 1. Split the data frame into a list of data frames by your variable
@@ -321,7 +321,7 @@ pdf(paste0("../../results/by-date/", today, "/nucleotide_diversity_scans.pdf"), 
 
 # 3. Map over the list, generate a standard plot for each subset, and print
 walk(data_list, function(sub_data) {
-p <- ggplot(sub_data,  aes(x = (start + end)/2, y = mapped.reordered.theta_pi)) +
+p <- ggplot(sub_data,  aes(x = (start + end)/2, y = theta_pi)) +
   geom_point(shape = 16) +
   geom_smooth(method = "loess", span = 0.2, se = FALSE) +
   labs(x = "Window midpoint (bp)", 
@@ -341,14 +341,14 @@ pdf(paste0("../../results/by-date/", today, "/tajimas_d_scans.pdf"), width = 8, 
 
 # 3. Map over the list, generate a standard plot for each subset, and print
 walk(data_list, function(sub_data) {
-p <- ggplot(sub_data,  aes(x = (start + end)/2, y = mapped.reordered.tajimas_d)) +
+p <- ggplot(sub_data,  aes(x = (start + end)/2, y = tajimas_d)) +
   geom_point(shape = 16) +
-  geom_smooth(method = "loess") +
-  geom_vline(xintercept = 258876087) +
-  geom_vline(xintercept = 258880517) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE) +
   labs(x = "Window midpoint (bp)", 
        y = "Tajima's D", 
-       title = paste0(unique(sub_data$chrom), ", Sample: ", unique(sub_data$sample)))
+       title = paste0(unique(sub_data$chrom), 
+                      ", Sample: ", 
+                      unique(sub_data$sample)))
   
   print(p)
 })

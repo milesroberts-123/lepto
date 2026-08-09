@@ -77,12 +77,13 @@ featurecounts_gff_feature: "Parent"
 featurecounts_paired: true
 
 # --- vg graph genome & diversity ---
-vg_ref_backbone: "hap2"
-vg_ref_variant: "hap1"
-vg_surject_prefixes:
-  - "hap2_scaffold_1"
+vg_ref_backbone: "hap1"
+vg_ref_variant: "hap2"
+#paftools_call_L: 100000
+#paftools_call_q: 30
+paftools_call_L: 1000
+paftools_call_q: 20
 grenedalf_window_width: 50000
-grenedalf_pool_sizes: 1000
 grenedalf_filter_min_count: 2
 grenedalf_filter_min_read_depth: 1
 grenedalf_window_average_policy: "valid-loci"

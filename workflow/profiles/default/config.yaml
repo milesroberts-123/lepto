@@ -7,7 +7,7 @@ default-resources:
   #slurm_qos: "savio_lowprio"
   slurm_partition: "savio4_htc"
   slurm_qos: "moilab_htc4_normal"
-  slurm_extra: "'--exclude=n0050.savio4,n4252.savio4,n4254.savio4'"
+  slurm_extra: "'--exclude=n0050.savio4,n4252.savio4,n4254.savio4,n0203.savio4'"
   mem_mb: 0
   mem_mb_per_cpu: 0
   disk_mb: 0
@@ -36,7 +36,7 @@ set-threads:
    samtools_sort_index_vg: 8
    grenedalf_diversity: 2
    grenedalf_frequency: 2
-   grenedalf_fst: 2
+   grenedalf_fst: 8
 
 set-resources:
   samtools_fastq:
@@ -89,6 +89,7 @@ set-resources:
     cpus_per_task: 16
     runtime: 120
   vg_autoindex:
+    cpus_per_task: 16
     runtime: 240
   vg_giraffe:
     cpus_per_task: 16
@@ -110,5 +111,5 @@ set-resources:
     cpus_per_task: 4
     runtime: 360
   grenedalf_fst:
-    cpus_per_task: 4
-    runtime: 360
+    cpus_per_task: 8
+    runtime: 720
