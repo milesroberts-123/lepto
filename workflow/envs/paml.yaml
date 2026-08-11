@@ -1,0 +1,8 @@
+name: paml
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - mafft
+  - paml
+  - pal2nal

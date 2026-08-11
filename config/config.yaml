@@ -92,5 +92,10 @@ grenedalf_min_map_qual: 20
 grenedalf_min_base_qual: 20
 grenedalf_fst_method: "unbiased-hudson"
 
+# --- dn/ds ---
+dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
+dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
+dnds_yn00_ctl: "../config/dnds/yn00.ctl"
+
 # --- samples ---
 samples_table: "../config/samples.tsv"

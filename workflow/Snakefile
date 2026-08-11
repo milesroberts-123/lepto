@@ -57,9 +57,14 @@ rule degenotate_all:
         expand("results/degenotate/{species}/degeneracy-all-sites.bed",
                species=panther_species)
 
+rule dnds_all:
+    input:
+        "results/dnds/yn"
+
 include: "rules/kmc.smk"
 include: "rules/panther.smk"
 include: "rules/orthofinder.smk"
 include: "rules/featurecounts.smk"
 include: "rules/degenotate.smk"
 include: "rules/vg_diversity.smk"
+include: "rules/dnds.smk"
