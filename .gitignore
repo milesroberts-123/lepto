@@ -43,3 +43,5 @@ results/
 *.vcf
 *.dict
 *.errlog
+*.aligned
+*.paml

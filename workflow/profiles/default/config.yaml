@@ -30,10 +30,10 @@ set-threads:
    orthofinder_run: 16
    featurecounts_run: 4
    minimap2_asm_paf: 16
-   vg_autoindex: 8
+   vg_autoindex: 2
    vg_giraffe: 12
    vg_surject: 8
-   samtools_sort_index_vg: 8
+   samtools_sort_vg: 8
    grenedalf_diversity: 2
    grenedalf_frequency: 2
    grenedalf_fst: 8
@@ -89,7 +89,8 @@ set-resources:
     cpus_per_task: 16
     runtime: 120
   vg_autoindex:
-    cpus_per_task: 16
+    cpus_per_task: 32
+    max_mem: "32G"
     runtime: 240
   vg_giraffe:
     cpus_per_task: 16
@@ -97,7 +98,7 @@ set-resources:
   vg_surject:
     cpus_per_task: 8
     runtime: "max(4*input.size_mb/1024, 20)"
-  samtools_sort_index_vg:
+  samtools_sort_vg:
     cpus_per_task: 8
     runtime: 360
   picard_reorder_sam:

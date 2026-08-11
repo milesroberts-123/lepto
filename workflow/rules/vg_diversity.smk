@@ -97,6 +97,7 @@ rule vg_autoindex:
             $(for f in "$LOCAL_TMP/vcf_split"/*.vcf.gz; do echo -v "$f"; done) \
             -p {params.prefix} \
             -t {threads} \
+            -M {resources.max_mem} \
             --tmp-dir "$LOCAL_TMP"
 
         # make indices read only so that vg giraffe isn't slow
@@ -129,20 +130,28 @@ rule vg_surject:
         "vg surject -x {input.gbz} -b -t {threads} {input.gam} > {output}"
 
 
-rule samtools_sort_index_vg:
+rule samtools_sort_vg:
     input:
         "results/vg/{variant}_vs_{backbone}/{ID}/mapped.bam"
     output:
         bam=temp("results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam"),
+    conda: "../envs/bcftools.yaml"
+    shell:
+        "samtools sort -m 2G -@ {threads} -o {output.bam} {input}"
+
+rule samtools_index_vg:
+    input:
+        "results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam"
+    output:
         bai=temp("results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam.bai")
     conda: "../envs/bcftools.yaml"
     shell:
-        "samtools sort -m 2G -@ {threads} -o {output.bam} {input} && samtools index {output.bam}"
-
+        "samtools index {input}"
 
 rule picard_reorder_sam:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/mapped.sorted.bam.bai",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
         "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam"
