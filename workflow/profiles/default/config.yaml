@@ -34,9 +34,10 @@ set-threads:
    vg_giraffe: 12
    vg_surject: 8
    samtools_sort_vg: 8
-   grenedalf_diversity: 2
-   grenedalf_frequency: 2
-   grenedalf_fst: 8
+   grenedalf_diversity: 4
+   grenedalf_frequency: 4
+   grenedalf_fst_interval: 8
+   grenedalf_fst_genome: 8
 
 set-resources:
   samtools_fastq:
@@ -105,12 +106,17 @@ set-resources:
     runtime: 1440
   samtools_index_reordered:
     runtime: 360
+  samtools_mpileup:
+    runtime: 360
   grenedalf_diversity:
     cpus_per_task: 4
     runtime: 360
   grenedalf_frequency:
     cpus_per_task: 4
     runtime: 360
-  grenedalf_fst:
+  grenedalf_fst_genome:
+    cpus_per_task: 8
+    runtime: 720
+  grenedalf_fst_interval:
     cpus_per_task: 8
     runtime: 720

@@ -81,12 +81,12 @@ paftools_call_q: 20
 samtools_mpileup_Q: 20
 samtools_mpileup_q: 20
 grenedalf_window_width: 50000
-grenedalf_filter_min_count: 2
-grenedalf_filter_min_read_depth: 1
+grenedalf_filter_sample_min_read_depth: 5
 grenedalf_window_average_policy: "valid-loci"
 grenedalf_filter_sample_min_count: 2
 grenedalf_min_map_qual: 20
 grenedalf_min_base_qual: 20
+grenedalf_subsample_max_read_depth: 500
 grenedalf_fst_method: "unbiased-hudson"
 
 # --- dn/ds ---

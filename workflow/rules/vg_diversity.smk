@@ -191,7 +191,7 @@ rule samtools_mpileup:
         Q=config["samtools_mpileup_Q"],
         q=config["samtools_mpileup_q"]
     shell:
-        "samtools mpileup -f {input.ref} -Q {params.Q} -q {params.q} {input.bam} > {output}"
+        "samtools mpileup -r hap1_scaffold_25 -f {input.ref} -Q {params.Q} -q {params.q} {input.bam} > {output}"
 
 rule grenedalf_diversity:
     input:
@@ -201,29 +201,34 @@ rule grenedalf_diversity:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        directory("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}")
+        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_diversity.txt",
+        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_diversity_regions.txt")
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
-        filter_min_count=config["grenedalf_filter_min_count"],
-        filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
+        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
-        min_base_qual=config["grenedalf_min_base_qual"]
+        min_base_qual=config["grenedalf_min_base_qual"],
+        subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
     shell:
         """
+        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
+
         grenedalf diversity --window-type interval \\
             --window-interval-width {params.window_width} \\
             --pool-sizes {input.pool_sizes} \\
-            --filter-sample-min-read-depth {params.filter_min_read_depth} \\
+            --filter-region-list {output.regions} \\
+            --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
+            --subsample-max-read-depth {params.subsample_max_read_depth} \\
             --window-average-policy {params.window_average_policy} \\
             --filter-mask-total-bed {input.bed} \\
             --filter-mask-total-bed-invert \\
             --reference-genome-dict {input.dict} \\
-            --out-dir {output}/ \\
-            --file-prefix pi_windows_ \\
+            --out-dir $(dirname {output.div}) \\
+            --file-prefix grenedalf_results_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
@@ -239,19 +244,21 @@ rule grenedalf_frequency:
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
-        "results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.txt"
+        fst="results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.txt",
+        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_frequency_regions.txt")
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
-        filter_min_count=config["grenedalf_filter_min_count"],
-        filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
         min_base_qual=config["grenedalf_min_base_qual"]
     shell:
         """
+        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
+
         grenedalf frequency --filter-mask-total-bed {input.bed} \\
+            --filter-region-list {output.regions} \\
             --filter-mask-total-bed-invert \\
             --write-sample-counts \\
             --write-sample-read-depth \\
@@ -268,7 +275,7 @@ rule grenedalf_frequency:
         """
 
 
-rule grenedalf_fst:
+rule grenedalf_fst_interval:
     input:
         bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
         bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
@@ -276,12 +283,12 @@ rule grenedalf_fst:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        "results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_fst.txt"
+        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_fst.txt",
+        regions=temp("results/vg/{variant}_vs_{backbone}/fst-{site}-interval-regions.txt")
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
-        filter_min_count=config["grenedalf_filter_min_count"],
-        filter_min_read_depth=config["grenedalf_filter_min_read_depth"],
+        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
@@ -289,21 +296,67 @@ rule grenedalf_fst:
         method=config["grenedalf_fst_method"]
     shell:
         """
+        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
+
         grenedalf fst --window-type interval \\
             --window-interval-width {params.window_width} \\
             --pool-sizes {input.pool_sizes} \\
-            --filter-sample-min-read-depth {params.filter_min_read_depth} \\
+            --filter-region-list {output.regions} \\
+            --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --window-average-policy {params.window_average_policy} \\
             --filter-mask-total-bed {input.bed} \\
             --filter-mask-total-bed-invert \\
             --reference-genome-dict {input.dict} \\
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/fst/{wildcards.site}/ \\
-            --file-prefix grenedalf_results_ \\
+            --file-prefix grenedalf_results_interval_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --method {params.method} \\
             --allow-file-overwriting \\
+            --write-pi-tables \\
+            --threads {threads} \\
+            --sam-path {input.bam}
+        """
+
+rule grenedalf_fst_genome:
+    input:
+        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        dict="results/vg/{backbone}_prefixed.dict",
+        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
+        pool_sizes="pool_sizes.csv"
+    output:
+        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_genome_fst.txt",
+        regions=temp("results/vg/{variant}_vs_{backbone}/fst-{site}-genome-regions.txt")
+    conda: "../envs/grenedalf.yaml"
+    params:
+        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
+        window_average_policy=config["grenedalf_window_average_policy"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        min_map_qual=config["grenedalf_min_map_qual"],
+        min_base_qual=config["grenedalf_min_base_qual"],
+        method=config["grenedalf_fst_method"]
+    shell:
+        """
+        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
+
+        grenedalf fst --window-type genome \\
+            --pool-sizes {input.pool_sizes} \\
+            --filter-region-list {output.regions} \\
+            --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
+            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --window-average-policy {params.window_average_policy} \\
+            --filter-mask-total-bed {input.bed} \\
+            --filter-mask-total-bed-invert \\
+            --reference-genome-dict {input.dict} \\
+            --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/fst/{wildcards.site}/ \\
+            --file-prefix grenedalf_results_genome_ \\
+            --sam-min-map-qual {params.min_map_qual} \\
+            --sam-min-base-qual {params.min_base_qual} \\
+            --method {params.method} \\
+            --allow-file-overwriting \\
+            --write-pi-tables \\
             --threads {threads} \\
             --sam-path {input.bam}
         """
@@ -315,11 +368,12 @@ rule vg_diversity_all:
             backbone=[vg_backbone],
             ID=sample_ids,
             site = ["cds"]),
-        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_fst.txt",
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.txt",
             variant=[vg_variant],
             backbone=[vg_backbone],
-            site = ["cds"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}",
+            window=["interval", "genome"],
+            site = ["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_diversity.txt",
             variant=[vg_variant],
             backbone=[vg_backbone],
             ID=sample_ids,
