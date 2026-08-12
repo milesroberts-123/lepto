@@ -14,11 +14,6 @@ fastp_n_base_limit: 5
 subtract_groups: true
 min_group_count: 0
 
-# --- metaSPAdes ---
-metaspades_kmers: "auto"
-metaspades_mem: 200
-metaspades_tmp_dir: "/tmp"
-
 # --- kmc_tools complex params ---
 kmc_intersect_depth: 1000000
 
@@ -83,6 +78,8 @@ vg_ref_variant: "hap2"
 #paftools_call_q: 30
 paftools_call_L: 1000
 paftools_call_q: 20
+samtools_mpileup_Q: 20
+samtools_mpileup_q: 20
 grenedalf_window_width: 50000
 grenedalf_filter_min_count: 2
 grenedalf_filter_min_read_depth: 1

@@ -171,12 +171,27 @@ rule samtools_index_reordered:
 
 rule samtools_idxstats:
     input:
-        "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam"
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai"
     output:
         "results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt"
     conda: "../envs/bcftools.yaml"
     shell:
-        "samtools idxstats {input} > {output}"
+        "samtools idxstats {input.bam} > {output}"
+
+rule samtools_mpileup:
+    input:
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
+        ref="results/vg/{backbone}_prefixed.fasta"
+    output:
+        "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup"
+    conda: "../envs/bcftools.yaml"
+    params:
+        Q=config["samtools_mpileup_Q"],
+        q=config["samtools_mpileup_q"]
+    shell:
+        "samtools mpileup -f {input.ref} -Q {params.Q} -q {params.q} {input.bam} > {output}"
 
 rule grenedalf_diversity:
     input:
@@ -309,6 +324,10 @@ rule vg_diversity_all:
             backbone=[vg_backbone],
             ID=sample_ids,
             site = ["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup",
+            variant=[vg_variant],
+            backbone=[vg_backbone],
+            ID=sample_ids),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt",
             variant=[vg_variant],
             backbone=[vg_backbone],
