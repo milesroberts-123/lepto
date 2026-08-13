@@ -193,7 +193,7 @@ rule samtools_mpileup:
     shell:
         "samtools mpileup -r hap1_scaffold_25 -f {input.ref} -Q {params.Q} -q {params.q} {input.bam} > {output}"
 
-rule grenedalf_diversity:
+rule grenedalf_diversity_interval:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
         bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
@@ -201,8 +201,8 @@ rule grenedalf_diversity:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_diversity.txt",
-        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_diversity_regions.txt")
+        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_diversity.txt",
+        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_interval_diversity_regions.txt")
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
@@ -228,7 +228,49 @@ rule grenedalf_diversity:
             --filter-mask-total-bed-invert \\
             --reference-genome-dict {input.dict} \\
             --out-dir $(dirname {output.div}) \\
-            --file-prefix grenedalf_results_ \\
+            --file-prefix grenedalf_results_interval_ \\
+            --sam-min-map-qual {params.min_map_qual} \\
+            --sam-min-base-qual {params.min_base_qual} \\
+            --allow-file-overwriting \\
+            --threads {threads} \\
+            --sam-path {input.bam}
+        """
+
+rule grenedalf_diversity_genome:
+    input:
+        bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
+        bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
+        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
+        dict="results/vg/{backbone}_prefixed.dict",
+        pool_sizes="pool_sizes.csv"
+    output:
+        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_genome_diversity.txt",
+        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_genome_diversity_regions.txt")
+    conda: "../envs/grenedalf.yaml"
+    params:
+        window_width=config["grenedalf_window_width"],
+        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
+        window_average_policy=config["grenedalf_window_average_policy"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        min_map_qual=config["grenedalf_min_map_qual"],
+        min_base_qual=config["grenedalf_min_base_qual"],
+        subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
+    shell:
+        """
+        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
+
+        grenedalf diversity --window-type genome \\
+            --pool-sizes {input.pool_sizes} \\
+            --filter-region-list {output.regions} \\
+            --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
+            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --subsample-max-read-depth {params.subsample_max_read_depth} \\
+            --window-average-policy {params.window_average_policy} \\
+            --filter-mask-total-bed {input.bed} \\
+            --filter-mask-total-bed-invert \\
+            --reference-genome-dict {input.dict} \\
+            --out-dir $(dirname {output.div}) \\
+            --file-prefix grenedalf_results_genome_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
@@ -373,9 +415,10 @@ rule vg_diversity_all:
             backbone=[vg_backbone],
             window=["interval", "genome"],
             site = ["cds", "four", "zero"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_diversity.txt",
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.txt",
             variant=[vg_variant],
             backbone=[vg_backbone],
+            window=["interval", "genome"],
             ID=sample_ids,
             site = ["cds", "four", "zero"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup",
