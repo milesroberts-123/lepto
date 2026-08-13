@@ -201,8 +201,7 @@ rule grenedalf_diversity_interval:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_diversity.txt",
-        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_interval_diversity_regions.txt")
+        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_diversity.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
@@ -214,18 +213,14 @@ rule grenedalf_diversity_interval:
         subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
     shell:
         """
-        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
-
         grenedalf diversity --window-type interval \\
             --window-interval-width {params.window_width} \\
             --pool-sizes {input.pool_sizes} \\
-            --filter-region-list {output.regions} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --subsample-max-read-depth {params.subsample_max_read_depth} \\
             --window-average-policy {params.window_average_policy} \\
-            --filter-mask-total-bed {input.bed} \\
-            --filter-mask-total-bed-invert \\
+            --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
             --out-dir $(dirname {output.div}) \\
             --file-prefix grenedalf_results_interval_ \\
@@ -244,8 +239,7 @@ rule grenedalf_diversity_genome:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_genome_diversity.txt",
-        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_genome_diversity_regions.txt")
+        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_genome_diversity.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
@@ -257,17 +251,13 @@ rule grenedalf_diversity_genome:
         subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
     shell:
         """
-        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
-
         grenedalf diversity --window-type genome \\
             --pool-sizes {input.pool_sizes} \\
-            --filter-region-list {output.regions} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --subsample-max-read-depth {params.subsample_max_read_depth} \\
             --window-average-policy {params.window_average_policy} \\
-            --filter-mask-total-bed {input.bed} \\
-            --filter-mask-total-bed-invert \\
+            --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
             --out-dir $(dirname {output.div}) \\
             --file-prefix grenedalf_results_genome_ \\
@@ -286,8 +276,7 @@ rule grenedalf_frequency:
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
-        fst="results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.txt",
-        regions=temp("results/vg/{variant}_vs_{backbone}/{ID}_{site}_frequency_regions.txt")
+        fst="results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
@@ -297,11 +286,7 @@ rule grenedalf_frequency:
         min_base_qual=config["grenedalf_min_base_qual"]
     shell:
         """
-        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
-
-        grenedalf frequency --filter-mask-total-bed {input.bed} \\
-            --filter-region-list {output.regions} \\
-            --filter-mask-total-bed-invert \\
+        grenedalf frequency --filter-region-bed {input.bed} \\
             --write-sample-counts \\
             --write-sample-read-depth \\
             --write-sample-alt-freq \\
@@ -325,8 +310,7 @@ rule grenedalf_fst_interval:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_fst.txt",
-        regions=temp("results/vg/{variant}_vs_{backbone}/fst-{site}-interval-regions.txt")
+        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_fst.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
@@ -338,17 +322,13 @@ rule grenedalf_fst_interval:
         method=config["grenedalf_fst_method"]
     shell:
         """
-        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
-
         grenedalf fst --window-type interval \\
             --window-interval-width {params.window_width} \\
             --pool-sizes {input.pool_sizes} \\
-            --filter-region-list {output.regions} \\
+            --filter-region-bed {input.bed} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --window-average-policy {params.window_average_policy} \\
-            --filter-mask-total-bed {input.bed} \\
-            --filter-mask-total-bed-invert \\
             --reference-genome-dict {input.dict} \\
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/fst/{wildcards.site}/ \\
             --file-prefix grenedalf_results_interval_ \\
@@ -369,8 +349,7 @@ rule grenedalf_fst_genome:
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         pool_sizes="pool_sizes.csv"
     output:
-        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_genome_fst.txt",
-        regions=temp("results/vg/{variant}_vs_{backbone}/fst-{site}-genome-regions.txt")
+        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_genome_fst.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
@@ -381,16 +360,12 @@ rule grenedalf_fst_genome:
         method=config["grenedalf_fst_method"]
     shell:
         """
-        cut -f 1 {input.bed} | sort -u | sort -t'_' -k3,3n > {output.regions}
-
         grenedalf fst --window-type genome \\
             --pool-sizes {input.pool_sizes} \\
-            --filter-region-list {output.regions} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --window-average-policy {params.window_average_policy} \\
-            --filter-mask-total-bed {input.bed} \\
-            --filter-mask-total-bed-invert \\
+            --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/fst/{wildcards.site}/ \\
             --file-prefix grenedalf_results_genome_ \\
@@ -405,17 +380,17 @@ rule grenedalf_fst_genome:
 
 rule vg_diversity_all:
     input:
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.txt",
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.csv",
             variant=[vg_variant],
             backbone=[vg_backbone],
             ID=sample_ids,
             site = ["cds"]),
-        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.txt",
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.csv",
             variant=[vg_variant],
             backbone=[vg_backbone],
             window=["interval", "genome"],
             site = ["cds", "four", "zero"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.txt",
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.csv",
             variant=[vg_variant],
             backbone=[vg_backbone],
             window=["interval", "genome"],

@@ -19,6 +19,7 @@ library(tidyverse)
 library(data.table)
 library(ggforce)
 library(ape)
+library(scico)
 today <- Sys.Date()
 ```
 
@@ -358,4 +359,99 @@ dev.off()
 
 #### plot piN/piS ####
 
+```
+# differentiation matrix
+
+```{r}
+dxy4 <- fread("../results/vg/hap2_vs_hap1/fst/four/grenedalf_results_genome_pi-between.csv")
+
+pi4 <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "grenedalf_results_genome_diversity.csv", recursive = T, full.names = T)
+
+pi4 <- pi4 %>% 
+  set_names() %>% 
+  map_dfr(~fread(.x, col.names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","missing","numeric","passed","theta_pi","theta_watterson","tajimas_d")), .id = "source_file")
+
+pi4$sample_id <- gsub("/", "", str_extract(pi4$source_file, "/[1-8]/"))
+
+pi4$site_class <- gsub("diversity/|/grenedalf", "", str_extract(pi4$source_file, "diversity/.*/grenedalf"))
+
+pi4 <- pi4 %>% filter(site_class == "four")
+
+# reformat grenedalf table into matrix
+pi_long <- dxy4 %>%
+  select(matches("^\\d+:\\d+\\.pi-between$")) %>%
+  pivot_longer(everything(), names_to = "pair", values_to = "pi") %>%
+  mutate(pair = str_remove(pair, "\\.pi-between$")) %>%
+  separate(pair, into = c("i", "j"), sep = ":", convert = TRUE)
+
+n <- max(pi_long$i, pi_long$j)
+
+pi_mat <- matrix(NA_real_, n, n, dimnames = list(1:n, 1:n))
+pi_mat[cbind(pi_long$i, pi_long$j)] <- pi_long$pi
+pi_mat[cbind(pi_long$j, pi_long$i)] <- pi_long$pi
+
+diag(pi_mat) <- pi4$theta_pi
+
+rownames(pi_mat) = c("1P", "1W", "2P", "2W", "3P", "3W", "4P", "4W")
+
+colnames(pi_mat) = c("1P", "1W", "2P", "2W", "3P", "3W", "4P", "4W")
+
+# diversity heatmap
+# dxy4/pi-between off diagonal
+# pi4 on diagonal
+pi_df <- pi_mat %>%
+  as.data.frame() %>%
+  rownames_to_column("row") %>%
+  pivot_longer(-row, names_to = "col", values_to = "pi") %>%
+  mutate(
+    row   = factor(row, levels = rownames(pi_mat)),
+    col   = factor(col, levels = colnames(pi_mat)),
+    label = round(pi, 4)
+  ) %>%
+  filter(as.integer(row) >= as.integer(col))
+
+ggplot(pi_df, aes(x = col, y = row, fill = pi)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  geom_text(aes(label = label), size = 3.2) +
+  scale_fill_scico(palette = "lajolla", name = "\u03c04", direction = -1, begin = 0.25) +
+  scale_y_discrete(limits = rev(levels(pi_df$row))) +
+  coord_fixed() +
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+ggsave(paste0("../../results/by-date/", today, "/pi4_dxy4_heatmap.pdf"), device = cairo_pdf, width = 6, height = 6)
+ggsave(paste0("../../results/by-date/", today, "/pi4_dxy4_heatmap.png"), width = 6, height = 6)
+
+# fst matrix
+fst_mat <- fread("../results/vg/hap2_vs_hap1/fst/four/grenedalf_results_genome_fst-matrix.csv")
+
+fst_mat$fst = c("1P", "1W", "2P", "2W", "3P", "3W", "4P", "4W")
+colnames(fst_mat) = c("fst", "1P", "1W", "2P", "2W", "3P", "3W", "4P", "4W")
+
+fst_df <- fst_mat %>% 
+  pivot_longer(-fst, names_to = "col", values_to = "Fst") %>%
+  mutate(
+    row   = factor(fst, levels = fst_mat$fst),
+    col   = factor(col, levels = colnames(fst_mat)),
+    label = round(Fst, 3)
+  ) %>%
+  filter(as.integer(row) >= as.integer(col))
+
+ggplot(fst_df, aes(x = col, y = row, fill = Fst)) +
+  geom_tile(color = "white", linewidth = 0.5) +
+  geom_text(aes(label = label), size = 3.2) +
+  scale_fill_scico(palette = "buda", name = "Fst", direction = -1, begin = 0.1) +
+  scale_y_discrete(limits = rev(levels(pi_df$row))) +
+  coord_fixed() +
+  theme(
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.pdf"), device = cairo_pdf, height = 6, width = 6)
+ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.png"), height = 6, width = 6)
 ```

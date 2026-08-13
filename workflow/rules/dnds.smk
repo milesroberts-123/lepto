@@ -29,7 +29,7 @@ rule yn00:
         cds="results/dnds/cds.paml",
         ctl=config["dnds_yn00_ctl"]
     output:
-        "results/dnds/yn"
+        "results/dnds/yn_results.txt"
     conda: "../envs/paml.yaml"
     shell:
         """

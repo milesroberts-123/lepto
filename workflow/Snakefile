@@ -59,7 +59,7 @@ rule degenotate_all:
 
 rule dnds_all:
     input:
-        "results/dnds/yn"
+        "results/dnds/yn_results.txt"
 
 include: "rules/kmc.smk"
 include: "rules/panther.smk"

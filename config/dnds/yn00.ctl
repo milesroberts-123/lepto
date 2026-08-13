@@ -1,5 +1,5 @@
-seqfile = OG0001281_myb_cluster_only_cds.paml       * sequence data file name
-      outfile = yn             * main result file name
+seqfile = cds.paml       * sequence data file name
+      outfile = yn_results.txt             * main result file name
 
     verbose = 0         * 0: concise; 1: detailed output
      icode = 0          * 0: universal genetic code
