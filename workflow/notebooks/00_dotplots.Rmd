@@ -455,3 +455,38 @@ ggplot(fst_df, aes(x = col, y = row, fill = Fst)) +
 ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.pdf"), device = cairo_pdf, height = 6, width = 6)
 ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.png"), height = 6, width = 6)
 ```
+
+# coverage from mpileup
+
+```{r}
+mpileup_files <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "\\.mpileup$", recursive = T, full.names = T)
+
+mpileup <- mpileup_files %>%
+  set_names() %>%
+  map_dfr(~fread(.x, col.names = c("chrom", "pos", "ref", "depth", "bases", "quals")), .id = "source_file")
+
+mpileup$sample_id <- gsub("/", "", str_extract(mpileup$source_file, "/[1-8]/"))
+
+# coverage scan along the scaffold
+ggplot(mpileup, aes(x = pos, y = depth, color = sample_id)) +
+  geom_line() +
+  labs(x = "Position on hap1_scaffold_25 (bp)",
+       y = "Read depth",
+       color = "Sample",
+       title = "Coverage along hap1_scaffold_25")
+
+ggsave(paste0("../../results/by-date/", today, "/mpileup_coverage_scan.pdf"), device = cairo_pdf, width = 8, height = 6)
+ggsave(paste0("../../results/by-date/", today, "/mpileup_coverage_scan.png"), width = 8, height = 6)
+
+# depth distribution per sample
+ggplot(mpileup, aes(x = depth, fill = sample_id)) +
+  geom_histogram(bins = 50) +
+  facet_wrap(~sample_id, scales = "free_y") +
+  labs(x = "Read depth",
+       y = "Number of positions",
+       title = "Read depth distribution on hap1_scaffold_25") +
+  theme(legend.position = "none")
+
+ggsave(paste0("../../results/by-date/", today, "/mpileup_depth_histogram.pdf"), device = cairo_pdf, width = 8, height = 6)
+ggsave(paste0("../../results/by-date/", today, "/mpileup_depth_histogram.png"), width = 8, height = 6)
+```
