@@ -254,7 +254,7 @@ rule grenedalf_diversity_genome:
         grenedalf diversity --window-type genome \\
             --pool-sizes {input.pool_sizes} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
-            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --filter-total-snp-min-count {params.filter_sample_min_count} \\
             --window-average-policy {params.window_average_policy} \\
             --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
@@ -387,14 +387,14 @@ rule vg_diversity_all:
         expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.csv",
             variant=[vg_variant],
             backbone=[vg_backbone],
-            window=["interval", "genome"],
-            site = ["cds", "four", "zero"]),
+            window=["genome"],
+            site=["four"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.csv",
             variant=[vg_variant],
             backbone=[vg_backbone],
-            window=["interval", "genome"],
+            window=["genome"],
             ID=sample_ids,
-            site = ["cds", "four", "zero"]),
+            site = ["four"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup",
             variant=[vg_variant],
             backbone=[vg_backbone],

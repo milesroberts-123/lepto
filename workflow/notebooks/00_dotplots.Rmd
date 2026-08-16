@@ -463,16 +463,37 @@ mpileup_files <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "\\.m
 
 mpileup <- mpileup_files %>%
   set_names() %>%
-  map_dfr(~fread(.x, col.names = c("chrom", "pos", "ref", "depth", "bases", "quals")), .id = "source_file")
+  map_dfr(~fread(
+    cmd = paste0("awk '(($2 < 12500000 && $2 > 10500000))' ", .x, " | cut -f 2,4 --delimiter='\t'"),
+    col.names = c("pos", "depth")), 
+    .id = "source_file")
 
 mpileup$sample_id <- gsub("/", "", str_extract(mpileup$source_file, "/[1-8]/"))
 
+mpileup %>%
+  group_by(sample_id) %>%
+  filter(pos > 10964369 & pos < 12046688) %>%
+  summarize(mean_depth = mean(depth),
+            total_depth = sum(depth))
+
+mpileup %>%
+  group_by(sample_id) %>%
+  filter(pos < 10964369 & pos > 10500000) %>%
+  summarize(mean_depth = mean(depth))
+
+mpileup %>%
+  group_by(sample_id) %>%
+  filter(pos < 12500000 & pos > 12046688) %>%
+  summarize(mean_depth = mean(depth))
+
 # coverage scan along the scaffold
-ggplot(mpileup, aes(x = pos, y = depth, color = sample_id)) +
-  geom_line() +
+ggplot(mpileup %>% slice_sample(prop = 0.1), aes(x = pos, y = depth)) +
+  geom_point(shape = 16) +
+  geom_vline(xintercept = c(10964369, 12046688)) +
+  geom_vline(xintercept = c(11818528, 11822704), lty = 2) +
+  facet_wrap(~sample_id, nrow = 2, ncol = 4) +
   labs(x = "Position on hap1_scaffold_25 (bp)",
        y = "Read depth",
-       color = "Sample",
        title = "Coverage along hap1_scaffold_25")
 
 ggsave(paste0("../../results/by-date/", today, "/mpileup_coverage_scan.pdf"), device = cairo_pdf, width = 8, height = 6)
