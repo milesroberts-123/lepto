@@ -160,8 +160,6 @@ ggplot(subset(paf_plot, tname == "scaffold_25" & qname == "scaffold_2")) +
   geom_hline(yintercept = 10964369, lty = 1, color = "pink") +
   geom_hline(yintercept = 12046688, lty = 1, color = "pink") +
   annotate("point", x = (258876087+258880517)/2, y = (10964369+12046688)/2, color = "grey", size = 0.5, shape = 17) +
-  #geom_vline(xintercept = , lty = 2, color = "grey") +
-  #geom_vline(xintercept = , lty = 2, color = "grey") +
   labs(x = "White (i.e. Haplotype 2), scaffold 2 (bp)", y = "Pink (i.e. Haplotype 1), scaffold 25 (bp)",
        title = "minimap2 white vs pink alignment\nMYB cluster delinated with pink lines",
        color = "Strand") +
@@ -290,8 +288,6 @@ idxstats <- idxstats %>%
   summarize(sample = 1:8,
             group = sample %% 2,
             pct_mapped = mapped/(mapped+unmapped))
-
-wilcox.test()
 ```
 
 # genome scans: pi, fst, tajima's D
@@ -357,9 +353,8 @@ p <- ggplot(sub_data,  aes(x = (start + end)/2, y = tajimas_d)) +
 # 4. Close the PDF device
 dev.off()
 
-#### plot piN/piS ####
-
 ```
+
 # differentiation matrix
 
 ```{r}

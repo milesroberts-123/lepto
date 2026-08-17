@@ -1,3 +1,6 @@
+# PANTHER HMM database download, extraction, and batch hmmsearch
+# against expressed proteomes for each haplotype.
+
 rule panther_download:
     output:
         "results/panther/PANTHER19.0_hmmscoring.tgz"

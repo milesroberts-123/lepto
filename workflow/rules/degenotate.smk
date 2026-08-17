@@ -1,4 +1,7 @@
 
+# DEGENOTATE: degenerate site classification (cds/zero/four-fold)
+# from expressed GFF annotations and graph-genome-prefixed sequences.
+
 rule prefix_gff:
     input:
         "results/featurecounts/{species}_expressed.gff3"

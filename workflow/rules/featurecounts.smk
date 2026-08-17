@@ -1,3 +1,5 @@
+# featureCounts quantification and filtering of expressed genes for each haplotype.
+
 rule featurecounts_run:
     input:
         gff=lambda wildcards: config["featurecounts_annotations"][wildcards.species],

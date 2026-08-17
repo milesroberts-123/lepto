@@ -10,10 +10,6 @@ fastp_window_length: 4
 fastp_min_len: 31
 fastp_n_base_limit: 5
 
-# --- kmc_filter: how to build group-specific k-mer set ---
-subtract_groups: true
-min_group_count: 0
-
 # --- kmc_tools complex params ---
 kmc_intersect_depth: 1000000
 
@@ -74,8 +70,6 @@ featurecounts_paired: true
 # --- vg graph genome & diversity ---
 vg_ref_backbone: "hap1"
 vg_ref_variant: "hap2"
-#paftools_call_L: 100000
-#paftools_call_q: 30
 paftools_call_L: 1000
 paftools_call_q: 20
 samtools_mpileup_Q: 20

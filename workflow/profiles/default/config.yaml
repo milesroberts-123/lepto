@@ -24,8 +24,6 @@ set-threads:
    kmc_intersect_group: 4
    kmc_subtract: 4
    bwa_mem: 8
-   kmc_filter_reads: 4
-   combine_group_reads: 1
    panther_hmmsearch: 8
    orthofinder_run: 16
    featurecounts_run: 4
@@ -59,15 +57,6 @@ set-resources:
   bwa_mem:
     cpus_per_task: 8
     runtime: 120
-  kmc_filter_reads:
-    cpus_per_task: 4
-    runtime: 60
-  combine_group_reads:
-    cpus_per_task: 4
-    runtime: 60
-  bcalm:
-    cpus_per_task: 4
-    runtime: 300
   panther_hmmsearch:
     cpus_per_task: 8
     runtime: 20

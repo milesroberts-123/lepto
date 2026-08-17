@@ -15,13 +15,7 @@ sample_sizes = dict(zip(sample_ids, [s["sample_size"] for s in samples]))
 ref_names = list(config["bwa_refs"].keys())
 ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
 panther_species = list(config["panther_input_fastas"].keys())
-orthofinder_external_species = list(config.get("orthofinder_external_proteomes", {}).keys())
 
-#print(sample_ids)
-#print(sample_sizes)
-
-# format sample_sizes for grenedalf
-# Get the headers from the keys of the first dictionary
 with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)    
     for key, value in sample_sizes.items():
@@ -35,7 +29,6 @@ rule all:
         expand("results/bwa/{ref_name}/{group}.bam.bai", group=groups, ref_name=ref_names),
         expand("results/bwa/{ref_name}/{group}.bed", group=groups, ref_name=ref_names),
         expand("results/minimap2/{query}_vs_{target}.paf", zip, query=[p[0] for p in ref_pairs], target=[p[1] for p in ref_pairs])
-        #expand("results/assembly/{group}.unitigs.fa", group=groups)
 
 rule panther_all:
     input:

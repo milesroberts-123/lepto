@@ -1,3 +1,7 @@
+# Graph-genome construction and diversity analysis: build a pangenome
+# graph from two haplotypes, map pool-seq reads with vg giraffe, and
+# compute diversity/Fst with grenedalf over degenerate-site masks.
+
 vg_backbone = config["vg_ref_backbone"]
 vg_variant = config["vg_ref_variant"]
 

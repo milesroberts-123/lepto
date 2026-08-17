@@ -1,3 +1,6 @@
+# dN/dS analysis: MAFFT alignment, codon alignment via pal2nal,
+# and YN00 rate estimation.
+
 rule mafft_align:
     input:
         config["dnds_aa_fasta"]

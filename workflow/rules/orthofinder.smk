@@ -1,3 +1,6 @@
+# OrthoFinder pipeline: filter transcripts, prefix sequences by species,
+# stage proteomes, and run OrthoFinder to produce orthogroups.
+
 rule orthofinder_filter_t1:
     input:
         "results/featurecounts/{species}_expressed.faa"

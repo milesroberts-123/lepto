@@ -45,3 +45,4 @@ results/
 *.errlog
 *.aligned
 *.paml
+workflow/yn

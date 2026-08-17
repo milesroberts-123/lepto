@@ -1,3 +1,7 @@
+# k-mer counting, group k-mer sets, and read mapping to references.
+# Chain: CRAM -> fastq -> fastp -> kmc -> group intersect/union/subtract
+#        -> filtered kmers -> BWA mem -> bam/bed -> minimap2 ref alignment.
+
 rule samtools_fastq:
     input:
         cram=lambda wildcards: cram_paths[wildcards.ID]
