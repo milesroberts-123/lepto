@@ -83,6 +83,19 @@ grenedalf_min_base_qual: 20
 grenedalf_subsample_max_read_depth: 500
 grenedalf_fst_method: "unbiased-hudson"
 
+# --- sourmash ---
+sourmash_fastas:
+  hap1: "../resources/reference/hap1.fasta"
+  hap2: "../resources/reference/hap2.fasta"
+sourmash_sketch_modes:
+  hap1: "standard"
+  hap2: "multiplicity"
+sourmash_k: 31
+sourmash_scaled: 10000
+sourmash_s: "hap1"
+sourmash_t: "hap2"
+sourmash_estimator: "r_pc"
+
 # --- dn/ds ---
 dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"

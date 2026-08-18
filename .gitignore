@@ -45,4 +45,5 @@ results/
 *.errlog
 *.aligned
 *.paml
+*.sig
 workflow/yn

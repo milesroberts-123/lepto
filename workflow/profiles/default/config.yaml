@@ -37,6 +37,7 @@ set-threads:
    grenedalf_frequency: 4
    grenedalf_fst_interval: 8
    grenedalf_fst_genome: 8
+   sourmash_sketch: 1
 
 set-resources:
   samtools_fastq:
@@ -113,3 +114,6 @@ set-resources:
   grenedalf_fst_interval:
     cpus_per_task: 8
     runtime: 1440
+  sourmash_sketch:
+    cpus_per_task: 1
+    runtime: 60
