@@ -293,7 +293,7 @@ idxstats <- idxstats %>%
 # genome scans: pi, fst, tajima's D
 
 ```{r}
-div_scans <- list.files(path = "../results/vg/hap1_vs_hap2", pattern = "pi_windows_diversity", recursive = T, full.names = T)
+div_scans <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "interval_diversity", recursive = T, full.names = T)
 
 # Read and bind them while keeping the file names
 div_scans <- div_scans %>% 
@@ -301,17 +301,43 @@ div_scans <- div_scans %>%
   map_dfr(~fread(.x, col.names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","missing","numeric","passed","theta_pi","theta_watterson","tajimas_d")), .id = "source_file")
 
 # separate out sample and site class
-div_scans$sample <- gsub("../results/vg/hap1_vs_hap2/|/diversity.*", "", div_scans$source_file)
+div_scans$sample <- gsub("../results/vg/hap2_vs_hap1/|/diversity.*", "", div_scans$source_file)
 
-div_scans$site_class <- gsub("../results/vg/hap1_vs_hap2/.*/diversity/|/pi_windows.*", "", div_scans$source_file)
+div_scans$site_class <- gsub("../results/vg/hap2_vs_hap1/.*/diversity/|/grenedalf_results_interval.*", "", div_scans$source_file)
 
 head(div_scans)
 
+table(div_scans$site_class, div_scans$sample)
+
+### rename samples
+sample_lookup <- c(
+  "1" = "1P", "2" = "1W",
+  "3" = "2P", "4" = "2W",
+  "5" = "3P", "6" = "3W",
+  "7" = "4P", "8" = "4W"
+)
+
+div_scans <- div_scans %>%
+  mutate(sample = recode(sample, !!!sample_lookup))
+
+### include fst
+fst_scans <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "interval_fst", recursive = T, full.names = T)
+
+# Read and bind them while keeping the file names
+fst_scans <- fst_scans %>% 
+  set_names() %>% 
+  map_dfr(~fread(.x, col.names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","1:2.missing","1:2.numeric","1:2.passed","1:2.fst","1:3.missing","1:3.numeric","1:3.passed","1:3.fst","1:4.missing","1:4.numeric","1:4.passed","1:4.fst","1:5.missing","1:5.numeric","1:5.passed","1:5.fst","1:6.missing","1:6.numeric","1:6.passed","1:6.fst","1:7.missing","1:7.numeric","1:7.passed","1:7.fst","1:8.missing","1:8.numeric","1:8.passed","1:8.fst","2:3.missing","2:3.numeric","2:3.passed","2:3.fst","2:4.missing","2:4.numeric","2:4.passed","2:4.fst","2:5.missing","2:5.numeric","2:5.passed","2:5.fst","2:6.missing","2:6.numeric","2:6.passed","2:6.fst","2:7.missing","2:7.numeric","2:7.passed","2:7.fst","2:8.missing","2:8.numeric","2:8.passed","2:8.fst","3:4.missing","3:4.numeric","3:4.passed","3:4.fst","3:5.missing","3:5.numeric","3:5.passed","3:5.fst","3:6.missing","3:6.numeric","3:6.passed","3:6.fst","3:7.missing","3:7.numeric","3:7.passed","3:7.fst","3:8.missing","3:8.numeric","3:8.passed","3:8.fst","4:5.missing","4:5.numeric","4:5.passed","4:5.fst","4:6.missing","4:6.numeric","4:6.passed","4:6.fst","4:7.missing","4:7.numeric","4:7.passed","4:7.fst","4:8.missing","4:8.numeric","4:8.passed","4:8.fst","5:6.missing","5:6.numeric","5:6.passed","5:6.fst","5:7.missing","5:7.numeric","5:7.passed","5:7.fst","5:8.missing","5:8.numeric","5:8.passed","5:8.fst","6:7.missing","6:7.numeric","6:7.passed","6:7.fst","6:8.missing","6:8.numeric","6:8.passed","6:8.fst","7:8.missing","7:8.numeric","7:8.passed","7:8.fst")), .id = "source_file")
+
+fst_scans$site_class <- gsub(".*fst/|/grenedalf.*", "", fst_scans$source_file)
+
+div_scans <- div_scans %>% 
+  left_join(fst_scans, by = c("chrom", "start", "end", "site_class"))
+
 #### plot total diversity ####
-cds_scans <- subset(div_scans, site_class == "cds")
+#cds_scans <- subset(div_scans, site_class == "cds")
 
 # 1. Split the data frame into a list of data frames by your variable
-data_list <- split(cds_scans, list(cds_scans$chrom, cds_scans$sample), drop = T)
+data_list <- split(div_scans, list(div_scans$chrom, div_scans$sample, div_scans$site_class), drop = T)
 
 # 2. Open the PDF device
 pdf(paste0("../../results/by-date/", today, "/nucleotide_diversity_scans.pdf"), width = 8, height = 6)
@@ -323,7 +349,7 @@ p <- ggplot(sub_data,  aes(x = (start + end)/2, y = theta_pi)) +
   geom_smooth(method = "loess", span = 0.2, se = FALSE) +
   labs(x = "Window midpoint (bp)", 
        y = "Nucleotide diversity", 
-       title = paste0(unique(sub_data$chrom), ", Sample: ", unique(sub_data$sample)))
+       title = paste0(unique(sub_data$chrom), ", Sample: ", unique(sub_data$sample), ", Sites: ", unique(sub_data$site_class)))
   
   print(p)
 })
@@ -345,6 +371,36 @@ p <- ggplot(sub_data,  aes(x = (start + end)/2, y = tajimas_d)) +
        y = "Tajima's D", 
        title = paste0(unique(sub_data$chrom), 
                       ", Sample: ", 
+                      unique(sub_data$sample),
+                      ", Sites: ", 
+                      unique(sub_data$site_class))
+  )
+
+  print(p)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+### plot piN/piS
+div_wide <- dcast(div_scans, chrom + start + end + sample ~ site_class, value.var = "theta_pi")
+
+div_wide$piNpiS <- div_wide$zero/div_wide$four
+
+data_list <- split(div_wide, list(div_wide$chrom, div_wide$sample), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/piN_piS_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+p <- ggplot(sub_data,  aes(x = (start + end)/2, y = piNpiS)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+  labs(x = "Window midpoint (bp)", 
+       y = "piN/piS", 
+       title = paste0(unique(sub_data$chrom), 
+                      ", Sample: ", 
                       unique(sub_data$sample)))
   
   print(p)
@@ -352,6 +408,134 @@ p <- ggplot(sub_data,  aes(x = (start + end)/2, y = tajimas_d)) +
 
 # 4. Close the PDF device
 dev.off()
+
+### plot fst
+
+fst_long <- fst_scans %>%
+  pivot_longer(
+    cols = matches("^\\d+:\\d+\\."),
+    names_to = c("pair", ".value"),
+    names_pattern = "^(\\d+:\\d+)\\.(.*)$"
+  ) %>%
+  separate(pair, into = c("idx1", "idx2"), sep = ":", remove = FALSE) %>%
+  mutate(
+    sample1 = sample_lookup[idx1],
+    sample2 = sample_lookup[idx2],
+    pair = paste0(sample1, ":", sample2)
+  ) %>%
+  select(-idx1, -idx2)
+
+fst_long$site_class <- gsub(".*fst/|/grenedalf.*", "", fst_long$source_file)
+
+data_list <- split(fst_long, list(fst_long$chrom, fst_long$pair, fst_long$site_class), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/fst_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+  p <- ggplot(sub_data,  aes(x = (start + end)/2, y = fst)) +
+    geom_point(shape = 16) +
+    geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+    labs(x = "Window midpoint (bp)", 
+         y = "Fst (unbiased Hudson estimator)", 
+         title = paste0(unique(sub_data$chrom), 
+                        ", Pair: ", 
+                        unique(sub_data$pair),
+                        ", Sites:",
+                        (sub_data$site_class))
+         )
+  
+  print(p)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+#### plot only MYB cluster diversity ####
+
+hap1_scaffold_25_div <- div_scans %>%
+  filter(chrom == "hap1_scaffold_25",
+         site_class == "four")
+
+# 1. Split the data frame into a list of data frames by your variable
+data_list <- split(hap1_scaffold_25_div, list(hap1_scaffold_25_div$sample), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/hap1_scaffold_25_diversity_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+  
+p1 <- ggplot(sub_data,  aes(x = (start + end)/2, y = tajimas_d)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5) +
+  labs(x = "Window midpoint (bp)", 
+       y = "Tajima's D", 
+       title = paste0(unique(sub_data$chrom), 
+                      ", Sample: ", 
+                      unique(sub_data$sample),
+                      ", Sites: ", 
+                      unique(sub_data$site_class))
+  )
+
+  print(p1)
+  
+  p2 <- ggplot(sub_data,  aes(x = (start + end)/2, y = theta_pi)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5) +
+  labs(x = "Window midpoint (bp)", 
+       y = "Nucleotide diversity", 
+       title = paste0(unique(sub_data$chrom), 
+                      ", Sample: ", 
+                      unique(sub_data$sample),
+                      ", Sites: ", 
+                      unique(sub_data$site_class))
+  )
+
+  print(p2)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+#### plot only myb cluster fst ####
+hap1_scaffold_25_fst <- fst_long %>%
+  filter(chrom == "hap1_scaffold_25",
+         site_class == "four")
+
+data_list <- split(hap1_scaffold_25_fst, list(hap1_scaffold_25_fst$chrom, hap1_scaffold_25_fst$pair, hap1_scaffold_25_fst$site_class), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/hap1_scaffold_25_fst_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+  p <- ggplot(sub_data,  aes(x = (start + end)/2, y = fst)) +
+    geom_point(shape = 16) +
+    geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5) +
+    labs(x = "Window midpoint (bp)", 
+         y = "Fst (unbiased Hudson estimator)", 
+         title = paste0(unique(sub_data$chrom), 
+                        ", Pair: ", 
+                        unique(sub_data$pair),
+                        ", Sites:",
+                        (sub_data$site_class))
+         )
+  
+  print(p)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+### plot pi in pink vs pi in white
 
 ```
 
