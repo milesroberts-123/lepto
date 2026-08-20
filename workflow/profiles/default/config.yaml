@@ -38,6 +38,7 @@ set-threads:
    grenedalf_fst_interval: 8
    grenedalf_fst_genome: 8
    sourmash_sketch: 1
+   msmc2_run: 4
 
 set-resources:
   samtools_fastq:
@@ -117,3 +118,15 @@ set-resources:
   sourmash_sketch:
     cpus_per_task: 1
     runtime: 60
+  msmc2_faidx:
+    runtime: 60
+  msmc2_contigs:
+    runtime: 10
+  msmc2_mask:
+    runtime: 10
+  msmc2_generate:
+    cpus_per_task: 1
+    runtime: 60
+  msmc2_run:
+    cpus_per_task: 4
+    runtime: 1440

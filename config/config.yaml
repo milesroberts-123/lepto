@@ -96,6 +96,11 @@ sourmash_s: "hap1"
 sourmash_t: "hap2"
 sourmash_estimator: "r_pc"
 
+# --- MSMC2 ---
+msmc2_binary: "/path/to/msmc2"
+msmc2_generate_multihetsep: "/path/to/msmc-tools/generate_multihetsep.py"
+msmc2_p: "1*2+25*1+1*2+1*3"
+
 # --- dn/ds ---
 dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"

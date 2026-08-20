@@ -1,0 +1,7 @@
+name: msmc2
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12.11
+  - pysam
