@@ -1,5 +1,6 @@
 executor: slurm
 jobs: 100000
+cores: 100
 
 default-resources:
   slurm_account: "co_moilab"

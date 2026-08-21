@@ -40,7 +40,7 @@ rule minimap2_asm_paf:
         "results/vg/{variant}_vs_{backbone}.paf"
     conda: "../envs/minimap2.yaml"
     shell:
-        "minimap2 -t {threads} -cx asm10 -f 0.02 --cs {input.backbone} {input.variant} > {output}"
+        "minimap2 -t {threads} -c --eqx -x asm10 -f 0.02 --cs {input.backbone} {input.variant} > {output}"
 
 
 rule paftools_call_vcf:

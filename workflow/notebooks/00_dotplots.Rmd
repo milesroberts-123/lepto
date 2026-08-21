@@ -11,9 +11,10 @@ gc()
 .rs.restartR(clean = TRUE)
 ```
 
-# packages
+# set-up
 
 ```{r}
+# packages
 library(ggplot2)
 library(tidyverse)
 library(data.table)
@@ -21,11 +22,8 @@ library(ggforce)
 library(ape)
 library(scico)
 today <- Sys.Date()
-```
 
 # global ggplot2 theme
-
-```{r}
 theme_set(
   theme_minimal() +
     theme(
@@ -638,37 +636,88 @@ ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.png"), height = 6, 
 # coverage from mpileup
 
 ```{r}
+
 mpileup_files <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "\\.mpileup$", recursive = T, full.names = T)
 
 mpileup <- mpileup_files %>%
   set_names() %>%
   map_dfr(~fread(
-    cmd = paste0("awk '(($2 < 12500000 && $2 > 10500000))' ", .x, " | cut -f 2,4 --delimiter='\t'"),
+    #cmd = paste0("awk '(($2 < 13129007  && $2 > 9882050))' ", .x, " | cut -f 2,4 --delimiter='\t'"),
+    cmd = paste0("awk '(($2 < 12046688  && $2 > 10964369))' ", .x, " | cut -f 2,4 --delimiter='\t'"),
     col.names = c("pos", "depth")), 
     .id = "source_file")
 
 mpileup$sample_id <- gsub("/", "", str_extract(mpileup$source_file, "/[1-8]/"))
 
+total_depths <- mpileup %>%
+  group_by(sample_id) %>%
+  mutate(total_depth = sum(depth),
+            norm_depth = depth/total_depth)
+
+
+# Recode sample_id
+sample_map <- c(
+  "1" = "1P", "2" = "1W",
+  "3" = "2P", "4" = "2W",
+  "5" = "3P", "6" = "3W",
+  "7" = "4P", "8" = "4W"
+)
+
+total_depths <- total_depths %>%
+  mutate(sample_id = recode(sample_id, !!!sample_map))
+
+# Split into pair number + type (P/W), then pivot wider on norm_depth
+diff_df <- total_depths %>%
+  ungroup() %>%
+  mutate(
+    pair = substr(sample_id, 1, nchar(sample_id) - 1),  # e.g. "1", "2", "3", "4"
+    type = substr(sample_id, nchar(sample_id), nchar(sample_id))  # "P" or "W"
+  ) %>%
+  select(pos, pair, type, norm_depth) %>%
+  pivot_wider(names_from = type, values_from = norm_depth) %>%
+  mutate(norm_depth_diff = W - P)
+
+# compare coverage inside vs outside the k-mer mapping region
 mpileup %>%
   group_by(sample_id) %>%
   filter(pos > 10964369 & pos < 12046688) %>%
-  summarize(mean_depth = mean(depth),
-            total_depth = sum(depth))
+  summarize(P_locus_depth = sum(depth)) %>%
+  left_join(total_depths, by = "sample_id") %>%
+  mutate(P_locus_lambda = P_locus_depth/total_depth)
 
 mpileup %>%
   group_by(sample_id) %>%
-  filter(pos < 10964369 & pos > 10500000) %>%
-  summarize(mean_depth = mean(depth))
+  filter(pos < 13129007 & pos > 12046688) %>%
+  summarize(downstream_locus_depth = sum(depth))  %>%
+  left_join(total_depths, by = "sample_id") %>%
+  mutate(downstream_locus_lambda = downstream_locus_depth/total_depth)
 
 mpileup %>%
   group_by(sample_id) %>%
-  filter(pos < 12500000 & pos > 12046688) %>%
-  summarize(mean_depth = mean(depth))
+  filter(pos < 10964369 & pos > 9882050) %>%
+  summarize(upstream_locus_depth = sum(depth))  %>%
+  left_join(total_depths, by = "sample_id") %>%
+  mutate(upstream_locus_lambda = upstream_locus_depth/total_depth)
 
 # coverage scan along the scaffold
-ggplot(mpileup %>% slice_sample(prop = 0.1), aes(x = pos, y = depth)) +
+ggplot(diff_df %>% slice_sample(prop = 0.01), aes(x = pos, y = norm_depth_diff*1e6)) +
   geom_point(shape = 16) +
-  geom_vline(xintercept = c(10964369, 12046688)) +
+  geom_smooth(method = "loess", color = "lightgrey", se = FALSE) +
+  geom_vline(xintercept = c(10964369, 12046688), color = "pink") +
+  facet_wrap(~pair, nrow = 1, ncol = 4) +
+  labs(x = "Position on hap1_scaffold_25 (bp)",
+       y = "\u0394 Standardized depth (W-P)",
+       title = "Coverage along hap1_scaffold_25") +
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+ggsave(paste0("../../results/by-date/", today, "/mpileup_delta_coverage_scan.pdf"), device = cairo_pdf, width = 8, height = 5)
+ggsave(paste0("../../results/by-date/", today, "/mpileup_delta_coverage_scan.png"), width = 8, height = 5)
+
+# coverage scan along the scaffold
+ggplot(mpileup %>% slice_sample(prop = 0.01), aes(x = pos, y = depth)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", se = F, span = 0.2) +
+  #geom_vline(xintercept = c(10964369, 12046688)) +
   geom_vline(xintercept = c(11818528, 11822704), lty = 2) +
   facet_wrap(~sample_id, nrow = 2, ncol = 4) +
   labs(x = "Position on hap1_scaffold_25 (bp)",
@@ -689,4 +738,55 @@ ggplot(mpileup, aes(x = depth, fill = sample_id)) +
 
 ggsave(paste0("../../results/by-date/", today, "/mpileup_depth_histogram.pdf"), device = cairo_pdf, width = 8, height = 6)
 ggsave(paste0("../../results/by-date/", today, "/mpileup_depth_histogram.png"), width = 8, height = 6)
+```
+
+# k-mer histogram
+
+```{r}
+
+kmc_hist_hap1 <- read.table("/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/hap1.33.hist", header=F)
+kmc_hist_hap2 <- read.table("/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/hap2.33.hist", header=F)
+
+kmc_hist_hap1$ref <- "hap1"
+kmc_hist_hap2$ref <- "hap2"
+
+kmc_hist <- rbind(kmc_hist_hap1, kmc_hist_hap2)
+
+sum(kmc_hist$V2[1])/sum(kmc_hist$V2)
+
+sum(kmc_hist_hap2$V2[1])/sum(kmc_hist_hap2$V2)
+
+ggplot(kmc_hist, aes(x = V1, y = V2, color = ref)) +
+  geom_point(alpha = 0.4) +
+  geom_line(alpha = 0.4) +
+  scale_color_scico_d(palette = "acton", direction = -1, begin = 0.05, end = 0.95) +
+  scale_y_continuous(labels = scales::comma) + # Cleans up large scientific notation numbers
+  labs(
+    title = "Reference k-mer histogram (86% of 33-mers are unique)",
+    x = "K-mer count",
+    y = "Number of k-mers with count",
+    color = "Haplotype"
+  ) +
+  scale_y_log10() +
+  scale_x_log10() +
+  theme_minimal() +
+  theme(text = element_text(size = 16))
+
+ggsave(paste0("../../results/by-date/", today, "/reference_kmer_histogram.pdf"), device = cairo_pdf, width = 8, height = 6)
+ggsave(paste0("../../results/by-date/", today, "/reference_kmer_histogram.png"), width = 8, height = 6)
+
+```
+
+# MSMC2
+
+```{r}
+
+mu <- 7e-9   # substitute species-appropriate value
+gen <- 1       # substitute species-appropriate value
+dat <- read.table("/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/out_prefix.final.txt", header=TRUE)
+
+
+plot(dat$left_time_boundary/mu*gen, (1/dat$lambda)/(2*mu), log="x", type="s",
+     xlab="Years ago", ylab="Effective population size", log="y")
+
 ```

@@ -1,4 +1,11 @@
+*.gff3
+*.gff3.gz
+*.vcf.gz
+*.tbi
+*.hist
 *.cram
+*.log
+*.multihetsep
 *.bam
 *.sam
 *.bai

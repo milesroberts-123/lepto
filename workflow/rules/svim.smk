@@ -14,9 +14,8 @@ rule minimap2_svim_asm:
     conda: "../envs/minimap2.yaml"
     params:
         x=config["svim_minimap_x"],
-        r2k=config["svim_minimap_r2k"]
     shell:
-        "minimap2 -a -x {params.x} --cs -r2k -t {threads} {input.ref} {input.qry} > {output}"
+        "minimap2 -a -x {params.x} -r2k --cs -t {threads} {input.ref} {input.qry} > {output}"
 
 
 rule samtools_sort_svim:
@@ -50,7 +49,7 @@ rule svim_asm_run:
         "results/svim/{variant}_vs_{backbone}/svim-asm.vcf"
     conda: "../envs/svim.yaml"
     shell:
-        "svim-asm haploid results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"
+        "svim-asm haploid --reference_gap_tolerance 2000000 --max_sv_size 25000000 results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"
 
 
 rule svim_all:
