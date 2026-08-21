@@ -1,0 +1,8 @@
+name: svim
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - svim-asm
+  - minimap2
+  - samtools

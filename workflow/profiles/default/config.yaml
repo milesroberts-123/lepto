@@ -39,6 +39,8 @@ set-threads:
    grenedalf_fst_genome: 8
    sourmash_sketch: 1
    msmc2_run: 4
+   minimap2_svim_asm: 8
+   samtools_sort_svim: 4
 
 set-resources:
   samtools_fastq:
@@ -129,4 +131,15 @@ set-resources:
     runtime: 60
   msmc2_run:
     cpus_per_task: 4
+    runtime: 1440
+  minimap2_svim_asm:
+    cpus_per_task: 8
+    runtime: 120
+  samtools_sort_svim:
+    cpus_per_task: 4
+    runtime: 360
+  samtools_index_svim:
+    runtime: 60
+  svim_asm_run:
+    cpus_per_task: 1
     runtime: 1440
