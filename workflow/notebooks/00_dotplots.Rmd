@@ -385,6 +385,8 @@ div_wide <- dcast(div_scans, chrom + start + end + sample ~ site_class, value.va
 
 div_wide$piNpiS <- div_wide$zero/div_wide$four
 
+div_wide$piNpiS[is.infinite(div_wide$piNpiS)] <- NA
+
 data_list <- split(div_wide, list(div_wide$chrom, div_wide$sample), drop = T)
 
 # 2. Open the PDF device
@@ -394,7 +396,7 @@ pdf(paste0("../../results/by-date/", today, "/piN_piS_scans.pdf"), width = 8, he
 walk(data_list, function(sub_data) {
 p <- ggplot(sub_data,  aes(x = (start + end)/2, y = piNpiS)) +
   geom_point(shape = 16) +
-  geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "lightblue") +
   labs(x = "Window midpoint (bp)", 
        y = "piN/piS", 
        title = paste0(unique(sub_data$chrom), 

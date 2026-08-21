@@ -134,8 +134,8 @@ set-resources:
     cpus_per_task: 4
     runtime: 1440
   minimap2_svim_asm:
-    cpus_per_task: 8
-    runtime: 120
+    cpus_per_task: 32
+    runtime: 240
   samtools_sort_svim:
     cpus_per_task: 4
     runtime: 360
