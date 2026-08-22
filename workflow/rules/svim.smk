@@ -1,14 +1,28 @@
-# SV calling with svim-asm: align variant assembly to backbone with
-# minimap2, sort/index, then call structural variants in haploid mode.
+# SV calling with svim-asm: chunk both assemblies into fixed-size windows
+# (to keep contigs within SAM length limits), align variant assembly to
+# backbone with minimap2, sort/index, then call structural variants in
+# haploid mode.
 
-svim_backbone = config["vg_ref_backbone"]
-svim_variant = config["vg_ref_variant"]
+
+rule seqkit_sliding:
+    input:
+        "results/vg/{reference}_prefixed.fasta"
+    output:
+        "results/svim/{reference}_chunked.fasta"
+    conda: "../envs/minimap2.yaml"
+    params:
+        chunk=config["svim_chunk_size"]
+    shell:
+        """
+        mkdir -p results/svim
+        seqkit sliding -W {params.chunk} -s {params.chunk} -g -o {output} {input}
+        """
 
 
 rule minimap2_svim_asm:
     input:
-        ref="results/vg/{backbone}_prefixed.fasta",
-        qry="results/vg/{variant}_prefixed.fasta"
+        ref="results/svim/{backbone}_chunked.fasta",
+        qry="results/svim/{variant}_chunked.fasta"
     output:
         "results/svim/{variant}_vs_{backbone}.sam"
     conda: "../envs/minimap2.yaml"
@@ -44,16 +58,12 @@ rule svim_asm_run:
     input:
         bam="results/svim/{variant}_vs_{backbone}.sorted.bam",
         bai="results/svim/{variant}_vs_{backbone}.sorted.bam.bai",
-        ref="results/vg/{backbone}_prefixed.fasta"
+        ref="results/svim/{backbone}_chunked.fasta"
     output:
         "results/svim/{variant}_vs_{backbone}/svim-asm.vcf"
     conda: "../envs/svim.yaml"
+    params:
+        gap_tolerance=config["svim_reference_gap_tolerance"],
+        max_sv_size=config["svim_max_sv_size"]
     shell:
-        "svim-asm haploid --reference_gap_tolerance 2000000 --max_sv_size 25000000 results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"
-
-
-rule svim_all:
-    input:
-        expand("results/svim/{variant}_vs_{backbone}/svim-asm.vcf",
-               variant=[svim_variant],
-               backbone=[svim_backbone])
+        "svim-asm haploid --reference_gap_tolerance {params.gap_tolerance} --max_sv_size {params.max_sv_size} results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"

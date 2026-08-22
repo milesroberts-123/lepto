@@ -4,9 +4,6 @@
 # Input VCF is the variant-vs-backbone VCF from the vg branch;
 # callable mask is the degenotate CDS bed for the backbone.
 
-msmc2_backbone = config["vg_ref_backbone"]
-msmc2_variant = config["vg_ref_variant"]
-
 
 rule msmc2_faidx:
     input:
@@ -61,6 +58,7 @@ rule msmc2_generate:
 
 
 def msmc2_inputs(wildcards):
+    """Return per-chromosome multihetsep files listed in the contig checkpoint."""
     contigs = checkpoints.msmc2_contigs.get(backbone=wildcards.backbone).output[0]
     with open(contigs) as f:
         chroms = [line.strip() for line in f if line.strip()]
@@ -85,10 +83,3 @@ rule msmc2_run:
         """
         {params.binary} -t {threads} -p {params.p} -o {params.prefix} {input}
         """
-
-
-rule msmc2_all:
-    input:
-        expand("results/msmc2/{variant}_vs_{backbone}/msmc2.final.txt",
-               variant=[msmc2_variant],
-               backbone=[msmc2_backbone])

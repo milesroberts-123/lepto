@@ -22,8 +22,8 @@ snakemake -s workflow/Snakefile --profile workflow/profiles/default --use-conda 
 - **`config/config.yaml`** — all workflow parameters (k-mer sizes, BWA settings, vg/grenedalf thresholds, etc.)
 - **`config/samples.tsv`** — sample metadata (sample_id, cram_path, group, sample_size)
 - **`workflow/Snakefile`** — top-level Snakefile; parses config and samples, defines target rules, includes rule files
-- **`workflow/rules/*.smk`** — 7 rule modules: `kmc.smk`, `panther.smk`, `orthofinder.smk`, `featurecounts.smk`, `degenotate.smk`, `vg_diversity.smk`, `dnds.smk`
-- **`workflow/envs/*.yaml`** — conda environment specs for the tools used by rules (currently 13 active envs; bcalm, metaspades, and bbtools were removed as unused)
+- **`workflow/rules/*.smk`** — 10 rule modules: `kmc.smk`, `panther.smk`, `orthofinder.smk`, `featurecounts.smk`, `degenotate.smk`, `vg_diversity.smk`, `dnds.smk`, `sourmash.smk`, `msmc2.smk`, `svim.smk`
+- **`workflow/envs/*.yaml`** — conda environment specs for the tools used by rules (currently 16 active envs; bcalm, metaspades, and bbtools were removed as unused)
 - **`workflow/profiles/default/config.yaml`** — Slurm executor config for UC Berkeley Savio cluster
 
 ## Key constraints
@@ -33,5 +33,5 @@ snakemake -s workflow/Snakefile --profile workflow/profiles/default --use-conda 
 - **External data is not in the repo.** The `resources/` directory (reference genomes, annotations, CRAM files) is gitignored and must be provisioned separately. Paths in `config.yaml` use `../resources/` relative to `workflow/`.
 - **`pool_sizes.csv` is auto-generated** at Snakefile parse time (lines 19-22 of `Snakefile`) from `samples.tsv`. Do not commit or manually edit it.
 - **Conda environments are required.** Always use `--use-conda` when running snakemake.
-- **Target rules** (entrypoints): `all`, `panther_all`, `orthofinder_all`, `featurecounts_all`, `degenotate_all`, `vg_diversity_all`, `dnds_all`.
+- **Target rules** (entrypoints): `all`, `panther_all`, `orthofinder_all`, `featurecounts_all`, `degenotate_all`, `vg_diversity_all`, `dnds_all`, `sourmash_all`, `msmc2_all`, `svim_all`.
 - **The `.gitignore` is aggressive** — it excludes most bioinformatics file types (`.fastq`, `.bam`, `.fasta`, `.vcf`, `.tsv`, etc.). Be careful when adding new output types.

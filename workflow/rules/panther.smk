@@ -57,7 +57,6 @@ rule panther_hmmsearch:
         out="results/panther/{species}/hmmsearch/batch_{batch}.out"
     conda: "../envs/hmmer.yaml"
     params:
-        cpu=config["panther_hmmsearch_cpu"],
         evalue=config["panther_hmmsearch_evalue"],
         dome=config["panther_hmmsearch_dome"],
         ince=config["panther_hmmsearch_ince"],
@@ -66,7 +65,7 @@ rule panther_hmmsearch:
         """
         mkdir -p results/panther/{wildcards.species}/hmmsearch
         if [ -s {input.fasta} ]; then
-            hmmsearch --cpu {params.cpu} \
+            hmmsearch --cpu {threads} \
                 -E {params.evalue} \
                 --domE {params.dome} \
                 --incE {params.ince} \

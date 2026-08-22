@@ -19,29 +19,30 @@ default-resources:
   runtime: 60
 
 set-threads:
-   samtools_fastq: 4
-   fastp: 8
-   kmc_count: 8
-   kmc_intersect_group: 4
-   kmc_subtract: 4
-   bwa_mem: 8
-   panther_hmmsearch: 8
-   orthofinder_run: 16
-   featurecounts_run: 4
-   minimap2_asm_paf: 16
-   vg_autoindex: 2
-   vg_giraffe: 12
-   vg_surject: 8
-   samtools_sort_vg: 8
-   grenedalf_diversity_interval: 4
-   grenedalf_diversity_genome: 4
-   grenedalf_frequency: 4
-   grenedalf_fst_interval: 8
-   grenedalf_fst_genome: 8
-   sourmash_sketch: 1
-   msmc2_run: 4
-   minimap2_svim_asm: 8
-   samtools_sort_svim: 4
+  samtools_fastq: 4
+  fastp: 8
+  kmc_count: 8
+  kmc_intersect_group: 4
+  kmc_subtract: 4
+  bwa_mem: 8
+  panther_hmmsearch: 8
+  orthofinder_run: 16
+  featurecounts_run: 4
+  minimap2_asm_paf: 16
+  vg_autoindex: 2
+  vg_giraffe: 12
+  vg_surject: 8
+  samtools_sort_vg: 8
+  grenedalf_diversity_interval: 4
+  grenedalf_diversity_genome: 4
+  grenedalf_frequency: 4
+  grenedalf_fst_interval: 8
+  grenedalf_fst_genome: 8
+  sourmash_sketch: 1
+  msmc2_run: 4
+  seqkit_sliding: 4
+  minimap2_svim_asm: 8
+  samtools_sort_svim: 4
 
 set-resources:
   samtools_fastq:
@@ -133,6 +134,9 @@ set-resources:
   msmc2_run:
     cpus_per_task: 4
     runtime: 1440
+  seqkit_sliding:
+    cpus_per_task: 4
+    runtime: 60
   minimap2_svim_asm:
     cpus_per_task: 32
     runtime: 240

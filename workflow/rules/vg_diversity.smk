@@ -2,11 +2,9 @@
 # graph from two haplotypes, map pool-seq reads with vg giraffe, and
 # compute diversity/Fst with grenedalf over degenerate-site masks.
 
-vg_backbone = config["vg_ref_backbone"]
-vg_variant = config["vg_ref_variant"]
-
 
 def count_vcf_contigs(vcfgz):
+    """Return the number of contigs in a tabix-indexed VCF."""
     import subprocess
     result = subprocess.run(["tabix", "-l", vcfgz], capture_output=True, text=True)
     return len(result.stdout.strip().split("\n"))
@@ -307,8 +305,8 @@ rule grenedalf_frequency:
 
 rule grenedalf_fst_interval:
     input:
-        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
-        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[config["vg_ref_variant"]], backbone=[config["vg_ref_backbone"]], ID=sample_ids),
+        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[config["vg_ref_variant"]], backbone=[config["vg_ref_backbone"]], ID=sample_ids),
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
@@ -346,8 +344,8 @@ rule grenedalf_fst_interval:
 
 rule grenedalf_fst_genome:
     input:
-        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
-        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[vg_variant], backbone=[vg_backbone], ID=sample_ids),
+        bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[config["vg_ref_variant"]], backbone=[config["vg_ref_backbone"]], ID=sample_ids),
+        bai=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai", variant=[config["vg_ref_variant"]], backbone=[config["vg_ref_backbone"]], ID=sample_ids),
         dict="results/vg/{backbone}_prefixed.dict",
         bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         pool_sizes="pool_sizes.csv"
@@ -380,31 +378,4 @@ rule grenedalf_fst_genome:
             --threads {threads} \\
             --sam-path {input.bam}
         """
-
-rule vg_diversity_all:
-    input:
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.csv",
-            variant=[vg_variant],
-            backbone=[vg_backbone],
-            ID=sample_ids,
-            site = ["cds"]),
-        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.csv",
-            variant=[vg_variant],
-            backbone=[vg_backbone],
-            window=["interval","genome"],
-            site=["cds","four","zero"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.csv",
-            variant=[vg_variant],
-            backbone=[vg_backbone],
-            window=["interval","genome"],
-            ID=sample_ids,
-            site = ["cds","four","zero"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup",
-            variant=[vg_variant],
-            backbone=[vg_backbone],
-            ID=sample_ids),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt",
-            variant=[vg_variant],
-            backbone=[vg_backbone],
-            ID=sample_ids)
 

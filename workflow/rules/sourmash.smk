@@ -38,10 +38,3 @@ rule sourmash_mutation_rate:
             --s-sig {input.s} \
             --t-sig {input.t} > {output}
         """
-
-
-rule sourmash_all:
-    input:
-        "results/sourmash/mutation_rate_{s}_vs_{t}.txt".format(
-            s=config["sourmash_s"], t=config["sourmash_t"]),
-        expand("results/sourmash/{fasta}.sig", fasta=config["sourmash_fastas"].keys())

@@ -35,7 +35,6 @@ panther_input_fastas:
   hap1: "../resources/annotation/LPJR3B1_scaf_hap1_braker_aa.fasta"
   hap2: "../resources/annotation/LPJR3B1_scaf_hap2_braker_aa.fasta"
 panther_batches: 3000
-panther_hmmsearch_cpu: 8
 panther_hmmsearch_evalue: 0.001
 panther_hmmsearch_dome: 1e-8
 panther_hmmsearch_ince: 0.001
@@ -97,8 +96,11 @@ sourmash_t: "hap2"
 sourmash_estimator: "r_pc"
 
 # --- svim-asm ---
+svim_chunk_size: 200000000
 svim_minimap_x: "asm10"
 svim_samtools_sort_m: "4G"
+svim_reference_gap_tolerance: 2000000
+svim_max_sv_size: 25000000
 
 # --- MSMC2 ---
 msmc2_binary: "/global/scratch/users/milesroberts/conda/msmc2/bin/msmc2_Linux"

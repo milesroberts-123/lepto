@@ -17,7 +17,7 @@ ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
 panther_species = list(config["panther_input_fastas"].keys())
 
 with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
-    writer = csv.writer(file)    
+    writer = csv.writer(file)
     for key, value in sample_sizes.items():
         writer.writerow([key, value])
 
@@ -64,3 +64,48 @@ include: "rules/dnds.smk"
 include: "rules/sourmash.smk"
 include: "rules/msmc2.smk"
 include: "rules/svim.smk"
+
+rule vg_diversity_all:
+    input:
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.csv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            ID=sample_ids,
+            site=["cds"]),
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.csv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            window=["interval", "genome"],
+            site=["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.csv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            window=["interval", "genome"],
+            ID=sample_ids,
+            site=["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            ID=sample_ids),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            ID=sample_ids)
+
+rule sourmash_all:
+    input:
+        "results/sourmash/mutation_rate_{s}_vs_{t}.txt".format(
+            s=config["sourmash_s"], t=config["sourmash_t"]),
+        expand("results/sourmash/{fasta}.sig", fasta=config["sourmash_fastas"].keys())
+
+rule msmc2_all:
+    input:
+        expand("results/msmc2/{variant}_vs_{backbone}/msmc2.final.txt",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]])
+
+rule svim_all:
+    input:
+        expand("results/svim/{variant}_vs_{backbone}/svim-asm.vcf",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]])
