@@ -29,7 +29,7 @@ rule minimap2_svim_asm:
     params:
         x=config["svim_minimap_x"],
     shell:
-        "minimap2 -a -r2k -x {params.x} --cs -t {threads} {input.ref} {input.qry} > {output}"
+        "minimap2 -a -f 0.02 -r2k -x {params.x} --cs -t {threads} {input.ref} {input.qry} > {output}"
 
 
 rule samtools_sort_svim:
