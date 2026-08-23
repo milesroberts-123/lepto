@@ -40,11 +40,37 @@ checkpoint msmc2_contigs:
         """
 
 
-rule msmc2_generate:
+rule msmc2_subset_vcf:
     input:
         vcf="results/vg/{variant}_vs_{backbone}.vcf.gz",
-        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi",
-        mask="results/msmc2/{backbone}_cds.mask.bed.gz"
+        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
+    output:
+        temp("results/msmc2/{variant}_vs_{backbone}/{chrom}.vcf.gz")
+    conda: "../envs/bcftools.yaml"
+    shell:
+        """
+        mkdir -p results/msmc2/{wildcards.variant}_vs_{wildcards.backbone}
+        bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o {output}
+        """
+
+
+rule msmc2_subset_mask:
+    input:
+        "results/msmc2/{backbone}_cds.mask.bed.gz"
+    output:
+        temp("results/msmc2/{backbone}/{chrom}.cds.mask.bed.gz")
+    conda: "../envs/bcftools.yaml"
+    shell:
+        """
+        mkdir -p results/msmc2/{wildcards.backbone}
+        zcat {input} | awk -v c={wildcards.chrom} '$1==c' | bgzip -c > {output}
+        """
+
+
+rule msmc2_generate:
+    input:
+        vcf="results/msmc2/{variant}_vs_{backbone}/{chrom}.vcf.gz",
+        mask="results/msmc2/{backbone}/{chrom}.cds.mask.bed.gz"
     output:
         "results/msmc2/{variant}_vs_{backbone}/{chrom}.multihetsep.txt"
     conda: "../envs/msmc2.yaml"
