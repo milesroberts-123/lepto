@@ -60,7 +60,7 @@ rule svim_asm_run:
         bai="results/svim/{variant}_vs_{backbone}.sorted.bam.bai",
         ref="results/svim/{backbone}_chunked.fasta"
     output:
-        "results/svim/{variant}_vs_{backbone}/svim-asm.vcf"
+        "results/svim/{variant}_vs_{backbone}/variants.vcf"
     conda: "../envs/svim.yaml"
     params:
         gap_tolerance=config["svim_reference_gap_tolerance"],

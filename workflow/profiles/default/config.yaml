@@ -42,7 +42,7 @@ set-threads:
   msmc2_run: 4
   seqkit_sliding: 4
   minimap2_svim_asm: 16
-  samtools_sort_svim: 4
+  samtools_sort_svim: 2
 
 set-resources:
   samtools_fastq:

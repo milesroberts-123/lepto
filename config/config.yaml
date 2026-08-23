@@ -98,7 +98,7 @@ sourmash_estimator: "r_pc"
 # --- svim-asm ---
 svim_chunk_size: 200000000
 svim_minimap_x: "asm10"
-svim_samtools_sort_m: "4G"
+svim_samtools_sort_m: "1G"
 svim_reference_gap_tolerance: 2000000
 svim_max_sv_size: 25000000
 
