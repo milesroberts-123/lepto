@@ -67,3 +67,25 @@ rule svim_asm_run:
         max_sv_size=config["svim_max_sv_size"]
     shell:
         "svim-asm haploid --types DEL,INS,INV --reference_gap_tolerance {params.gap_tolerance} --max_sv_size {params.max_sv_size} results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"
+
+
+rule bcftools_norm_svim:
+    input:
+        vcf="results/svim/{variant}_vs_{backbone}/variants.vcf",
+        ref="results/svim/{backbone}_chunked.fasta"
+    output:
+        "results/svim/{variant}_vs_{backbone}/variants.norm.vcf"
+    conda: "../envs/bcftools.yaml"
+    shell:
+        "bcftools norm -f {input.ref} -m +any {input.vcf} -o {output}"
+
+
+rule bgzip_tabix_svim_vcf:
+    input:
+        "results/svim/{variant}_vs_{backbone}/variants.norm.vcf"
+    output:
+        vcfgz="results/svim/{variant}_vs_{backbone}/variants.norm.vcf.gz",
+        tbi="results/svim/{variant}_vs_{backbone}/variants.norm.vcf.gz.tbi"
+    conda: "../envs/bcftools.yaml"
+    shell:
+        "bgzip -c {input} > {output.vcfgz} && tabix -p vcf {output.vcfgz}"

@@ -43,6 +43,7 @@ set-threads:
   seqkit_sliding: 4
   minimap2_svim_asm: 16
   samtools_sort_svim: 2
+  bcftools_norm_svim: 2
 
 set-resources:
   samtools_fastq:
@@ -144,6 +145,11 @@ set-resources:
     cpus_per_task: 4
     runtime: 360
   samtools_index_svim:
+    runtime: 60
+  bcftools_norm_svim:
+    cpus_per_task: 2
+    runtime: 120
+  bgzip_tabix_svim_vcf:
     runtime: 60
   svim_asm_run:
     cpus_per_task: 1

@@ -106,6 +106,9 @@ rule msmc2_all:
 
 rule svim_all:
     input:
-        expand("results/svim/{variant}_vs_{backbone}/variants.vcf",
+        expand("results/svim/{variant}_vs_{backbone}/variants.norm.vcf.gz",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]]),
+        expand("results/svim/{variant}_vs_{backbone}/variants.norm.vcf.gz.tbi",
                variant=[config["vg_ref_variant"]],
                backbone=[config["vg_ref_backbone"]])
