@@ -40,17 +40,29 @@ checkpoint msmc2_contigs:
         """
 
 
+rule msmc2_het_vcf:
+    input:
+        "results/vg/{variant}_vs_{backbone}.vcf.gz"
+    output:
+        temp("results/msmc2/{variant}_vs_{backbone}.het.vcf")
+    conda: "../envs/bcftools.yaml"
+    shell:
+        """
+        mkdir -p results/msmc2
+        zcat {input} | sed 's:1/1:0/1:g' > {output}
+        """
+
+
 rule msmc2_subset_vcf:
     input:
-        vcf="results/vg/{variant}_vs_{backbone}.vcf.gz",
-        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
+        "results/msmc2/{variant}_vs_{backbone}.het.vcf"
     output:
         temp("results/msmc2/{variant}_vs_{backbone}/{chrom}.vcf.gz")
     conda: "../envs/bcftools.yaml"
     shell:
         """
         mkdir -p results/msmc2/{wildcards.variant}_vs_{wildcards.backbone}
-        bcftools view -r {wildcards.chrom} {input.vcf} -Oz -o {output}
+        bcftools view -r {wildcards.chrom} {input} -Oz -o {output}
         """
 
 
@@ -107,5 +119,5 @@ rule msmc2_run:
         prefix=lambda wildcards: f"results/msmc2/{wildcards.variant}_vs_{wildcards.backbone}/msmc2"
     shell:
         """
-        {params.binary} -t {threads} -p {params.p} -o {params.prefix} {input}
+        {params.binary} -I 0-1 -t {threads} -p {params.p} -o {params.prefix} {input}
         """
