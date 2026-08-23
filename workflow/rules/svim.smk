@@ -36,7 +36,7 @@ rule samtools_sort_svim:
     input:
         "results/svim/{variant}_vs_{backbone}.sam"
     output:
-        temp("results/svim/{variant}_vs_{backbone}.sorted.bam")
+        "results/svim/{variant}_vs_{backbone}.sorted.bam"
     conda: "../envs/minimap2.yaml"
     params:
         m=config["svim_samtools_sort_m"]

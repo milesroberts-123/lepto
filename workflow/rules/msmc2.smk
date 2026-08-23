@@ -54,6 +54,7 @@ rule msmc2_het_vcf:
 
 
 rule msmc2_subset_vcf:
+    group: "msmc2_subset"
     input:
         "results/msmc2/{variant}_vs_{backbone}.het.vcf"
     output:
@@ -67,6 +68,7 @@ rule msmc2_subset_vcf:
 
 
 rule msmc2_subset_mask:
+    group: "msmc2_subset"
     input:
         "results/msmc2/{backbone}_cds.mask.bed.gz"
     output:
@@ -80,6 +82,7 @@ rule msmc2_subset_mask:
 
 
 rule msmc2_generate:
+    group: "msmc2_subset"
     input:
         vcf="results/msmc2/{variant}_vs_{backbone}/{chrom}.vcf.gz",
         mask="results/msmc2/{backbone}/{chrom}.cds.mask.bed.gz"
