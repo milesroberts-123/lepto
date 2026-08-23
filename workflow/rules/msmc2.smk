@@ -44,26 +44,29 @@ rule msmc2_het_vcf:
     input:
         "results/vg/{variant}_vs_{backbone}.vcf.gz"
     output:
-        temp("results/msmc2/{variant}_vs_{backbone}.het.vcf")
+        vcfgz=temp("results/msmc2/{variant}_vs_{backbone}.het.vcf.gz"),
+        tbi=temp("results/msmc2/{variant}_vs_{backbone}.het.vcf.gz.tbi")
     conda: "../envs/bcftools.yaml"
     shell:
         """
         mkdir -p results/msmc2
-        zcat {input} | sed 's:1/1:0/1:g' > {output}
+        zcat {input} | sed 's:1/1:0/1:g' | bgzip -c > {output.vcfgz}
+        tabix -p vcf {output.vcfgz}
         """
 
 
 rule msmc2_subset_vcf:
     group: "msmc2_subset"
     input:
-        "results/msmc2/{variant}_vs_{backbone}.het.vcf"
+        vcfgz="results/msmc2/{variant}_vs_{backbone}.het.vcf.gz",
+        tbi="results/msmc2/{variant}_vs_{backbone}.het.vcf.gz.tbi"
     output:
         temp("results/msmc2/{variant}_vs_{backbone}/{chrom}.vcf.gz")
     conda: "../envs/bcftools.yaml"
     shell:
         """
         mkdir -p results/msmc2/{wildcards.variant}_vs_{wildcards.backbone}
-        bcftools view -r {wildcards.chrom} {input} -Oz -o {output}
+        bcftools view -r {wildcards.chrom} {input.vcfgz} -Oz -o {output}
         """
 
 
