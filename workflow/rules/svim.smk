@@ -66,4 +66,4 @@ rule svim_asm_run:
         gap_tolerance=config["svim_reference_gap_tolerance"],
         max_sv_size=config["svim_max_sv_size"]
     shell:
-        "svim-asm haploid --reference_gap_tolerance {params.gap_tolerance} --max_sv_size {params.max_sv_size} results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"
+        "svim-asm haploid --types DEL,INS,INV --reference_gap_tolerance {params.gap_tolerance} --max_sv_size {params.max_sv_size} results/svim/{wildcards.variant}_vs_{wildcards.backbone} {input.bam} {input.ref}"
