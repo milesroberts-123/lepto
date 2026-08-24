@@ -15,6 +15,8 @@ sample_sizes = dict(zip(sample_ids, [s["sample_size"] for s in samples]))
 ref_names = list(config["bwa_refs"].keys())
 ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
 panther_species = list(config["panther_input_fastas"].keys())
+braker_genomes = config["braker_genomes"]
+braker_refs = list(config["braker_genomes"].keys())
 
 with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
@@ -22,7 +24,8 @@ with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
         writer.writerow([key, value])
 
 wildcard_constraints:
-    group="[PW]"
+    group="[PW]",
+    acc="SRR[0-9]+"
 
 rule all:
     input:
@@ -54,6 +57,13 @@ rule dnds_all:
     input:
         "results/dnds/yn_results.txt"
 
+rule braker_all:
+    input:
+        expand("results/braker/{ref}/braker.gtf", ref=braker_refs),
+        expand("results/braker/{ref}/braker.gff3", ref=braker_refs),
+        expand("results/braker/{ref}/braker.aa", ref=braker_refs),
+        expand("results/braker/{ref}/braker.codingseq", ref=braker_refs)
+
 include: "rules/kmc.smk"
 include: "rules/panther.smk"
 include: "rules/orthofinder.smk"
@@ -64,6 +74,7 @@ include: "rules/dnds.smk"
 include: "rules/sourmash.smk"
 include: "rules/msmc2.smk"
 include: "rules/svim.smk"
+include: "rules/braker.smk"
 
 rule vg_diversity_all:
     input:

@@ -107,6 +107,18 @@ msmc2_binary: "/global/scratch/users/milesroberts/conda/msmc2/bin/msmc2_Linux"
 msmc2_generate_multihetsep: "/global/home/users/milesroberts/bin/msmc-tools/generate_multihetsep.py"
 msmc2_p: "1*2+15*1+1*2"
 
+# --- BRAKER3 RNA-seq annotation ---
+rna_sra_accessions:
+  - "SRR29348131"
+  - "SRR29348132"
+  - "SRR29348133"
+  - "SRR29348134"
+  - "SRR29348135"
+braker_genomes:
+  LPJR3B1_scaf: "../resources/reference/LPJR3B1_scaf.fasta"
+braker_species: "lepto"
+braker_container: "docker://teambraker/braker3:v3.1.1"
+
 # --- dn/ds ---
 dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"

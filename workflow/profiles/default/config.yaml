@@ -44,6 +44,11 @@ set-threads:
   minimap2_svim_asm: 16
   samtools_sort_svim: 2
   bcftools_norm_svim: 2
+  sra_download: 1
+  fastp_rna: 8
+  hisat2_index: 1
+  hisat2_align: 16
+  braker_run: 16
 
 set-resources:
   samtools_fastq:
@@ -162,6 +167,21 @@ set-resources:
     runtime: 120
   bgzip_tabix_svim_vcf:
     runtime: 60
+  braker_run:
+    cpus_per_task: 16
+    runtime: 2880
   svim_asm_run:
     cpus_per_task: 1
     runtime: 1440
+  sra_download:
+    cpus_per_task: 1
+    runtime: 720
+  fastp_rna:
+    cpus_per_task: 8
+    runtime: "max(2*input.size_mb/(1024*threads), 10)"
+  hisat2_index:
+    cpus_per_task: 1
+    runtime: 120
+  hisat2_align:
+    cpus_per_task: 16
+    runtime: "max(4*input.size_mb/1024, 20)"
