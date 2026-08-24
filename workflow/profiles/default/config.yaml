@@ -129,6 +129,9 @@ set-resources:
     runtime: 10
   msmc2_mask:
     runtime: 10
+  msmc2_filter_snps:
+    cpus_per_task: 1
+    runtime: 60
   msmc2_het_vcf:
     cpus_per_task: 1
     runtime: 20

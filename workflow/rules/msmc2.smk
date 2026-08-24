@@ -40,9 +40,23 @@ checkpoint msmc2_contigs:
         """
 
 
+rule msmc2_filter_snps:
+    input:
+        vcfgz="results/vg/{variant}_vs_{backbone}.vcf.gz",
+        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
+    output:
+        temp("results/msmc2/{variant}_vs_{backbone}.snps.vcf.gz")
+    conda: "../envs/bcftools.yaml"
+    shell:
+        """
+        mkdir -p results/msmc2
+        bcftools view -v snps -m2 -M2 {input.vcfgz} -Oz -o {output}
+        """
+
+
 rule msmc2_het_vcf:
     input:
-        "results/vg/{variant}_vs_{backbone}.vcf.gz"
+        "results/msmc2/{variant}_vs_{backbone}.snps.vcf.gz"
     output:
         vcfgz=temp("results/msmc2/{variant}_vs_{backbone}.het.vcf.gz"),
         tbi=temp("results/msmc2/{variant}_vs_{backbone}.het.vcf.gz.tbi")
