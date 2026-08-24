@@ -139,5 +139,9 @@ rule msmc2_run:
         prefix=lambda wildcards: f"results/msmc2/{wildcards.variant}_vs_{wildcards.backbone}/msmc2"
     shell:
         """
-        {params.binary} -I 0-1 -t {threads} -p {params.p} -o {params.prefix} {input}
+        inputs=""
+        for f in {input}; do
+            if [ -s "$f" ]; then inputs="$inputs $f"; fi
+        done
+        {params.binary} -I 0-1 -t {threads} -p {params.p} -o {params.prefix} $inputs
         """
