@@ -44,6 +44,7 @@ set-threads:
   minimap2_svim_asm: 16
   samtools_sort_svim: 2
   bcftools_norm_svim: 2
+  minimap2_braker_paf: 16
   sra_download: 1
   fastp_rna: 8
   hisat2_index: 1
@@ -71,7 +72,7 @@ set-resources:
     runtime: 120
   panther_hmmsearch:
     cpus_per_task: 8
-    runtime: 20
+    runtime: 60
   orthofinder_stage:
     runtime: 10
   orthofinder_stage_external:
@@ -173,6 +174,9 @@ set-resources:
   svim_asm_run:
     cpus_per_task: 1
     runtime: 1440
+  minimap2_braker_paf:
+    cpus_per_task: 16
+    runtime: 360
   sra_download:
     cpus_per_task: 1
     runtime: 720

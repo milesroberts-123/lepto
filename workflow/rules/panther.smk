@@ -46,6 +46,14 @@ rule panther_split_fasta:
         done
         """
 
+rule gather_pather_results:
+    input:
+        expand("results/panther/{{species}}/hmmsearch/batch_{batch}.tblout",
+               batch=range(1, config["panther_batches"] + 1))
+    output:
+        "results/panther/{species}/full_table.txt"
+    shell:
+        "grep -h -v '^#' {input} > {output}"
 
 rule panther_hmmsearch:
     input:

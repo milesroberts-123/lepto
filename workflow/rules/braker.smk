@@ -5,6 +5,17 @@
 # internet, compute nodes do not).
 
 
+rule minimap2_braker_paf:
+    input:
+        backbone=config["minimap2_braker"]["backbone"],
+        variant=config["minimap2_braker"]["variant"]
+    output:
+        "results/braker/{variant}_vs_{backbone}.paf"
+    conda: "../envs/minimap2.yaml"
+    shell:
+        "minimap2 -t {threads} -c --eqx -x asm20 -f 0.02 --cs {input.backbone} {input.variant} > {output}"
+
+
 rule sra_download:
     output:
         r1="results/rna/{acc}_1.fastq",

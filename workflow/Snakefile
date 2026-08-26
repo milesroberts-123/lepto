@@ -35,9 +35,10 @@ rule all:
 
 rule panther_all:
     input:
-        expand("results/panther/{species}/hmmsearch/batch_{batch}.tblout",
-               species=panther_species,
-               batch=range(1, config["panther_batches"] + 1))
+        expand("results/panther/{species}/full_table.txt", species=panther_species)
+        #expand("results/panther/{species}/hmmsearch/batch_{batch}.tblout",
+        #       species=panther_species,
+        #       batch=range(1, config["panther_batches"] + 1))
 
 rule orthofinder_all:
     input:
@@ -59,6 +60,7 @@ rule dnds_all:
 
 rule braker_all:
     input:
+        expand("results/braker/{variant}_vs_{backbone}.paf", variant=config["minimap2_braker"]["variant"], backbone=config["minimap2_braker"]["backbone"]),
         expand("results/braker/{ref}/braker.gtf", ref=braker_refs),
         expand("results/braker/{ref}/braker.gff3", ref=braker_refs),
         expand("results/braker/{ref}/braker.aa", ref=braker_refs),

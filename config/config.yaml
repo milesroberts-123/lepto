@@ -17,6 +17,7 @@ kmc_intersect_depth: 1000000
 bwa_refs:
   hap1: "../resources/reference/hap1.fasta"
   hap2: "../resources/reference/hap2.fasta"
+  hap1_rc: "../resources/reference/hap1_rc.fasta"
 bwa_count_threshold: 40
 bwa_k: 31
 bwa_A: 1
@@ -108,6 +109,9 @@ msmc2_generate_multihetsep: "/global/home/users/milesroberts/bin/msmc-tools/gene
 msmc2_p: "1*2+15*1+1*2"
 
 # --- BRAKER3 RNA-seq annotation ---
+minimap2_braker:
+    backbone: "../resources/reference/hap1.fasta"
+    variant: "../resources/reference/Linanthus_parryae.fasta"
 rna_sra_accessions:
   - "SRR29348131"
   - "SRR29348132"
