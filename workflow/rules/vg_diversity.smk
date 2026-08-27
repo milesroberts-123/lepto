@@ -15,6 +15,7 @@ rule add_prefix:
         lambda wildcards: config["bwa_refs"][wildcards.reference]
     output:
         "results/vg/{reference}_prefixed.fasta"
+    conda: "../envs/featurecounts.yaml"
     shell:
         """
         seqkit replace -p '^' -r '{wildcards.reference}_' {input} > {output}
@@ -274,10 +275,10 @@ rule grenedalf_frequency:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
         bai="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
-        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
+        #bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
         dict="results/vg/{backbone}_prefixed.dict"
     output:
-        fst="results/vg/{variant}_vs_{backbone}/{ID}/frequency/{site}/grenedalf_results_frequency.csv",
+        fst="results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         window_width=config["grenedalf_window_width"],
@@ -287,7 +288,7 @@ rule grenedalf_frequency:
         min_base_qual=config["grenedalf_min_base_qual"]
     shell:
         """
-        grenedalf frequency --filter-region-bed {input.bed} \\
+        grenedalf frequency \\
             --write-sample-counts \\
             --write-sample-read-depth \\
             --write-sample-alt-freq \\

@@ -260,7 +260,9 @@ dev.off()
 # myb orthogroup gene tree
 
 ```{r}
+library(ape)
 # Read the tree
+getwd()
 my_tree <- read.tree("../OG0001281_with_g166640.tree")
 
 # Basic plot
@@ -883,4 +885,149 @@ for(tscaf in paste0("scaffold_", 1:51)){
 }
 
 
+```
+
+# PANTHER scans
+
+```{r}
+#
+panther_hap1 <- fread("../results/panther/hap1/full_table.txt", col.names = c("gene", "BLANK", "PANTHER.subfamily", "BLANK2", "full.evalue", "full.score", "full.bias", "best.domain.evalue", "best.domain.score", "best.domain.bias", "domain.number.exp", "domain.number.reg", "domain.number.clu", "domain.number.ov", "domain.number.env", "domain.number.dom", "domain.number.rep", "domain.number.inc", "domain.number.description"))
+
+# extract panther family
+panther_hap1$PANTHER.family <- gsub("\\..*", "", panther_hap1$PANTHER.subfamily)
+
+# count number of MYBs
+panther_hap1 %>%
+  dplyr::select(gene, PANTHER.family, PANTHER.subfamily) %>%
+  filter(PANTHER.subfamily == "PTHR10641.SF1408.pir") %>%
+  distinct() %>%
+  arrange(gene)
+
+# write list of MYB genes in pink
+
+# MYB gens in white
+panther_hap2 <- fread("../results/panther/hap2/full_table.txt", col.names = c("gene", "BLANK", "PANTHER.subfamily", "BLANK2", "full.evalue", "full.score", "full.bias", "best.domain.evalue", "best.domain.score", "best.domain.bias", "domain.number.exp", "domain.number.reg", "domain.number.clu", "domain.number.ov", "domain.number.env", "domain.number.dom", "domain.number.rep", "domain.number.inc", "domain.number.description"))
+
+panther_hap2$PANTHER.family <- gsub("\\..*", "", panther_hap2$PANTHER.subfamily)
+
+panther_hap2 %>%
+  dplyr::select(gene, PANTHER.family, PANTHER.subfamily) %>%
+  filter(PANTHER.subfamily == "PTHR10641.SF1408.pir") %>%
+  distinct() %>%
+  arrange(gene)
+```
+
+
+# heatmap of rna-seq data: leaf vs tissue
+
+```{r}
+
+rna_seq <- fread("../../resources/rna_seq_alysha/featureCounts_and_salmon_RNAseq_salmon_kmer_31.csv")
+
+rna_seq <- rna_seq %>% 
+  pivot_longer(cols = starts_with("hap1"), names_to = "gene", values_to = "count") %>%
+  group_by(Tissue, Color) %>%
+  mutate(
+    replicate = dense_rank(`Novogene name`),# same rep # for every gene row of a given sample
+    sample = paste0(Tissue, Color, replicate))
+
+ggplot(rna_seq, aes(x = gene, y = sample, fill = log2(count+1))) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "white", high = "darkred") +
+  #facet_grid(Tissue~Color, scales = "free") +
+  labs(title = "Expression heatmap", x = "Gene", y = "Sample", fill = "log2(TPM+1)") +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+ 
+ggsave(paste0("../../results/by-date/", today, "/expression_heatmap.pdf"), width = 6, height = 5)
+ 
+
+```
+
+# Scan for SNPs in MYB cluster
+
+```{r}
+
+#mpileup_files <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "\\.mpileup$", recursive = T, full.names = T)
+snp_files <- "../results/vg/hap2_vs_hap1/1/frequency/cds/grenedalf_results_frequency.csv"
+
+snp_list <- snp_files %>%
+  set_names() %>%
+  map_dfr(~fread(
+    #cmd = paste0("awk '(($2 < 13129007  && $2 > 9882050))' ", .x, " | cut -f 2,4 --delimiter='\t'"),
+    cmd = paste0("awk -F, '$1 == \"hap1_scaffold_25\" && $2 > 10964369 && $2 < 12046688 && $8 > 0' ", .x),
+    col.names = c("CHROM", "POS", "REF", "ALT", "1.REF_CNT", "1.ALT_CNT", "1.DEPTH", "1.FREQ")), 
+    .id = "source_file")
+
+zoom_regions <- tibble(
+  xmin  = c(11109909, 11818528, 11849856, 11881221),                        
+  xmax = c(11111363, 11822704, 11853987, 11881776),
+  label = c("g166507", "g166636", "g166640", "g166644"),
+  thresh = rep(0.02, times = 4)
+)
+
+shade_regions <- zoom_regions %>% 
+  select(xmin, xmax)  # reuse for shading
+ 
+## Common layers shared across all panels ------------------------------
+base_layers <- list(
+  geom_point(alpha = 0.4, size = 2),
+  geom_rect(
+    data = shade_regions,
+    aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+    inherit.aes = FALSE,
+    fill = "darkred", alpha = 0.3
+  ),
+  scale_color_gradient(low = "grey80", high = "black"),
+  labs(x = "Position (bp)", color = "Depth", y = "Alt freq"),
+  theme_minimal(base_size = 12)
+)
+ 
+## 1. Full overview plot -------------------------------------------------
+p_overview <- ggplot(snp_list, aes(x = POS, color = `1.DEPTH`, y = `1.FREQ`)) +
+  base_layers +
+  labs(title = "Full view, Minor AF > 0.02")
+ 
+## 2. One zoomed panel per region, built programmatically ----------------
+make_zoom_panel <- function(xmin, xmax, label, thresh) {
+  ggplot(snp_list %>% filter(`1.FREQ` > thresh), aes(x = POS, color = `1.DEPTH`, y = `1.FREQ`)) +
+    base_layers +
+    coord_cartesian(xlim = c(xmin, xmax)) +
+    labs(title = label)
+}
+ 
+zoom_panels <- pmap(zoom_regions, function(label, xmin, xmax, thresh) {
+  make_zoom_panel(xmin, xmax, label, thresh)
+})
+ 
+## 3. Combine: overview on top, zoom panels in a row below ---------------
+combined <- p_overview / (wrap_plots(zoom_panels, ncol = length(zoom_panels))) +
+  plot_layout(heights = c(2, 1), guides = "collect")
+
+
+```
+
+# Conceptual diagrams of k-mer arithmetic
+
+```{r}
+
+# install.packages("ggVennDiagram")
+library(ggVennDiagram)
+
+x <- list(`1P` = 1:5, `2P` = 3:8, `3P` = 5:10, `4P` = 8:16)
+
+ggVennDiagram(x, label_size = 0, edge_size = 1) +
+  scale_fill_gradient(low = "pink", high = "pink") +  # same color both ends = uniform
+  scale_color_manual(values = rep("black", length(x)))
+
+  ggsave(paste0("../../results/by-date/", today, "/pink_venn_diagram.pdf"), width = 6, height = 6)
+
+
+x <- list(`1W` = 1:5, `2W` = 3:8, `3W` = 5:10, `4W` = 8:16)
+
+ggVennDiagram(x, label_size = 0, edge_size = 0) +
+  scale_fill_gradient(low = "white", high = "white") +  # same color both ends = uniform
+  scale_color_manual(values = rep("black", length(x)))
+
+  ggsave(paste0("../../results/by-date/", today, "/white_venn_diagram.pdf"), width = 6, height = 6)
 ```
