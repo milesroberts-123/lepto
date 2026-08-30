@@ -1,0 +1,6 @@
+name: anchorwave
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - anchorwave

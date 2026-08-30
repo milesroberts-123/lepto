@@ -17,6 +17,8 @@ ref_pairs = [(q, t) for q in ref_names for t in ref_names if q != t]
 panther_species = list(config["panther_input_fastas"].keys())
 braker_genomes = config["braker_genomes"]
 braker_refs = list(config["braker_genomes"].keys())
+anchorwave_backbone = config["anchorwave_backbone"]
+anchorwave_variant = config["anchorwave_variant"]
 
 with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
@@ -25,7 +27,8 @@ with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
 
 wildcard_constraints:
     group="[PW]",
-    acc="SRR[0-9]+"
+    acc="SRR[0-9]+",
+    genome="hap[12]"
 
 rule all:
     input:
@@ -77,6 +80,16 @@ include: "rules/sourmash.smk"
 include: "rules/msmc2.smk"
 include: "rules/svim.smk"
 include: "rules/braker.smk"
+include: "rules/anchorwave.smk"
+
+rule anchorwave_all:
+    input:
+        expand("results/anchorwave/{variant}_vs_{backbone}/{variant}.maf",
+               variant=[anchorwave_variant],
+               backbone=[anchorwave_backbone]),
+        expand("results/anchorwave/{variant}_vs_{backbone}/{variant}.f.maf",
+               variant=[anchorwave_variant],
+               backbone=[anchorwave_backbone])
 
 rule vg_diversity_all:
     input:
