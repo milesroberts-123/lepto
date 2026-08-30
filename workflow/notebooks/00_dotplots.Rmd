@@ -800,12 +800,12 @@ plot_msmc2 <- ggplot(dat, aes(x = t, y = Ne)) +
   scale_y_log10() +
   labs(x = "Years ago", y = "Ne")
 
-save_plot <- function(plot_obj, plot_name, date, analysis, plot_base_dir){
+save_plot <- function(plot_obj, plot_name, date, analysis, plot_base_dir, height, width){
   
   plot_full_name <- paste0(plot_base_dir, "by-date/", today, "/", plot_name)
   
-  ggsave(paste0(plot_full_name, ".pdf"))
-  ggsave(paste0(plot_full_name, ".png"))
+  ggsave(paste0(plot_full_name, ".pdf"), height = height, width = width)
+  ggsave(paste0(plot_full_name, ".png"), height = height, width = width)
   
   symlink_pdf <- paste0(plot_base_dir, "by-analysis/", plot_name, ".pdf")
   symlink_png <- paste0(plot_base_dir, "by-analysis/", plot_name, ".png")
@@ -887,34 +887,41 @@ for(tscaf in paste0("scaffold_", 1:51)){
 
 ```
 
-# PANTHER scans
+# Whole genome PANTHER scans
 
 ```{r}
-#
+
+# haplotype 1
 panther_hap1 <- fread("../results/panther/hap1/full_table.txt", col.names = c("gene", "BLANK", "PANTHER.subfamily", "BLANK2", "full.evalue", "full.score", "full.bias", "best.domain.evalue", "best.domain.score", "best.domain.bias", "domain.number.exp", "domain.number.reg", "domain.number.clu", "domain.number.ov", "domain.number.env", "domain.number.dom", "domain.number.rep", "domain.number.inc", "domain.number.description"))
 
 # extract panther family
 panther_hap1$PANTHER.family <- gsub("\\..*", "", panther_hap1$PANTHER.subfamily)
 
+# check e-values for candidates
 # count number of MYBs
-panther_hap1 %>%
-  dplyr::select(gene, PANTHER.family, PANTHER.subfamily) %>%
+panther_hap1_filt <- panther_hap1 %>%
+  dplyr::select(gene, PANTHER.family, PANTHER.subfamily, full.evalue) %>%
   filter(PANTHER.subfamily == "PTHR10641.SF1408.pir") %>%
   distinct() %>%
+  filter(full.evalue < 1e-50) %>%
   arrange(gene)
 
 # write list of MYB genes in pink
+write.table(panther_hap1_filt, "../results/panther/hap1/mybs.txt", quote = F, row.names = F, sep = "\t")
 
 # MYB gens in white
 panther_hap2 <- fread("../results/panther/hap2/full_table.txt", col.names = c("gene", "BLANK", "PANTHER.subfamily", "BLANK2", "full.evalue", "full.score", "full.bias", "best.domain.evalue", "best.domain.score", "best.domain.bias", "domain.number.exp", "domain.number.reg", "domain.number.clu", "domain.number.ov", "domain.number.env", "domain.number.dom", "domain.number.rep", "domain.number.inc", "domain.number.description"))
 
 panther_hap2$PANTHER.family <- gsub("\\..*", "", panther_hap2$PANTHER.subfamily)
 
-panther_hap2 %>%
-  dplyr::select(gene, PANTHER.family, PANTHER.subfamily) %>%
+panther_hap2_filt <- panther_hap2 %>%
+  dplyr::select(gene, PANTHER.family, PANTHER.subfamily, full.evalue) %>%
   filter(PANTHER.subfamily == "PTHR10641.SF1408.pir") %>%
   distinct() %>%
+  filter(full.evalue < 1e-50) %>%
   arrange(gene)
+
+write.table(panther_hap2_filt, "../results/panther/hap2/mybs.txt", quote = F, row.names = F, sep = "\t")
 ```
 
 
@@ -949,29 +956,46 @@ ggsave(paste0("../../results/by-date/", today, "/expression_heatmap.pdf"), width
 ```{r}
 
 #mpileup_files <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "\\.mpileup$", recursive = T, full.names = T)
-snp_files <- "../results/vg/hap2_vs_hap1/1/frequency/cds/grenedalf_results_frequency.csv"
+snp_files <- list.files(path = "../results/vg/hap2_vs_hap1", pattern = "grenedalf_results_frequency_filtered.csv", recursive = T, full.names = T)
 
+# candidate region is:
+# hap1_scaffold_25:10964369..12046688
+# but also including region around the potential "breakpoints" of putative indel between pink/white: 
+# hap1_scaffold_25:10960000..12050000
 snp_list <- snp_files %>%
   set_names() %>%
   map_dfr(~fread(
     #cmd = paste0("awk '(($2 < 13129007  && $2 > 9882050))' ", .x, " | cut -f 2,4 --delimiter='\t'"),
-    cmd = paste0("awk -F, '$1 == \"hap1_scaffold_25\" && $2 > 10964369 && $2 < 12046688 && $8 > 0' ", .x),
-    col.names = c("CHROM", "POS", "REF", "ALT", "1.REF_CNT", "1.ALT_CNT", "1.DEPTH", "1.FREQ")), 
+    cmd = paste0("awk -F, '$1 == \"hap1_scaffold_25\" && $2 > 10960000 && $2 < 12050000 && $8 > 0.02 && $7 >= 10 && $6 > 1' ", .x),
+    col.names = c("CHROM", "POS", "REF", "ALT", "REF_CNT", "ALT_CNT", "DEPTH", "FREQ")), 
     .id = "source_file")
 
-zoom_regions <- tibble(
-  xmin  = c(11109909, 11818528, 11849856, 11881221),                        
-  xmax = c(11111363, 11822704, 11853987, 11881776),
-  label = c("g166507", "g166636", "g166640", "g166644"),
-  thresh = rep(0.02, times = 4)
+snp_list$sample <- gsub(".*hap2_vs_hap1/|/grenedalf.*", "",snp_list$source_file)
+
+sample_lookup <- c(
+  "1" = "1P", "2" = "1W",
+  "3" = "2P", "4" = "2W",
+  "5" = "3P", "6" = "3W",
+  "7" = "4P", "8" = "4W"
 )
 
+snp_list <- snp_list %>%
+  mutate(sample = recode(sample, !!!sample_lookup))
+
+zoom_regions <- tibble(
+  xmin  = c(11109909, 11818528, 11849856, 11881221, 10960000, 12046688),      
+  xmax = c(11111363, 11822704, 11853987, 11881776, 10964369, 12050000),
+  label = c("g166507", "g166636", "g166640", "g166644", "upstream", "downstream")
+  #thresh = rep(0.02, times = 6)
+)
+
+# reuse for shading
 shade_regions <- zoom_regions %>% 
-  select(xmin, xmax)  # reuse for shading
+  select(xmin, xmax)  
  
 ## Common layers shared across all panels ------------------------------
 base_layers <- list(
-  geom_point(alpha = 0.4, size = 2),
+  geom_point(alpha = 0.4, size = 2, shape = 16),
   geom_rect(
     data = shade_regions,
     aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
@@ -979,32 +1003,51 @@ base_layers <- list(
     fill = "darkred", alpha = 0.3
   ),
   scale_color_gradient(low = "grey80", high = "black"),
-  labs(x = "Position (bp)", color = "Depth", y = "Alt freq"),
-  theme_minimal(base_size = 12)
+  labs(x = "Position (bp)", color = "Depth", y = "Alt. allele freq."),
+  theme_minimal(base_size = 12)  +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) 
 )
- 
+
+# 1. Split the data frame into a list of data frames by your variable
+data_list <- split(snp_list, list(snp_list$sample), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/variation_breakdown.pdf"), width = 9, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+  
 ## 1. Full overview plot -------------------------------------------------
-p_overview <- ggplot(snp_list, aes(x = POS, color = `1.DEPTH`, y = `1.FREQ`)) +
+p_overview <- ggplot(sub_data, aes(x = POS, color = `DEPTH`, y = `FREQ`)) +
   base_layers +
-  labs(title = "Full view, Minor AF > 0.02")
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink") +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink") +
+  labs(title = paste0(unique(sub_data$sample), ", Full view, Alt AF > 0.02, Depth > 10, Alt count > 1"))
  
 ## 2. One zoomed panel per region, built programmatically ----------------
-make_zoom_panel <- function(xmin, xmax, label, thresh) {
-  ggplot(snp_list %>% filter(`1.FREQ` > thresh), aes(x = POS, color = `1.DEPTH`, y = `1.FREQ`)) +
+make_zoom_panel <- function(xmin, xmax, label) {
+  ggplot(sub_data, aes(x = POS, color = `DEPTH`, y = `FREQ`)) +
     base_layers +
     coord_cartesian(xlim = c(xmin, xmax)) +
     labs(title = label)
 }
  
-zoom_panels <- pmap(zoom_regions, function(label, xmin, xmax, thresh) {
-  make_zoom_panel(xmin, xmax, label, thresh)
+zoom_panels <- pmap(zoom_regions, function(label, xmin, xmax) {
+  make_zoom_panel(xmin, xmax, label)
 })
  
 ## 3. Combine: overview on top, zoom panels in a row below ---------------
 combined <- p_overview / (wrap_plots(zoom_panels, ncol = length(zoom_panels))) +
   plot_layout(heights = c(2, 1), guides = "collect")
 
+print(combined)
+})
 
+dev.off()
+
+save_plot(combined, "variantion_breakdown_1", today, "variantion_breakdown", "../../results/", height = 7, width = 9)
+
+save_plot(combined, )
 ```
 
 # Conceptual diagrams of k-mer arithmetic

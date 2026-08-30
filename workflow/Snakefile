@@ -93,7 +93,7 @@ rule anchorwave_all:
 
 rule vg_diversity_all:
     input:
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv",
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency_filtered.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
             ID=sample_ids,

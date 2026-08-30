@@ -304,6 +304,15 @@ rule grenedalf_frequency:
         """
 
 
+rule grenedalf_frequency_filter:
+    input: "results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv"
+    output: "results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency_filtered.csv"
+    shell: 
+        """
+        awk -F, '$1 == "hap1_scaffold_25" && $2 > 10960000 && $2 < 12050000 && $8 > 0.02 && $7 >= 10 && $6 > 1' {input} > {output}
+        """ 
+
+
 rule grenedalf_fst_interval:
     input:
         bam=expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam", variant=[config["vg_ref_variant"]], backbone=[config["vg_ref_backbone"]], ID=sample_ids),
