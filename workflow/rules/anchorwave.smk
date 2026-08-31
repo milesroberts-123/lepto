@@ -1,13 +1,15 @@
 # AnchorWave gene-anchored whole-genome alignment: extract CDS from the
 # backbone's expressed-gene GFF3 (featurecounts branch), splice-align the
-# CDS to both haplotypes with minimap2, then AnchorWave genoAli constructs
-# the whole-genome alignment anchored on conserved coding sequence.
+# CDS to both graph-genome-prefixed haplotypes with minimap2, then
+# AnchorWave genoAli constructs the whole-genome alignment anchored on
+# conserved coding sequence. All assemblies use prefixed contig names, so
+# MAF/anchors coordinates follow the vg branch convention.
 
 
 rule anchorwave_gff2seq:
     input:
-        gff="results/featurecounts/{ref}_expressed.gff3",
-        ref_fasta="../resources/reference/{ref}.fasta"
+        gff="results/featurecounts/{ref}_expressed_prefixed.gff3",
+        ref_fasta="results/vg/{ref}_prefixed.fasta"
     output:
         "results/anchorwave/{ref}/cds.fa"
     conda: "../envs/anchorwave.yaml"
@@ -17,7 +19,7 @@ rule anchorwave_gff2seq:
 
 rule minimap2_splice_cds:
     input:
-        genome_fasta="../resources/reference/{genome}.fasta",
+        genome_fasta="results/vg/{genome}_prefixed.fasta",
         cds="results/anchorwave/{backbone}/cds.fa"
     output:
         "results/anchorwave/{variant}_vs_{backbone}/{genome}_cds.sam"
@@ -32,10 +34,10 @@ rule minimap2_splice_cds:
 
 rule anchorwave_genoali:
     input:
-        gff="results/featurecounts/{backbone}_expressed.gff3",
+        gff="results/featurecounts/{backbone}_expressed_prefixed.gff3",
         cds="results/anchorwave/{backbone}/cds.fa",
-        ref_fasta="../resources/reference/{backbone}.fasta",
-        variant_fasta="../resources/reference/{variant}.fasta",
+        ref_fasta="results/vg/{backbone}_prefixed.fasta",
+        variant_fasta="results/vg/{variant}_prefixed.fasta",
         ref_sam="results/anchorwave/{variant}_vs_{backbone}/{backbone}_cds.sam",
         variant_sam="results/anchorwave/{variant}_vs_{backbone}/{variant}_cds.sam"
     output:
