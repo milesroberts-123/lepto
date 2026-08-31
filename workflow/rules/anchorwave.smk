@@ -46,4 +46,4 @@ rule anchorwave_genoali:
         "results/anchorwave/{variant}_vs_{backbone}/{variant}.genoAli.log"
     conda: "../envs/anchorwave.yaml"
     shell:
-        "anchorwave genoAli -i {input.gff} -as {input.cds} -r {input.ref_fasta} -a {input.variant_sam} -ar {input.ref_sam} -s {input.variant_fasta} -n {output.anchors} -o {output.maf} -f {output.fmaf} > {log} 2>&1"
+        "anchorwave genoAli -t {threads} -i {input.gff} -as {input.cds} -r {input.ref_fasta} -a {input.variant_sam} -ar {input.ref_sam} -s {input.variant_fasta} -n {output.anchors} -o {output.maf} -f {output.fmaf} > {log} 2>&1"

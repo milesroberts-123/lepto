@@ -51,7 +51,7 @@ set-threads:
   hisat2_align: 16
   braker_run: 16
   minimap2_splice_cds: 16
-  anchorwave_genoali: 1
+  anchorwave_genoali: 4
 
 set-resources:
   samtools_fastq:
@@ -198,5 +198,5 @@ set-resources:
     cpus_per_task: 16
     runtime: 480
   anchorwave_genoali:
-    cpus_per_task: 1
+    cpus_per_task: 16
     runtime: 2880
