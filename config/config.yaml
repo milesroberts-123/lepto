@@ -124,13 +124,6 @@ braker_genomes:
 braker_species: "lepto"
 braker_container: "docker://teambraker/braker3:v3.1.1"
 
-# --- AnchorWave gene-anchored whole-genome alignment ---
-anchorwave_backbone: "hap1"
-anchorwave_variant: "hap2"
-anchorwave_minimap_k: 12
-anchorwave_minimap_p: 0.4
-anchorwave_minimap_n: 20
-
 # --- dn/ds ---
 dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
