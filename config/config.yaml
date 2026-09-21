@@ -112,7 +112,8 @@ msmc2_p: "1*2+25*1+1*2+1*3"
 # --- BRAKER3 RNA-seq annotation ---
 minimap2_braker:
     backbone: "../resources/reference/hap1.fasta"
-    variant: "../resources/reference/Linanthus_parryae.fasta"
+    variant: "../resources/reference/Phlox_drummondii.fasta"
+    #variant: "../resources/reference/Linanthus_parryae.fasta"
 rna_sra_accessions:
   - "SRR29348131"
   - "SRR29348132"

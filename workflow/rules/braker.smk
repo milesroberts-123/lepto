@@ -13,7 +13,7 @@ rule minimap2_braker_paf:
         "results/braker/{variant}_vs_{backbone}.paf"
     conda: "../envs/minimap2.yaml"
     shell:
-        "minimap2 -t {threads} -c --eqx -x asm20 -f 0.02 --cs {input.backbone} {input.variant} > {output}"
+        "minimap2 -t {threads} -x asm20 -f 0.02 {input.backbone} {input.variant} > {output}"
 
 
 rule sra_download:
