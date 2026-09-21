@@ -77,6 +77,14 @@ include: "rules/sourmash.smk"
 include: "rules/msmc2.smk"
 include: "rules/svim.smk"
 include: "rules/braker.smk"
+include: "rules/freqk.smk"
+
+rule freqk_all:
+    input:
+        expand("results/freqk/{variant}_vs_{backbone}/{ID}_calls.txt",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]],
+               ID=sample_ids)
 
 rule vg_diversity_all:
     input:

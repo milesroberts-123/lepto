@@ -1,74 +1,91 @@
-rule freqk_index:
+# Estimate allele frequencies of known variants in pool-seq reads from
+# k-mer counts. Variants come from the vg pipeline's paftools-call VCF on
+# the hap1 backbone; reads are the same fastp-cleaned pooled fastqs fed
+# to vg giraffe. The freqk binary is provisioned outside the repo and
+# referenced by the freqk_binary config key (see AGENTS.md).
+
+rule freqk_norm_vcf:
     input:
-        vcf="slim_results/norm_{SID}_{PID}.vcf.gz",
-        fasta="ancestral_genome_results/{SID}.fasta",
-        fai="ancestral_genome_results/{SID}.fasta.fai",
+        "results/vg/{variant}_vs_{backbone}.vcf.gz",
+        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
     output:
-        index=temp("results/{SID}_{PID}.txt"),
-    benchmark:
-        "benchmarks/freqk_index/{SID}_{PID}.bench"
-    group: "freqk_index"
-    params:
-        k=lookup(query="ID == '{SID}'", within=parameters, cols="k"),
+        vcfgz=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz"),
+        tbi=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi")
+    conda: "../envs/bcftools.yaml"
     shell:
         """
-        # index panel of variants
-        ./scripts/freqk index --fasta {input.fasta} --vcf {input.vcf} -k {params.k} --output {output.index}
+        mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
+        bcftools norm -m +any {input} | bgzip > {output.vcfgz}
+        tabix -p vcf {output.vcfgz}
         """
+
+rule freqk_index:
+    input:
+        fasta="results/vg/{backbone}_prefixed.fasta",
+        fai="results/vg/{backbone}_prefixed.fasta.fai",
+        vcf="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz",
+        tbi="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi"
+    output:
+        temp("results/freqk/{variant}_vs_{backbone}/index.txt")
+    benchmark:
+        "benchmarks/freqk_index/freqk_index_{variant}_vs_{backbone}.bench"
+    params:
+        binary=config["freqk_binary"],
+        k=config["freqk_k"]
+    shell:
+        "{params.binary} index --fasta {input.fasta} --vcf {input.vcf} -k {params.k} --output {output}"
 
 rule freqk_var_dedup:
     input:
-        "freqk_indices/{SID}_{PID}.txt",
+        "results/freqk/{variant}_vs_{backbone}/index.txt"
     output:
-        temp("freqk_var_dedup/{SID}_{PID}.txt"),
+        temp("results/freqk/{variant}_vs_{backbone}/var_index.txt")
     benchmark:
-        "benchmarks/freqk_var_dedup/{SID}_{PID}.bench"
-    group: "freqk_index"
+        "benchmarks/freqk_index/freqk_var_dedup_{variant}_vs_{backbone}.bench"
+    params:
+        binary=config["freqk_binary"]
     shell:
-        """
-        ./scripts/freqk var-dedup --index {input} --output {output}
-        """
+        "{params.binary} var-dedup --index {input} --output {output}"
 
 rule freqk_ref_dedup:
     input:
-        index="freqk_var_dedup/{SID}_{PID}.txt",
-        vcf="slim_results/norm_{SID}_{PID}.vcf.gz",
-        fasta="ancestral_genome_results/{SID}.fasta",
-        fai="ancestral_genome_results/{SID}.fasta.fai",
+        index="results/freqk/{variant}_vs_{backbone}/var_index.txt",
+        fasta="results/vg/{backbone}_prefixed.fasta",
+        fai="results/vg/{backbone}_prefixed.fasta.fai",
+        vcf="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz",
+        tbi="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi"
     output:
-        "freqk_ref_dedup/{SID}_{PID}.txt",
+        "results/freqk/{variant}_vs_{backbone}/ref_index.txt"
     benchmark:
-        "benchmarks/freqk_ref_dedup/{SID}_{PID}.bench"
-    group: "freqk_index"
+        "benchmarks/freqk_index/freqk_ref_dedup_{variant}_vs_{backbone}.bench"
+    params:
+        binary=config["freqk_binary"]
     shell:
-        """
-        ./scripts/freqk ref-dedup --index {input.index} --fasta {input.fasta} --vcf {input.vcf} --output {output}
-        """
+        "{params.binary} ref-dedup --index {input.index} --fasta {input.fasta} --vcf {input.vcf} --output {output}"
 
 rule freqk_count:
     input:
-        reads="all_{SID}_{PID}.fastq",
-        index="freqk_ref_dedup/{SID}_{PID}.txt",
+        reads="results/fastp/{ID}.fastq",
+        index="results/freqk/{variant}_vs_{backbone}/ref_index.txt"
     output:
-        counts="freqk_results/{SID}_{PID}_counts.txt",
-        freqs="freqk_results/{SID}_{PID}_freqs.txt",
-    group: "freqk_count"
+        counts="results/freqk/{variant}_vs_{backbone}/{ID}_counts.txt",
+        freqs="results/freqk/{variant}_vs_{backbone}/{ID}_freqs.txt"
     benchmark:
-        "benchmarks/freqk_count/{SID}_{PID}.bench"
+        "benchmarks/freqk_count/freqk_count_{variant}_vs_{backbone}_{ID}.bench"
+    params:
+        binary=config["freqk_binary"]
     shell:
-        """
-        ./scripts/freqk count --nthreads {threads} --index {input.index} --reads {input.reads} --freq-output {output.freqs} --count-output {output.counts}
-        """
+        "{params.binary} count --nthreads {threads} --index {input.index} --reads {input.reads} --freq-output {output.freqs} --count-output {output.counts}"
 
 rule freqk_call:
     input:
-        counts="freqk_results/{SID}_{PID}_freqs.txt",
-        index="freqk_ref_dedup/{SID}_{PID}.txt",
+        counts="results/freqk/{variant}_vs_{backbone}/{ID}_counts.txt",
+        index="results/freqk/{variant}_vs_{backbone}/ref_index.txt"
     output:
-        "freqk_results/{SID}_{PID}_calls.txt",
-    group: "freqk_count"
-    priority: 1000
+        "results/freqk/{variant}_vs_{backbone}/{ID}_calls.txt"
     benchmark:
-        "benchmarks/freqk_call/{SID}_{PID}.bench"
+        "benchmarks/freqk_call/freqk_call_{variant}_vs_{backbone}_{ID}.bench"
+    params:
+        binary=config["freqk_binary"]
     shell:
-        "./scripts/freqk call --index {input.index} -c {input.counts} --output {output}"
+        "{params.binary} call --index {input.index} -c {input.counts} --output {output}"

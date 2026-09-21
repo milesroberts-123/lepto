@@ -50,6 +50,8 @@ set-threads:
   hisat2_index: 1
   hisat2_align: 16
   braker_run: 16
+  freqk_count: 8
+  freqk_index: 4
 
 set-resources:
   samtools_fastq:
@@ -189,3 +191,21 @@ set-resources:
   hisat2_align:
     cpus_per_task: 16
     runtime: "max(4*input.size_mb/1024, 20)"
+  freqk_norm_vcf:
+    cpus_per_task: 2
+    runtime: 120
+  freqk_index:
+    cpus_per_task: 4
+    runtime: 240
+  freqk_var_dedup:
+    cpus_per_task: 4
+    runtime: 240
+  freqk_ref_dedup:
+    cpus_per_task: 4
+    runtime: 480
+  freqk_count:
+    cpus_per_task: 8
+    runtime: "max(4*input.size_mb/1024, 20)"
+  freqk_call:
+    cpus_per_task: 8
+    runtime: 60

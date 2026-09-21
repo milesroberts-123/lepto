@@ -130,5 +130,9 @@ dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
 dnds_yn00_ctl: "../config/dnds/yn00.ctl"
 
+# --- freqk (binary path, see AGENTS.md) ---
+freqk_binary: "/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/bin/freqk"
+freqk_k: 31
+
 # --- samples ---
 samples_table: "../config/samples.tsv"
