@@ -59,3 +59,16 @@ rule freqk_count:
         """
         ./scripts/freqk count --nthreads {threads} --index {input.index} --reads {input.reads} --freq-output {output.freqs} --count-output {output.counts}
         """
+
+rule freqk_call:
+    input:
+        counts="freqk_results/{SID}_{PID}_freqs.txt",
+        index="freqk_ref_dedup/{SID}_{PID}.txt",
+    output:
+        "freqk_results/{SID}_{PID}_calls.txt",
+    group: "freqk_count"
+    priority: 1000
+    benchmark:
+        "benchmarks/freqk_call/{SID}_{PID}.bench"
+    shell:
+        "./scripts/freqk call --index {input.index} -c {input.counts} --output {output}"
