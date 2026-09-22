@@ -1,13 +1,43 @@
 # Estimate allele frequencies of known variants in pool-seq reads from
 # k-mer counts. Variants come from the vg pipeline's paftools-call VCF on
 # the hap1 backbone; reads are the same fastp-cleaned pooled fastqs fed
-# to vg giraffe. The freqk binary is provisioned outside the repo and
-# referenced by the freqk_binary config key (see AGENTS.md).
+# to vg giraffe. Before indexing, the VCF is filtered to biallelic SNPs
+# that are not polymorphic (0.02 < freq < 0.98) in any of the 8 pools,
+# using the per-pool grenedalf frequency tables. The freqk binary is
+# provisioned outside the repo and referenced by the freqk_binary config
+# key (see AGENTS.md).
 
-rule freqk_norm_vcf:
+rule freqk_exclusion_bed:
+    input:
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]],
+               ID=sample_ids)
+    output:
+        "results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+    params:
+        min_alt_count=config["freqk_min_alt_count"],
+        min_depth=config["freqk_min_depth"],
+        min_freq=config["freqk_min_polymorphic_freq"],
+        max_freq=config["freqk_max_polymorphic_freq"]
+    benchmark:
+        "benchmarks/freqk_exclusion_bed/freqk_exclusion_bed_{variant}_vs_{backbone}.bench"
+    shell:
+        """
+        mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
+        for table in {input}; do
+            awk -F, -v c={params.min_alt_count} -v d={params.min_depth} \\
+                -v f={params.min_freq} -v x={params.max_freq} \\
+                '$1 != "CHROM" && $6 > c && $7 >= d && $8 > f && $8 < x \\
+                 {{print $1"\\t"$2-1"\\t"$2}}' "$table"
+        done | sort -u -k1,1 -k2,2n > {output}
+        """
+
+rule freqk_filter_vcf:
     input:
         "results/vg/{variant}_vs_{backbone}.vcf.gz",
-        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
+        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi",
+        excl="results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
     output:
         vcfgz=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz"),
         tbi=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi")
@@ -15,7 +45,9 @@ rule freqk_norm_vcf:
     shell:
         """
         mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
-        bcftools norm -m +any {input} | bgzip > {output.vcfgz}
+        bcftools view -v snps -m2 -M2 {input} \\
+            | bcftools view -T ^results/freqk/{wildcards.variant}_vs_{wildcards.backbone}/polymorphic_exclusion.bed \\
+            | bcftools norm -m +any -Oz -o {output.vcfgz}
         tabix -p vcf {output.vcfgz}
         """
 

@@ -133,6 +133,11 @@ dnds_yn00_ctl: "../config/dnds/yn00.ctl"
 # --- freqk (binary path, see AGENTS.md) ---
 freqk_binary: "/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/bin/freqk"
 freqk_k: 31
+# polymorphic-site exclusion thresholds (grenedalf frequency columns)
+freqk_min_alt_count: 2
+freqk_min_depth: 10
+freqk_min_polymorphic_freq: 0.02
+freqk_max_polymorphic_freq: 0.98
 
 # --- samples ---
 samples_table: "../config/samples.tsv"
