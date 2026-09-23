@@ -3,6 +3,6 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - mafft
-  - paml
-  - pal2nal
+  - mafft=7.525
+  - paml=4.10.10
+  - pal2nal=14.1

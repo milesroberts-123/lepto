@@ -3,4 +3,4 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - grenedalf
+  - grenedalf=0.6.3

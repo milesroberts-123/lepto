@@ -3,5 +3,5 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - subread
-  - seqkit
+  - subread=2.1.1
+  - seqkit=2.13.0

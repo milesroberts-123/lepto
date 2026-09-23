@@ -3,5 +3,5 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - orthofinder
-  - seqkit
+  - orthofinder=3.1.5
+  - seqkit=2.13.0
