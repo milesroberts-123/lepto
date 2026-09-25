@@ -36,6 +36,7 @@ snakemake -s workflow/Snakefile --profile workflow/profiles/default --use-conda 
 - **BRAKER singularity caveat:** Savio compute nodes have no internet. The first-time container pull must happen on a login node (either via a snakemake run from the login node, or `apptainer pull docker://teambraker/braker3:v3.1.1`); the cached image in `.snakemake/singularity/` is then readable by compute nodes. `sra_download` and `odb_download` (OrthoDB Viridiplantae protein evidence, gated by `config["braker_use_protein"]`) also need internet, so run those rules on a login node with `--local-cores`.
 - **Target rules** (entrypoints): `all`, `panther_all`, `orthofinder_all`, `featurecounts_all`, `degenotate_all`, `vg_diversity_all`, `dnds_all`, `sourmash_all`, `msmc2_all`, `svim_all`, `braker_all`, `freqk_all`.
 - **The `.gitignore` is aggressive** — it excludes most bioinformatics file types (`.fastq`, `.bam`, `.fasta`, `.vcf`, `.tsv`, etc.). Be careful when adding new output types.
+- **Session transcripts must be archived before every push.** Run `scripts/export_session.sh` first: it exports the full transcript of the current opencode session as JSON (`opencode export <session-id>`), compresses it with `xz -9` into `transcripts/<session-id>.json.xz` (one file per session, overwritten on each push), and stages it. Commit the staged archive with a `chore:` prefix before pushing; if the script fails, do not push.
 
 ## Reverted approaches (do not re-add)
 
