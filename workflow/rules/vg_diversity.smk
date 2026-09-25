@@ -251,14 +251,15 @@ rule grenedalf_diversity_genome:
         filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        filter_total_snp_min_count=config["grenedalf_filter_sample_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
-        min_base_qual=config["grenedalf_min_base_qual"],
-        subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
+        min_base_qual=config["grenedalf_min_base_qual"]
     shell:
         """
         grenedalf diversity --window-type genome \\
             --pool-sizes {input.pool_sizes} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
+            --filter-total-snp-min-count {params.filter_total_snp_min_count} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --window-average-policy {params.window_average_policy} \\
             --filter-region-bed {input.bed} \\
@@ -329,14 +330,16 @@ rule grenedalf_fst_interval:
         window_width=config["grenedalf_window_width"],
         filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
         window_average_policy=config["grenedalf_window_average_policy"],
-        filter_total_snp_min_count=config["grenedalf_filter_sample_min_count"],
+        window_stride=config["grenedalf_window_interval_stride"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
         min_base_qual=config["grenedalf_min_base_qual"],
-        method=config["grenedalf_fst_method"]
+        subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
     shell:
         """
-        grenedalf fst --window-type interval \\
+        grenedalf diversity --window-type interval \\
             --window-interval-width {params.window_width} \\
+            --window-interval-stride {params.window_stride} \\
             --pool-sizes {input.pool_sizes} \\
             --filter-region-bed {input.bed} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
