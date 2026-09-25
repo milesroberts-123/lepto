@@ -80,6 +80,12 @@ include: "rules/msmc2.smk"
 include: "rules/svim.smk"
 include: "rules/braker.smk"
 include: "rules/freqk.smk"
+include: "rules/anchorwave_pair.smk"
+
+rule anchorwave_pair_all:
+    input:
+        "results/anchorwave/pair/maf",
+        "results/anchorwave/pair/f.maf"
 
 rule freqk_all:
     input:
