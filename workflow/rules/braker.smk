@@ -127,7 +127,7 @@ def braker_protein(wildcards):
 
 def braker_protein_flag(wildcards):
     if config["braker_use_protein"]:
-        return "--protein=results/braker/odb12/Viridiplantae.fa \\"
+        return "--prot_seq=results/braker/odb12/Viridiplantae.fa"
     return ""
 
 
@@ -160,8 +160,7 @@ rule braker_run:
             --genome={input.genome} \
             --bam=$bams \
             --threads={threads} \
-            --skipOptimize \
-            {params.protein_flag}
+            {params.protein_flag} \
             --gff3 \
             --softmasking \
             --AUGUSTUS_CONFIG_PATH=$(pwd)/{params.cfg} \

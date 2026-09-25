@@ -1110,6 +1110,68 @@ save_plot(combined, "variantion_breakdown_1", today, "variantion_breakdown", "..
 save_plot(combined, )
 ```
 
+# Sweep model for MYB cluster
+
+```{r}
+
+# load diversity scan data
+div_files <- list.files(path = "../results/vg/hap2_vs_hap1", recursive = T, pattern = "interval_diversity.csv", full.names = T)
+
+div_files <- div_files[grepl("four", div_files)]
+
+div_data <- read_csv(div_files, col_names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","missing","numeric","passed","theta_pi","theta_watterson","tajimas_d"), id = "file_path", skip = 1)
+
+div_data <- div_data %>%
+  filter(chrom != "chrom")
+
+div_data <- div_data %>%
+  filter(chrom == "hap1_scaffold_25") %>%
+  mutate(mid = (start+end)/2,
+         sample = gsub("/diversity", "", str_extract(file_path, "[1-9]/diversity")),
+         dist_bp = abs(mid - 10425000)
+  )
+
+# df: dist_M = genetic distance from sweep site (Morgans), pi = window diversity
+C_const <- 4e-9
+fit <- nls(theta_pi ~ pi0 * (1 - exp(-beta * abs(C_const * dist_bp))),
+           data = div_data %>% filter(sample == 1),
+           start = list(pi0 = max(div_data$theta_pi, na.rm = TRUE), beta = 100))
+
+summary(fit)
+beta_hat <- coef(fit)["beta"]
+Ne <- 3e5  # plug in your estimate
+
+# selection coefficient (divide by 2 because its a dominant mutation?)
+s_hat <- 2 * log(2 * Ne) / beta_hat * (1/2)
+
+# Generate a smooth prediction curve across the observed distance range
+pred_df <- data.frame(
+  dist_bp = seq(min(div_data$dist_bp, na.rm = TRUE),
+                max(div_data$dist_bp, na.rm = TRUE),
+                length.out = 500)
+)
+pred_df$theta_pi_hat <- predict(fit, newdata = pred_df)
+
+# Plot observed vs fitted
+p <- ggplot() +
+  geom_point(data = div_data %>% filter(sample == 1), aes(x = dist_bp, y = theta_pi),
+             alpha = 0.4, size = 1.5, color = "grey30") +
+  geom_line(data = pred_df, aes(x = dist_bp, y = theta_pi_hat),
+            color = "firebrick", linewidth = 1) +
+  labs(
+    x = "Distance from sweep site (bp)",
+    y = expression(pi[4]),
+    title = paste0("Observed diversity vs. fitted sweep model (s = ", signif(s_hat, digits = 3), ")")
+  ) +
+  xlim(0, 250e3) +
+  theme_minimal(base_size = 13)
+
+p
+
+ggsave(paste0("../results/by-date/", today, "/hitchhike_model.pdf"), height = 4, width = 7)
+
+```
+
 # Conceptual diagrams of k-mer arithmetic
 
 ```{r}
