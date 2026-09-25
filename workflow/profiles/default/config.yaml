@@ -55,6 +55,9 @@ set-threads:
   freqk_count: 8
   freqk_index: 4
   freqk_filter_vcf: 2
+  anchorwave_pair_splice_backbone: 8
+  anchorwave_pair_splice_variant: 8
+  anchorwave_pair_genoali: 8
 
 set-resources:
   samtools_fastq:
@@ -218,3 +221,21 @@ set-resources:
   freqk_call:
     cpus_per_task: 8
     runtime: 60
+  anchorwave_pair_extract_backbone:
+    cpus_per_task: 1
+    runtime: 30
+  anchorwave_pair_extract_variant:
+    cpus_per_task: 1
+    runtime: 30
+  anchorwave_pair_gff2seq:
+    cpus_per_task: 1
+    runtime: 30
+  anchorwave_pair_splice_backbone:
+    cpus_per_task: 8
+    runtime: 240
+  anchorwave_pair_splice_variant:
+    cpus_per_task: 8
+    runtime: 240
+  anchorwave_pair_genoali:
+    cpus_per_task: 8
+    runtime: 720

@@ -128,6 +128,20 @@ braker_use_protein: true
 braker_odb_url: "https://bioinf.uni-greifswald.de/bioinf/partitioned_odb12/Viridiplantae.fa.gz"
 braker_odb_md5: "34c1f027a1a7b10f225b69fbd5500587"
 
+# --- AnchorWave single scaffold pair alignment ---
+anchorwave_pair:
+  backbone:                                  # reference; donates the annotation
+    fasta: "../resources/reference/hap1.fasta"
+    gff: "../resources/annotation/hap1.gff3"
+    scaffold: "scaffold_25"
+  variant:                                   # query
+    fasta: "../resources/reference/hap2.fasta"
+    scaffold: "hap2_scaffold_2"              # name as it appears in the fasta
+anchorwave_pair_common_name: "scaffold_pair"
+anchorwave_minimap_k: 12
+anchorwave_minimap_p: 0.4
+anchorwave_minimap_n: 20
+
 # --- dn/ds ---
 dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
