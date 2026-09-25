@@ -1,8 +1,8 @@
-# BRAKER3 genome annotation from RNA-seq.
-# Chain: SRA download -> fastp trimming -> HISAT2 alignment -> BRAKER3
-# (singularity container) gene prediction per reference genome.
-# Requires --use-singularity; sra_download runs locally (login node has
-# internet, compute nodes do not).
+# BRAKER3 genome annotation from RNA-seq and OrthoDB protein evidence.
+# Chain: OrthoDB/SRA download -> fastp trimming -> HISAT2 alignment ->
+# BRAKER3 (singularity container) gene prediction per reference genome.
+# Requires --use-singularity; odb_download and sra_download need internet
+# (login node has internet, compute nodes do not).
 
 
 rule minimap2_braker_paf:
@@ -14,6 +14,24 @@ rule minimap2_braker_paf:
     conda: "../envs/minimap2.yaml"
     shell:
         "minimap2 -t {threads} -x asm20 -f 0.02 {input.backbone} {input.variant} > {output}"
+
+
+rule odb_download:
+    # OrthoDB v12 Viridiplantae proteins used as BRAKER3 protein evidence
+    # (switches GeneMark to ETP mode). Needs internet: run on a login node.
+    output:
+        fa="results/braker/odb12/Viridiplantae.fa"
+    conda: "../envs/odb_download.yaml"
+    params:
+        url=config["braker_odb_url"],
+        md5=config["braker_odb_md5"]
+    shell:
+        """
+        mkdir -p $(dirname {output})
+        wget -c -O {output}.gz {params.url}
+        echo "{params.md5}  {output}.gz" | md5sum -c -
+        gunzip {output}.gz
+        """
 
 
 rule sra_download:
@@ -99,10 +117,25 @@ def braker_bams(wildcards):
     )
 
 
+def braker_protein(wildcards):
+    # Protein evidence only when enabled; an empty list keeps the OrthoDB
+    # download out of the DAG when braker_use_protein is false.
+    if config["braker_use_protein"]:
+        return ["results/braker/odb12/Viridiplantae.fa"]
+    return []
+
+
+def braker_protein_flag(wildcards):
+    if config["braker_use_protein"]:
+        return "--protein=results/braker/odb12/Viridiplantae.fa \\"
+    return ""
+
+
 rule braker_run:
     input:
         genome=lambda wildcards: braker_genomes[wildcards.ref],
-        bams=braker_bams
+        bams=braker_bams,
+        protein=braker_protein
     output:
         gtf="results/braker/{ref}/braker.gtf",
         gff3="results/braker/{ref}/braker.gff3",
@@ -112,7 +145,8 @@ rule braker_run:
     params:
         species=config["braker_species"],
         cfg=lambda wildcards: f"results/braker/{wildcards.ref}/augustus_config",
-        workdir=lambda wildcards: f"results/braker/{wildcards.ref}/braker"
+        workdir=lambda wildcards: f"results/braker/{wildcards.ref}/braker",
+        protein_flag=braker_protein_flag
     shell:
         """
         mkdir -p results/braker/{wildcards.ref}
@@ -127,6 +161,7 @@ rule braker_run:
             --bam=$bams \
             --threads={threads} \
             --skipOptimize \
+            {params.protein_flag}
             --gff3 \
             --softmasking \
             --AUGUSTUS_CONFIG_PATH=$(pwd)/{params.cfg} \

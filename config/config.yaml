@@ -124,6 +124,9 @@ braker_genomes:
   linanthus: "../resources/reference/Linanthus_parryae_spaceless.fasta"
 braker_species: "linanthus_parryae"
 braker_container: "docker://teambraker/braker3:v3.1.1"
+braker_use_protein: true
+braker_odb_url: "https://bioinf.uni-greifswald.de/bioinf/partitioned_odb12/Viridiplantae.fa.gz"
+braker_odb_md5: "34c1f027a1a7b10f225b69fbd5500587"
 
 # --- dn/ds ---
 dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"

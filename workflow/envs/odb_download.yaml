@@ -1,0 +1,8 @@
+name: odb_download
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - wget=1.21.4
+  - gzip=1.13
+  - coreutils=9.5

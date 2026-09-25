@@ -28,6 +28,7 @@ set-threads:
   panther_hmmsearch: 8
   orthofinder_run: 16
   featurecounts_run: 4
+  braker_featurecounts_run: 4
   minimap2_asm_paf: 16
   vg_autoindex: 2
   vg_giraffe: 12
@@ -46,6 +47,7 @@ set-threads:
   bcftools_norm_svim: 2
   minimap2_braker_paf: 16
   sra_download: 1
+  odb_download: 1
   fastp_rna: 8
   hisat2_index: 1
   hisat2_align: 16
@@ -89,6 +91,9 @@ set-resources:
   featurecounts_run:
     cpus_per_task: 4
     runtime: 60
+  braker_featurecounts_run:
+    cpus_per_task: 4
+    runtime: 120
   degenotate_run:
     cpus_per_task: 8
     runtime: 120
@@ -183,6 +188,9 @@ set-resources:
   sra_download:
     cpus_per_task: 1
     runtime: 720
+  odb_download:
+    cpus_per_task: 1
+    runtime: 240
   fastp_rna:
     cpus_per_task: 8
     runtime: "max(2*input.size_mb/(1024*threads), 10)"

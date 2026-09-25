@@ -47,7 +47,9 @@ rule orthofinder_all:
 rule featurecounts_all:
     input:
         expand("results/featurecounts/{species}_expressed_genes.txt",
-               species=panther_species)
+               species=panther_species),
+        expand("results/braker/{ref}/braker_expressed.gff3", ref=braker_refs),
+        expand("results/braker/{ref}/braker_expressed.faa", ref=braker_refs)
 
 rule degenotate_all:
     input:
