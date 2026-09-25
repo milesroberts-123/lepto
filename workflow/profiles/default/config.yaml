@@ -49,7 +49,7 @@ set-threads:
   fastp_rna: 8
   hisat2_index: 1
   hisat2_align: 16
-  braker_run: 16
+  braker_run: 32
   freqk_count: 8
   freqk_index: 4
   freqk_filter_vcf: 2
@@ -60,7 +60,7 @@ set-resources:
     runtime: 240
   fastp:
     cpus_per_task: 8
-    runtime: "max(2*input.size_mb/(1024*threads), 10)"
+    runtime: "max(4*input.size_mb/(1024*threads), 10)"
   kmc_count:
     cpus_per_task: 8
     runtime: 120
@@ -172,8 +172,8 @@ set-resources:
   bgzip_tabix_svim_vcf:
     runtime: 60
   braker_run:
-    cpus_per_task: 16
-    runtime: 2880
+    cpus_per_task: 32
+    runtime: 10080
   svim_asm_run:
     cpus_per_task: 1
     runtime: 1440
@@ -199,13 +199,13 @@ set-resources:
     cpus_per_task: 4
     runtime: 240
   freqk_var_dedup:
-    cpus_per_task: 4
+    cpus_per_task: 16
     runtime: 240
   freqk_ref_dedup:
-    cpus_per_task: 4
+    cpus_per_task: 8
     runtime: 480
   freqk_count:
-    cpus_per_task: 8
+    cpus_per_task: 32
     runtime: "max(4*input.size_mb/1024, 20)"
   freqk_call:
     cpus_per_task: 8

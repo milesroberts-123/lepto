@@ -121,8 +121,8 @@ rna_sra_accessions:
   - "SRR29348134"
   - "SRR29348135"
 braker_genomes:
-  LPJR3B1_scaf: "../resources/reference/LPJR3B1_scaf.fasta"
-braker_species: "lepto"
+  linanthus: "../resources/reference/Linanthus_parryae_spaceless.fasta"
+braker_species: "linanthus_parryae"
 braker_container: "docker://teambraker/braker3:v3.1.1"
 
 # --- dn/ds ---
@@ -130,9 +130,10 @@ dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
 dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
 dnds_yn00_ctl: "../config/dnds/yn00.ctl"
 
-# --- freqk (binary path, see AGENTS.md) ---
-freqk_binary: "/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/bin/freqk"
+# --- freqk ---
+freqk_binary: "/global/scratch/users/milesroberts/moi_lab_projects/freqk/target/release/freqk"
 freqk_k: 31
+freqk_min_qual: 30
 
 # --- samples ---
 samples_table: "../config/samples.tsv"

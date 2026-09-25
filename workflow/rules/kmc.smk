@@ -17,7 +17,7 @@ rule fastp:
     input:
         "results/samtools/{ID}.fq",
     output:
-        fastq=temp("results/fastp/{ID}.fastq"),
+        fastq="results/fastp/{ID}.fastq",
         json="results/fastp/{ID}.json"
     conda:
         "../envs/fastp.yaml"

@@ -60,7 +60,7 @@ rule dnds_all:
 
 rule braker_all:
     input:
-        expand("results/braker/{variant}_vs_{backbone}.paf", variant=config["minimap2_braker"]["variant"], backbone=config["minimap2_braker"]["backbone"]),
+        #expand("results/braker/{variant}_vs_{backbone}.paf", variant=config["minimap2_braker"]["variant"], backbone=config["minimap2_braker"]["backbone"]),
         expand("results/braker/{ref}/braker.gtf", ref=braker_refs),
         expand("results/braker/{ref}/braker.gff3", ref=braker_refs),
         expand("results/braker/{ref}/braker.aa", ref=braker_refs),

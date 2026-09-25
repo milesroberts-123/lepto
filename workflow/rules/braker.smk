@@ -126,6 +126,7 @@ rule braker_run:
             --genome={input.genome} \
             --bam=$bams \
             --threads={threads} \
+            --skipOptimize \
             --gff3 \
             --softmasking \
             --AUGUSTUS_CONFIG_PATH=$(pwd)/{params.cfg} \

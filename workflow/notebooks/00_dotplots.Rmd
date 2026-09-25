@@ -969,6 +969,19 @@ panther_hap2_filt <- panther_hap2 %>%
   arrange(gene)
 
 write.table(panther_hap2_filt, "../results/panther/hap2/mybs.txt", quote = F, row.names = F, sep = "\t")
+
+# write more general lists of all PANTHER matches per gene
+panther_hap1_evalueOnly <- panther_hap1 %>%
+  dplyr::select(gene, PANTHER.family, PANTHER.subfamily, full.evalue) %>%
+  arrange(gene)
+
+fwrite(panther_hap1_evalueOnly, paste0("../../results/by-date/", today, "/hap1_panther_annotations.txt.gz"))
+
+panther_hap2_evalueOnly <- panther_hap2 %>%
+  dplyr::select(gene, PANTHER.family, PANTHER.subfamily, full.evalue) %>%
+  arrange(gene)
+
+fwrite(panther_hap2_evalueOnly, paste0("../../results/by-date/", today, "/hap2_panther_annotations.txt.gz"))
 ```
 
 
