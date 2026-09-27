@@ -10,6 +10,7 @@ samples_by_group = {
     for g in groups
 }
 sample_ids = [str(s["sample_id"]) for s in samples]
+w_sample_ids = [str(s["sample_id"]) for s in samples if s["group"] == "W"]
 cram_paths = dict(zip(sample_ids, [s["cram_path"] for s in samples]))
 sample_sizes = dict(zip(sample_ids, [s["sample_size"] for s in samples]))
 ref_names = list(config["bwa_refs"].keys())

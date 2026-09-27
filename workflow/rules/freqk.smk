@@ -4,13 +4,48 @@
 # VCF, its tabix index, and the prefixed backbone fasta to already
 # exist); reads are the same fastp-cleaned pooled fastqs fed to vg
 # giraffe. Before indexing, the VCF is normalized and subset to
-# biallelic SNPs. The freqk binary is provisioned outside the repo and
-# referenced by the freqk_binary config key (see AGENTS.md).
+# biallelic SNPs, excluding sites polymorphic (0.02 < alt freq < 0.98)
+# in any W-group pool per the per-pool grenedalf frequency tables. The
+# freqk binary is provisioned outside the repo and referenced by the
+# freqk_binary config key (see AGENTS.md).
+
+rule freqk_exclusion_bed:
+    # BED of sites polymorphic in any W-group pool, from the per-pool
+    # grenedalf frequency tables (column 6 alt count, 7 depth, 8 alt
+    # freq; 0-based BED). Consuming these tables couples freqk to the vg
+    # mapping chain (see AGENTS.md reverted-approaches entry): freqk-only
+    # targets will schedule the vg chain if the CSVs are missing.
+    input:
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]],
+               ID=w_sample_ids)
+    output:
+        "results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+    params:
+        min_alt_count=config["freqk_min_alt_count"],
+        min_depth=config["freqk_min_depth"],
+        min_freq=config["freqk_min_polymorphic_freq"],
+        max_freq=config["freqk_max_polymorphic_freq"]
+    benchmark:
+        "benchmarks/freqk_exclusion_bed/freqk_exclusion_bed_{variant}_vs_{backbone}.bench"
+    shell:
+        """
+        mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
+        for table in {input}; do
+            awk -F, -v c={params.min_alt_count} -v d={params.min_depth} \\
+                -v f={params.min_freq} -v x={params.max_freq} \\
+                '$1 != "CHROM" && $6 > c && $7 >= d && $8 > f && $8 < x \\
+                 {{print $1"\\t"$2-1"\\t"$2}}' "$table"
+        done | sort -u -k1,1 -k2,2n > {output}
+        """
+
 
 rule freqk_filter_vcf:
     input:
         "results/vg/{variant}_vs_{backbone}.vcf.gz",
-        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi"
+        tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi",
+        excl="results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
     output:
         vcfgz=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz"),
         tbi=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi")
@@ -20,7 +55,8 @@ rule freqk_filter_vcf:
     shell:
         """
         mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
-        bcftools norm -m -any {input} \\
+        bcftools norm -m -any {input[0]} \\
+            | bcftools view -T ^{input.excl} \\
             | bcftools view -i 'QUAL>={params.freqk_min_qual}' -v snps -m2 -M2 -Oz -o {output.vcfgz}
         tabix -p vcf {output.vcfgz}
         """

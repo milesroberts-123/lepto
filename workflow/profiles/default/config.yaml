@@ -54,6 +54,7 @@ set-threads:
   braker_run: 32
   freqk_count: 8
   freqk_index: 4
+  freqk_exclusion_bed: 2
   freqk_filter_vcf: 2
   anchorwave_pair_splice_backbone: 8
   anchorwave_pair_splice_variant: 8
@@ -203,6 +204,9 @@ set-resources:
   hisat2_align:
     cpus_per_task: 16
     runtime: "max(4*input.size_mb/1024, 20)"
+  freqk_exclusion_bed:
+    cpus_per_task: 2
+    runtime: 120
   freqk_filter_vcf:
     cpus_per_task: 2
     runtime: 120
