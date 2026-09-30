@@ -1,0 +1,6 @@
+name: vigs
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - seqkit=2.13.0
