@@ -59,6 +59,12 @@ set-threads:
   anchorwave_pair_splice_backbone: 8
   anchorwave_pair_splice_variant: 8
   anchorwave_pair_genoali: 8
+  vigs_split: 2
+  vigs_nontarget_rc: 2
+  vigs_nontarget_kmers: 8
+  vigs_target_seq: 2
+  vigs_target_kmers: 4
+  vigs_assemble: 1
 
 set-resources:
   samtools_fastq:
@@ -243,3 +249,22 @@ set-resources:
   anchorwave_pair_genoali:
     cpus_per_task: 8
     runtime: 720
+  vigs_nontarget_kmers:
+    cpus_per_task: 8
+    mem_mb: 12000
+    runtime: 120
+  vigs_split:
+    cpus_per_task: 2
+    runtime: 60
+  vigs_nontarget_rc:
+    cpus_per_task: 2
+    runtime: 60
+  vigs_target_seq:
+    cpus_per_task: 2
+    runtime: 60
+  vigs_target_kmers:
+    cpus_per_task: 4
+    runtime: 240
+  vigs_assemble:
+    cpus_per_task: 1
+    runtime: 60

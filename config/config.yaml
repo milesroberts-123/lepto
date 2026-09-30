@@ -159,5 +159,24 @@ freqk_min_depth: 10
 freqk_min_polymorphic_freq: 0.02
 freqk_max_polymorphic_freq: 0.98
 
+# --- VIGS target design ---
+# Transcriptome fasta (all transcript records); record IDs listed in
+# vigs_target_transcripts are the VIGS targets, everything else is the
+# off-target background. K-mers of size vigs_k shared with any
+# non-target transcript disqualify a region (docx: reject any target
+# containing a >=19-21 nt contiguous match with a non-target
+# transcript); surviving k-mer runs are assembled into insert blocks.
+vigs_transcriptome_fasta: "../resources/annotation/hap1_cds.fasta"
+vigs_target_transcripts: []
+# vigs_target_transcripts:
+#   - "gene00001"
+#   - "gene00099"
+vigs_k: 19
+vigs_insert_min: 200
+vigs_insert_max: 300
+vigs_min_gc: 0.40
+vigs_max_gc: 0.55
+vigs_max_homopolymer: 3
+
 # --- samples ---
 samples_table: "../config/samples.tsv"
