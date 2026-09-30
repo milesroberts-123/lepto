@@ -26,7 +26,7 @@ set-threads:
   kmc_subtract: 4
   bwa_mem: 8
   panther_hmmsearch: 8
-  orthofinder_run: 16
+  orthofinder_run: 32
   featurecounts_run: 4
   braker_featurecounts_run: 4
   minimap2_asm_paf: 16
@@ -90,7 +90,7 @@ set-resources:
     slurm_account: "co_moilab"
     slurm_partition: "savio4_htc"
     slurm_qos: "moilab_htc4_normal"
-    cpus_per_task: 16
+    cpus_per_task: 32
     runtime: 1440
   featurecounts_run:
     cpus_per_task: 4
@@ -181,7 +181,7 @@ set-resources:
   bgzip_tabix_svim_vcf:
     runtime: 60
   braker_run:
-    cpus_per_task: 32
+    cpus_per_task: 56
     runtime: 10080
   svim_asm_run:
     cpus_per_task: 1
@@ -206,7 +206,7 @@ set-resources:
     runtime: "max(4*input.size_mb/1024, 20)"
   freqk_exclusion_bed:
     cpus_per_task: 2
-    runtime: 120
+    runtime: 480
   freqk_filter_vcf:
     cpus_per_task: 2
     runtime: 120

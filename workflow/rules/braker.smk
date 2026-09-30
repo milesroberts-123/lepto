@@ -161,6 +161,7 @@ rule braker_run:
             --bam=$bams \
             --threads={threads} \
             {params.protein_flag} \
+            --skipOptimize \
             --gff3 \
             --softmasking \
             --AUGUSTUS_CONFIG_PATH=$(pwd)/{params.cfg} \

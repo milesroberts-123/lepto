@@ -29,6 +29,7 @@ rule orthofinder_stage:
         "results/orthofinder/prefixed/{species}.faa"
     output:
         "results/orthofinder/proteomes/{species}.faa"
+    localrule: True
     shell:
         """
         mkdir -p results/orthofinder/proteomes
@@ -41,6 +42,7 @@ rule orthofinder_stage_external:
         lambda wildcards: config["orthofinder_external_proteomes"][wildcards.species]
     output:
         "results/orthofinder/proteomes/{species}.faa"
+    localrule: True
     shell:
         """
         mkdir -p results/orthofinder/proteomes

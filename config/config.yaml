@@ -45,6 +45,8 @@ panther_hmmsearch_incdome: 1e-8
 # --- OrthoFinder ---
 orthofinder_external_proteomes:
   arabidopsis: "../resources/proteomes/arabidopsis_thaliana.faa"
+  linanthus: "results/braker/linanthus/braker_expressed.faa"
+  phlox: "../resources/proteomes/phlox_drummondii/phlox_drummondii.faa"
 
 # --- featureCounts ---
 featurecounts_annotations:
