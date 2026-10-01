@@ -1,6 +1,7 @@
 benchmarks/
 braker/
 gyd/
+*.nwk
 *.gff3
 *.gff3.gz
 *.vcf.gz

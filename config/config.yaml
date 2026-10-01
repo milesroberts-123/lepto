@@ -46,7 +46,7 @@ panther_hmmsearch_incdome: 1e-8
 orthofinder_external_proteomes:
   arabidopsis: "../resources/proteomes/arabidopsis_thaliana.faa"
   linanthus: "results/braker/linanthus/braker_expressed.faa"
-  phlox: "../resources/proteomes/phlox_drummondii/phlox_drummondii.faa"
+  #phlox: "../resources/proteomes/phlox_drummondii/phlox_drummondii.faa"
 
 # --- featureCounts ---
 featurecounts_annotations:
@@ -140,8 +140,8 @@ anchorwave_pair:
     scaffold: "scaffold_25"
   variant:                                   # query
     fasta: "../resources/reference/hap2.fasta"
-    scaffold: "hap2_scaffold_2"              # name as it appears in the fasta
-anchorwave_pair_common_name: "scaffold_pair"
+    scaffold: "scaffold_2"              # name as it appears in the fasta
+anchorwave_pair_common_name: "foobar"
 anchorwave_minimap_k: 12
 anchorwave_minimap_p: 0.4
 anchorwave_minimap_n: 20

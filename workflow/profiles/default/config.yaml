@@ -58,7 +58,7 @@ set-threads:
   freqk_filter_vcf: 2
   anchorwave_pair_splice_backbone: 8
   anchorwave_pair_splice_variant: 8
-  anchorwave_pair_genoali: 8
+  anchorwave_pair_genoali: 2
   vigs_split: 2
   vigs_nontarget_rc: 2
   vigs_nontarget_kmers: 8
