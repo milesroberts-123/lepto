@@ -33,7 +33,7 @@ rule orthofinder_stage:
     shell:
         """
         mkdir -p results/orthofinder/proteomes
-        ln -sf $(realpath {input}) {output}
+        cp {input} {output}
         """
 
 
@@ -46,7 +46,7 @@ rule orthofinder_stage_external:
     shell:
         """
         mkdir -p results/orthofinder/proteomes
-        ln -sf $(realpath {input}) {output}
+        cp {input} {output}
         """
 
 
@@ -55,7 +55,7 @@ rule orthofinder_run:
         expand("results/orthofinder/proteomes/{species}.faa",
                species=list(config["panther_input_fastas"].keys()) + list(config.get("orthofinder_external_proteomes", {}).keys()))
     output:
-        "results/orthofinder/Orthogroups.tsv"
+        directory("results/orthofinder/proteomes/Orthofinder")
     conda: "../envs/orthofinder.yaml"
     shell:
         """
@@ -64,5 +64,4 @@ rule orthofinder_run:
             -a {threads} \\
             -S diamond \\
             -og 
-        ln -sf $(ls -d results/orthofinder/proteomes/OrthoFinder/Results_*/Orthogroups/Orthogroups.tsv) {output}
         """
