@@ -42,17 +42,18 @@ rule freqk_exclusion_sites:
         """
 
 rule freqk_exclusion_bed:
-    # Sort and deduplicate the polymorphic-site stream into the final
-    # 0-based BED consumed by freqk_filter_vcf.
+    # Sort and merge overlapping/adjacent polymorphic sites into the
+    # final 0-based BED consumed by freqk_filter_vcf.
     input:
         "results/freqk/{variant}_vs_{backbone}/polymorphic_sites.unsorted.bed"
     output:
         "results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+    conda: "../envs/bedtools.yaml"
     benchmark:
         "benchmarks/freqk_exclusion_bed/freqk_exclusion_bed_{variant}_vs_{backbone}.bench"
     shell:
         """
-        sort -u -k1,1 -k2,2n {input} > {output}
+        sort -k1,1 -k2,2n {input} | bedtools merge -i - > {output}
         """
 
 
