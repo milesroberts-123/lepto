@@ -70,6 +70,18 @@ featurecounts_bams:
 featurecounts_gff_feature: "Parent"
 featurecounts_paired: true
 
+# --- MCScanX hap1/hap2 collinearity ---
+# Inputs are the featureCounts-expressed products (matching gene sets);
+# paths point at the featurecounts subworkflow outputs.
+mcscanx_input_fastas:
+  hap1: "results/featurecounts/hap1_expressed.faa"
+  hap2: "results/featurecounts/hap2_expressed.faa"
+mcscanx_input_gffs:
+  hap1: "results/featurecounts/hap1_expressed.gff3"
+  hap2: "results/featurecounts/hap2_expressed.gff3"
+mcscanx_blast_evalue: 1e-5
+mcscanx_blast_max_targets: 5
+
 # --- vg graph genome & diversity ---
 vg_ref_backbone: "hap1"
 vg_ref_variant: "hap2"

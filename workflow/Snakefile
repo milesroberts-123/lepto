@@ -83,11 +83,17 @@ include: "rules/braker.smk"
 include: "rules/freqk.smk"
 include: "rules/anchorwave_pair.smk"
 include: "rules/vigs.smk"
+include: "rules/mcscanx.smk"
 
 rule vigs_all:
     input:
         "results/vigs/vigs_targets.tsv",
         "results/vigs/vigs_target_blocks.fasta"
+
+rule mcscanx_all:
+    input:
+        "results/mcscanx/collinearity/leptosiphon_all.collinearity",
+        "results/mcscanx/collinearity/leptosiphon_all.tandem"
 
 rule anchorwave_pair_all:
     input:
