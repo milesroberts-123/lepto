@@ -9,26 +9,27 @@
 # freqk binary is provisioned outside the repo and referenced by the
 # freqk_binary config key (see AGENTS.md).
 
-rule freqk_exclusion_bed:
-    # BED of sites polymorphic in any W-group pool, from the per-pool
-    # grenedalf frequency tables (column 6 alt count, 7 depth, 8 alt
-    # freq; 0-based BED). Consuming these tables couples freqk to the vg
-    # mapping chain (see AGENTS.md reverted-approaches entry): freqk-only
-    # targets will schedule the vg chain if the CSVs are missing.
+rule freqk_exclusion_sites:
+    # Unsorted, un-deduplicated stream of sites polymorphic in any
+    # W-group pool, from the per-pool grenedalf frequency tables (column
+    # 6 alt count, 7 depth, 8 alt freq; 0-based BED). Consuming these
+    # tables couples freqk to the vg mapping chain (see AGENTS.md
+    # reverted-approaches entry): freqk-only targets will schedule the
+    # vg chain if the CSVs are missing.
     input:
         expand("results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv",
                variant=[config["vg_ref_variant"]],
                backbone=[config["vg_ref_backbone"]],
                ID=w_sample_ids)
     output:
-        "results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+        temp("results/freqk/{variant}_vs_{backbone}/polymorphic_sites.unsorted.bed")
     params:
         min_alt_count=config["freqk_min_alt_count"],
         min_depth=config["freqk_min_depth"],
         min_freq=config["freqk_min_polymorphic_freq"],
         max_freq=config["freqk_max_polymorphic_freq"]
     benchmark:
-        "benchmarks/freqk_exclusion_bed/freqk_exclusion_bed_{variant}_vs_{backbone}.bench"
+        "benchmarks/freqk_exclusion_bed/freqk_exclusion_sites_{variant}_vs_{backbone}.bench"
     shell:
         """
         mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
@@ -37,7 +38,21 @@ rule freqk_exclusion_bed:
                 -v f={params.min_freq} -v x={params.max_freq} \\
                 '$1 != "CHROM" && $6 > c && $7 >= d && $8 > f && $8 < x \\
                  {{print $1"\\t"$2-1"\\t"$2}}' "$table"
-        done | sort -u -k1,1 -k2,2n > {output}
+        done > {output}
+        """
+
+rule freqk_exclusion_bed:
+    # Sort and deduplicate the polymorphic-site stream into the final
+    # 0-based BED consumed by freqk_filter_vcf.
+    input:
+        "results/freqk/{variant}_vs_{backbone}/polymorphic_sites.unsorted.bed"
+    output:
+        "results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+    benchmark:
+        "benchmarks/freqk_exclusion_bed/freqk_exclusion_bed_{variant}_vs_{backbone}.bench"
+    shell:
+        """
+        sort -u -k1,1 -k2,2n {input} > {output}
         """
 
 
