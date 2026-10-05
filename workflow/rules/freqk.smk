@@ -57,22 +57,40 @@ rule freqk_exclusion_bed:
         """
 
 
+def freqk_exclusion_input(wildcards):
+    # Exclusion BED is part of the DAG only when the grenedalf-site
+    # filter is enabled; an empty list drops the exclusion chain (and
+    # the grenedalf CSV inputs) entirely.
+    if config["freqk_use_exclusion_filter"]:
+        return "results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+    return []
+
+
+def freqk_exclusion_stage(wildcards, input):
+    # Mirror whichever input set snakemake resolved so the shell always
+    # matches the DAG (checked against input.excl, not config). Built by
+    # concatenation so no format placeholders survive in the value.
+    if input.excl:
+        return "| bcftools view -T ^{}".format(input.excl)
+    return ""
+
+
 rule freqk_filter_vcf:
     input:
         "results/vg/{variant}_vs_{backbone}.vcf.gz",
         tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi",
-        excl="results/freqk/{variant}_vs_{backbone}/polymorphic_exclusion.bed"
+        excl=freqk_exclusion_input
     output:
         vcfgz=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz"),
         tbi=temp("results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi")
     conda: "../envs/bcftools.yaml"
     params:
-        freqk_min_qual=config["freqk_min_qual"]
+        freqk_min_qual=config["freqk_min_qual"],
+        excl_stage=freqk_exclusion_stage
     shell:
         """
         mkdir -p results/freqk/{wildcards.variant}_vs_{wildcards.backbone}
-        bcftools norm -m -any {input[0]} \\
-            | bcftools view -T ^{input.excl} \\
+        bcftools norm -m -any {input[0]} {params.excl_stage} \\
             | bcftools view -i 'QUAL>={params.freqk_min_qual}' -v snps -m2 -M2 -Oz -o {output.vcfgz}
         tabix -p vcf {output.vcfgz}
         """
