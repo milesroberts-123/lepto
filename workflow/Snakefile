@@ -43,7 +43,7 @@ rule panther_all:
 
 rule orthofinder_all:
     input:
-        "results/orthofinder/Orthogroups.tsv"
+        directory("results/orthofinder/proteomes/Orthofinder")
 
 rule featurecounts_all:
     input:
