@@ -177,6 +177,22 @@ freqk_min_depth: 10
 freqk_min_polymorphic_freq: 0.02
 freqk_max_polymorphic_freq: 0.98
 
+# --- kMate ---
+# Haplotype-mixture allele-frequency estimates for the kmate_groups
+# pools. Panel is built from freqk's norm.vcf.gz with an all-reference
+# backbone column (hap1) appended and hap2 haploidized; kMate consumes
+# the same vg products (prefixed fasta, fastq reads) but keeps indels,
+# which freqk's -v snps stage drops. --min-ac 1 is mandatory for the
+# 2-founder panel (default 2 empties the k-mer matrix).
+kmate_groups: ["P"]
+kmate_k: 31
+kmate_min_ac: 1
+kmate_invariant_margin: 1
+kmate_unit: "chrom"
+# jellyfish hash size for build-kmer-db; pool 1 is 456 GB of fastq,
+# size the hash generously (wiki default 3G is too small here)
+kmate_hash_size: "32G"
+
 # --- VIGS target design ---
 # Transcriptome fasta (all transcript records); record IDs listed in
 # vigs_target_transcripts are the VIGS targets, everything else is the

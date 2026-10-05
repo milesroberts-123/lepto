@@ -11,6 +11,9 @@ samples_by_group = {
 }
 sample_ids = [str(s["sample_id"]) for s in samples]
 w_sample_ids = [str(s["sample_id"]) for s in samples if s["group"] == "W"]
+p_sample_ids = [
+    str(s["sample_id"]) for s in samples if s["group"] in config["kmate_groups"]
+]
 cram_paths = dict(zip(sample_ids, [s["cram_path"] for s in samples]))
 sample_sizes = dict(zip(sample_ids, [s["sample_size"] for s in samples]))
 ref_names = list(config["bwa_refs"].keys())
@@ -84,6 +87,7 @@ include: "rules/freqk.smk"
 include: "rules/anchorwave_pair.smk"
 include: "rules/vigs.smk"
 include: "rules/mcscanx.smk"
+include: "rules/kmate.smk"
 
 rule vigs_all:
     input:
@@ -106,6 +110,13 @@ rule freqk_all:
                variant=[config["vg_ref_variant"]],
                backbone=[config["vg_ref_backbone"]],
                ID=sample_ids)
+
+rule kmate_all:
+    input:
+        expand("results/kmate/{variant}_vs_{backbone}/{ID}_af.tsv",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]],
+               ID=p_sample_ids)
 
 rule vg_diversity_all:
     input:

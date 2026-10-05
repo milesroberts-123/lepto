@@ -1,0 +1,11 @@
+name: kmate
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # python=3.10 pinned: kmate declares python>=3.8, but its dna_jellyfish
+  # dependency is a py3.10 C extension; on newer pythons the import fails
+  # (ModuleNotFoundError) and build-index aborts. Verified 0.1.2 selftest
+  # PASS on 3.10.
+  - python=3.10
+  - kmate=0.1.2

@@ -67,6 +67,11 @@ set-threads:
   vigs_target_seq: 2
   vigs_target_kmers: 4
   vigs_assemble: 1
+  kmate_build_index: 8
+  kmate_build_kmer_pa: 2
+  kmate_build_var_pa: 2
+  kmate_kmer_db: 8
+  kmate_run: 8
 
 set-resources:
   samtools_fastq:
@@ -279,3 +284,19 @@ set-resources:
   vigs_assemble:
     cpus_per_task: 1
     runtime: 60
+  kmate_build_index:
+    cpus_per_task: 8
+    runtime: 480
+  kmate_build_kmer_pa:
+    cpus_per_task: 2
+    runtime: 240
+  kmate_build_var_pa:
+    cpus_per_task: 2
+    runtime: 120
+  kmate_kmer_db:
+    cpus_per_task: 8
+    runtime: "max(4*input.size_mb/1024, 240)"
+  kmate_run:
+    cpus_per_task: 8
+    runtime: "max(4*input.size_mb/1024, 480)"
+    mem_mb: 64000
