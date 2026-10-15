@@ -100,6 +100,19 @@ grenedalf_min_base_qual: 20
 grenedalf_subsample_max_read_depth: 500
 grenedalf_fst_method: "unbiased-hudson"
 
+# --- grenedalf pooled diversity ---
+# Pool samples together into one merged sample (grenedalf
+# --sample-group-merge-table): per-position base counts are summed
+# over the listed sample IDs, so pi reflects the combined population,
+# with the pool size recomputed as the sum of the member pools.
+# The merged sample (output dir, filename and CSV columns) is named
+# by grenedalf_pooled_diversity_name. An empty ID list disables the
+# pooled-diversity branch. Grenedalf names SAM inputs by file basename,
+# which here is the sample ID.
+grenedalf_pooled_diversity_name: "pooled"
+grenedalf_pooled_diversity_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+grenedalf_pooled_multi_file_locus_set: "union"
+
 # --- sourmash ---
 sourmash_fastas:
   hap1: "../resources/reference/hap1.fasta"

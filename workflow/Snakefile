@@ -22,6 +22,34 @@ panther_species = list(config["panther_input_fastas"].keys())
 braker_genomes = config["braker_genomes"]
 braker_refs = list(config["braker_genomes"].keys())
 
+# grenedalf pooled diversity: one merged sample summing the listed
+# sample IDs (see config: grenedalf_pooled_diversity_*). Empty or absent
+# ID list disables the branch.
+pooled_diversity_name = config.get("grenedalf_pooled_diversity_name", "pooled")
+pooled_ids = [str(i) for i in (config.get("grenedalf_pooled_diversity_ids") or [])]
+if pooled_ids:
+    missing = set(pooled_ids) - set(sample_ids)
+    if missing:
+        raise ValueError(
+            "grenedalf_pooled_diversity_ids contains sample IDs absent from "
+            f"samples.tsv: {sorted(missing)}"
+        )
+
+# Per-rule pooled diversity outputs (empty list when disabled).
+pooled_diversity_inputs = []
+if pooled_ids:
+    pooled_diversity_inputs = [
+        expand(
+            "results/vg/{variant}_vs_{backbone}/diversity_pooled/{pool}/{site}/grenedalf_results_pooled_w{w}_s{s}_diversity.csv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            pool=[pooled_diversity_name],
+            w=[config["grenedalf_window_width"]],
+            s=[config["grenedalf_window_interval_stride"]],
+            site=["cds", "four", "zero"],
+        )
+    ]
+
 with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
     writer = csv.writer(file)
     for key, value in sample_sizes.items():
@@ -33,6 +61,8 @@ wildcard_constraints:
     # grenedalf interval window naming (see vg_diversity.smk)
     w="[0-9]+",
     s="[0-9]+",
+    # grenedalf pooled-diversity merged-sample tag
+    pool="[a-zA-Z0-9_]+",
 
 rule all:
     input:
@@ -160,7 +190,8 @@ rule vg_diversity_all:
         expand("results/vg/{variant}_vs_{backbone}/{ID}/idxstats.txt",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
-            ID=sample_ids)
+            ID=sample_ids),
+        *pooled_diversity_inputs
 
 rule sourmash_all:
     input:

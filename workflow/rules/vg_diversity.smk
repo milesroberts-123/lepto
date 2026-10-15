@@ -236,6 +236,70 @@ rule grenedalf_diversity_interval:
             --sam-path {input.bam}
         """
 
+rule grenedalf_diversity_interval_pooled:
+    # Several pools merged into one sample (grenedalf
+    # --sample-group-merge-table): base counts are summed per position,
+    # so pi reflects the combined population; the pool size is
+    # recomputed as the sum of the member pools. Grenedalf names SAM
+    # inputs by file basename, which here equals the sample ID.
+    input:
+        bam=lambda wc: expand(
+            "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
+            variant=wc.variant,
+            backbone=wc.backbone,
+            ID=pooled_ids),
+        bai=lambda wc: expand(
+            "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam.bai",
+            variant=wc.variant,
+            backbone=wc.backbone,
+            ID=pooled_ids),
+        bed="results/degenotate/{backbone}/degeneracy-{site}-sites.bed",
+        dict="results/vg/{backbone}_prefixed.dict",
+        pool_sizes="pool_sizes.csv"
+    output:
+        div="results/vg/{variant}_vs_{backbone}/diversity_pooled/{pool}/{site}/grenedalf_results_pooled_w{w}_s{s}_diversity.csv",
+    conda: "../envs/grenedalf.yaml"
+    params:
+        members_str=",".join(pooled_ids),
+        multi_file_locus_set=config["grenedalf_pooled_multi_file_locus_set"],
+        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
+        window_average_policy=config["grenedalf_window_average_policy"],
+        filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
+        filter_total_snp_min_count=config["grenedalf_filter_total_snp_min_count"],
+        min_map_qual=config["grenedalf_min_map_qual"],
+        min_base_qual=config["grenedalf_min_base_qual"],
+        subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
+    shell:
+        """
+        # merge table: member sample names -> merged sample tag
+        printf '%s,{wildcards.pool}\\n' $(echo {params.members_str} | tr ',' ' ') \\
+            > results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_merge_table.csv
+        # pool sizes: recompute as the sum of the member pools
+        awk -F, -v tag={wildcards.pool} -v members={params.members_str} 'BEGIN {{n = split(members, m, ","); for (i = 1; i <= n; i++) want[m[i]] = 1}} want[$1] {{s += $2}} END {{print tag "," s}}' \\
+            {input.pool_sizes} \\
+            > results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_pool_sizes.csv
+        grenedalf diversity --window-type interval \\
+            --window-interval-width {wildcards.w} \\
+            --window-interval-stride {wildcards.s} \\
+            --pool-sizes results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_pool_sizes.csv \\
+            --sample-group-merge-table results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_merge_table.csv \\
+            --multi-file-locus-set {params.multi_file_locus_set} \\
+            --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
+            --filter-sample-min-count {params.filter_sample_min_count} \\
+            --filter-total-snp-min-count {params.filter_total_snp_min_count} \\
+            --subsample-max-read-depth {params.subsample_max_read_depth} \\
+            --window-average-policy {params.window_average_policy} \\
+            --filter-region-bed {input.bed} \\
+            --reference-genome-dict {input.dict} \\
+            --out-dir $(dirname {output.div}) \\
+            --file-prefix grenedalf_results_{wildcards.pool}_w{wildcards.w}_s{wildcards.s}_ \\
+            --sam-min-map-qual {params.min_map_qual} \\
+            --sam-min-base-qual {params.min_base_qual} \\
+            --allow-file-overwriting \\
+            --threads {threads} \\
+            --sam-path {input.bam}
+        """
+
 rule grenedalf_diversity_genome:
     input:
         bam="results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",

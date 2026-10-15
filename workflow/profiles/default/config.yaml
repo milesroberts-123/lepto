@@ -36,6 +36,7 @@ set-threads:
   samtools_sort_vg: 8
   grenedalf_diversity_interval: 4
   grenedalf_diversity_genome: 4
+  grenedalf_diversity_interval_pooled: 4
   grenedalf_frequency: 4
   grenedalf_fst_interval: 8
   grenedalf_fst_genome: 8
@@ -137,6 +138,9 @@ set-resources:
   samtools_mpileup:
     runtime: 360
   grenedalf_diversity_interval:
+    cpus_per_task: 4
+    runtime: 1440
+  grenedalf_diversity_interval_pooled:
     cpus_per_task: 4
     runtime: 1440
   grenedalf_diversity_genome:
