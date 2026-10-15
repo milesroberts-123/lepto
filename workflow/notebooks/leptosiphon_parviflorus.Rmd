@@ -1115,7 +1115,7 @@ save_plot(combined, )
 ```{r}
 
 # load diversity scan data
-div_files <- list.files(path = "../results/vg/hap2_vs_hap1", recursive = T, pattern = "interval_diversity.csv", full.names = T)
+div_files <- list.files(path = "../results/vg/hap2_vs_hap1", recursive = T, pattern = "interval_.*_diversity.csv", full.names = T)
 
 div_files <- div_files[grepl("four", div_files)]
 

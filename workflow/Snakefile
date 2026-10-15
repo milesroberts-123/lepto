@@ -29,7 +29,10 @@ with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
 
 wildcard_constraints:
     group="[PW]",
-    acc="SRR[0-9]+"
+    acc="SRR[0-9]+",
+    # grenedalf interval window naming (see vg_diversity.smk)
+    w="[0-9]+",
+    s="[0-9]+",
 
 rule all:
     input:
@@ -126,15 +129,28 @@ rule vg_diversity_all:
             backbone=[config["vg_ref_backbone"]],
             ID=sample_ids,
             site=["cds"]),
-        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_{window}_fst.csv",
+        # interval windows embed width and stride in the filenames so
+        # changing the config keys produces new, unambiguous outputs
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_w{w}_s{s}_fst.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
-            window=["interval", "genome"],
+            w=[config["grenedalf_window_width"]],
+            s=[config["grenedalf_window_interval_stride"]],
             site=["cds", "four", "zero"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_{window}_diversity.csv",
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_genome_fst.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
-            window=["interval", "genome"],
+            site=["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_w{w}_s{s}_diversity.csv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            w=[config["grenedalf_window_width"]],
+            s=[config["grenedalf_window_interval_stride"]],
+            ID=sample_ids,
+            site=["cds", "four", "zero"]),
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_genome_diversity.csv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
             ID=sample_ids,
             site=["cds", "four", "zero"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/{ID}.mpileup",
