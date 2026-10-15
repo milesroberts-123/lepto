@@ -300,3 +300,9 @@ set-resources:
     cpus_per_task: 8
     runtime: "max(4*input.size_mb/1024, 480)"
     mem_mb: 64000
+  cds_windows_faidx:
+    runtime: 30
+  cds_windows_cds_bed:
+    runtime: 30
+  cds_windows_windows:
+    runtime: 30

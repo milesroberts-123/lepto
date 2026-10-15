@@ -88,6 +88,7 @@ include: "rules/anchorwave_pair.smk"
 include: "rules/vigs.smk"
 include: "rules/mcscanx.smk"
 include: "rules/kmate.smk"
+include: "rules/cds_windows.smk"
 
 rule vigs_all:
     input:
@@ -165,3 +166,7 @@ rule svim_all:
         expand("results/svim/{variant}_vs_{backbone}/variants.norm.vcf.gz.tbi",
                variant=[config["vg_ref_variant"]],
                backbone=[config["vg_ref_backbone"]])
+
+rule cds_windows_all:
+    input:
+        "results/cds_windows/cds_windows.bed"

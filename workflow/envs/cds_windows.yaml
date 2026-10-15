@@ -1,0 +1,7 @@
+name: cds_windows
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - bedtools=2.31.1
+  - samtools=1.24

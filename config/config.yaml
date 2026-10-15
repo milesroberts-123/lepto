@@ -193,6 +193,14 @@ kmate_unit: "chrom"
 # size the hash generously (wiki default 3G is too small here)
 kmate_hash_size: "32G"
 
+# --- CDS windows ---
+# One assembly fasta + one matching GFF3 annotation; output is a BED of
+# fixed, non-overlapping windows across every scaffold with the number
+# of (merged) CDS-annotated bases per window, zeros included.
+cds_windows_fasta: "../resources/reference/hap1.fasta"
+cds_windows_gff3: "../resources/annotation/hap1.gff3"
+cds_windows_size: 100000
+
 # --- VIGS target design ---
 # Transcriptome fasta (all transcript records); record IDs listed in
 # vigs_target_transcripts are the VIGS targets, everything else is the
