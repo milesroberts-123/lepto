@@ -21,6 +21,8 @@ library(data.table)
 library(ggforce)
 library(ape)
 library(scico)
+
+# date
 today <- Sys.Date()
 
 # global ggplot2 theme
@@ -307,14 +309,53 @@ ggsave(paste0("../../results/by-date/", today, "/dotplot_Phlox_drummondi_vs_hap1
 # myb orthogroup gene tree
 
 ```{r}
-library(ape)
 # Read the tree
 getwd()
-my_tree <- read.tree("../OG0001281_with_g166640.tree")
+#my_tree <- read.tree("../OG0001281_with_g166640.tree")
+myb_tree <- read.tree("../OG0000820.nwk")
 
 # Basic plot
-plot(my_tree, 
+plot(myb_tree, 
      type = "phylogram")
+
+myb_tree$tip.label
+
+rooted_tree <- root(myb_tree, outgroup = myb_tree$tip.label[grepl("^AT", myb_tree$tip.label)], resolve.root = TRUE)
+
+rooted_tree$tip.label
+
+plot(rooted_tree, 
+     type = "phylogram")
+
+# now make it nice
+rooted_tree$tip.label <- gsub("hap1.|hap2.", "Leptosiphon parviflorus ", rooted_tree$tip.label)
+rooted_tree$tip.label <- gsub("linanthus.", "Linanthus parryae ", rooted_tree$tip.label)
+
+tip_colors <- c("AT1G56650.1" = "darkgreen", 
+                "AT1G66370.1" = "darkgreen", 
+                "AT1G66380.1" = "darkgreen", 
+                "AT1G66390.1" = "darkgreen", 
+                "Linanthus parryae g299.t1" = "blue",
+                "Linanthus parryae g316.t1" = "blue",
+                "Linanthus parryae g19190.t1" = "blue",
+                "Leptosiphon parviflorus g166507.t1" = "pink",
+                "Leptosiphon parviflorus g166636.t1" = "pink",
+                "Leptosiphon parviflorus g166640.t1" = "pink",
+                "Leptosiphon parviflorus g166644.t1" = "pink",
+                "Leptosiphon parviflorus g166813.t1" = "pink",
+                "Leptosiphon parviflorus g244008.t1" = "pink",
+                "Leptosiphon parviflorus g267683.t1" = "pink",
+                "Leptosiphon parviflorus g144773.t1" = "grey",
+                "Leptosiphon parviflorus g144806.t1" = "grey",
+                "Leptosiphon parviflorus g145035.t1" = "grey",
+                "Leptosiphon parviflorus g57545.t1" = "grey")
+
+# 2. Plot the tree using the mapped colors
+pdf(paste0("../../results/by-date/", today, "/myb_tree.pdf"), width = 8, height = 5)
+plotTree(rooted_tree, tip.color = tip_colors[rooted_tree$tip.label], fsize = 1.2, lwd = 2)
+tiplabels(pch = 15, col = tip_colors[rooted_tree$tip.label], cex = 1.5)
+dev.off()
+
 ```
 
 # mapping bias
@@ -429,7 +470,7 @@ p <- ggplot(sub_data,  aes(x = (start + end)/2, y = tajimas_d)) +
 # 4. Close the PDF device
 dev.off()
 
-### plot piN/piS
+#### plot piN/piS ####
 div_wide <- dcast(div_scans, chrom + start + end + sample ~ site_class, value.var = "theta_pi")
 
 div_wide$piNpiS <- div_wide$zero/div_wide$four
@@ -439,18 +480,24 @@ div_wide$piNpiS[is.infinite(div_wide$piNpiS)] <- NA
 data_list <- split(div_wide, list(div_wide$chrom, div_wide$sample), drop = T)
 
 # 2. Open the PDF device
-pdf(paste0("../../results/by-date/", today, "/piN_piS_scans.pdf"), width = 8, height = 6)
+pdf(paste0("../../results/by-date/", today, "/piN_piS_scans.pdf"), width = 8, height = 6, device = cairo_pdf)
 
 # 3. Map over the list, generate a standard plot for each subset, and print
 walk(data_list, function(sub_data) {
-p <- ggplot(sub_data,  aes(x = (start + end)/2, y = piNpiS)) +
-  geom_point(shape = 16) +
-  geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "lightblue") +
-  labs(x = "Window midpoint (bp)", 
-       y = "piN/piS", 
-       title = paste0(unique(sub_data$chrom), 
-                      ", Sample: ", 
-                      unique(sub_data$sample)))
+  p <- ggplot(sub_data,  aes(x = (start + end)/2, y = piNpiS)) +
+    geom_point(shape = 16) +
+    geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+    labs(x = "Window midpoint (bp)", 
+         y = "\u03c0N/\u03c0S", 
+         title = paste0(unique(sub_data$chrom), 
+                        ", Sample: ", 
+                        unique(sub_data$sample)))
+  
+  if(unique(sub_data$chrom) == "hap1_scaffold_25"){
+    p <- p +  
+      geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+      geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5)
+  }
   
   print(p)
 })
@@ -459,7 +506,6 @@ p <- ggplot(sub_data,  aes(x = (start + end)/2, y = piNpiS)) +
 dev.off()
 
 ### plot fst
-
 fst_long <- fst_scans %>%
   pivot_longer(
     cols = matches("^\\d+:\\d+\\."),
@@ -502,10 +548,10 @@ walk(data_list, function(sub_data) {
 dev.off()
 
 #### plot only MYB cluster diversity ####
-
 hap1_scaffold_25_div <- div_scans %>%
   filter(chrom == "hap1_scaffold_25",
-         site_class == "four")
+         site_class == "four",
+         end %% 50e3 == 0)
 
 # 1. Split the data frame into a list of data frames by your variable
 data_list <- split(hap1_scaffold_25_div, list(hap1_scaffold_25_div$sample), drop = T)
@@ -584,8 +630,41 @@ walk(data_list, function(sub_data) {
 # 4. Close the PDF device
 dev.off()
 
-### plot pi in pink vs pi in white
+#### plot only MYB cluster piN/piS ####
+ggplot(div_wide %>% filter(chrom == "hap1_scaffold_25", sample == "1W", end %% 50e3 == 0),  aes(x = (start + end)/2, y = piNpiS)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5) +
+  labs(x = "Window midpoint (bp)", 
+       y = "\u03c04/\u03c00")
 
+ggsave(paste0("../../results/by-date/", today, "/hap1_scaffold_25_piNpiS_scans_1W.pdf"), width = 7, height = 5, device = cairo_pdf)
+
+#### plot statistics in all white pools vs all pink pools ####
+ggplot(div_scans %>% filter(chrom == "hap1_scaffold_25", end %% 50e3 == 0, end > 10e6, end < 13e6),  aes(x = (start + end)/2, y = theta_pi)) +
+  facet_wrap(~sample, nrow= 4, ncol = 2) +
+    geom_point(shape = 16) +
+    geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5) +
+    labs(x = "Window midpoint (bp)", 
+         y = "\u03c04") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+ggsave(paste0("../../results/by-date/", today, "/hap1_scaffold_25_theta_pi_scans.pdf"), width = 6, height = 7, device = cairo_pdf)
+
+ggplot(div_scans %>% filter(chrom == "hap1_scaffold_25", end %% 50e3 == 0, end >= 9e6, end <= 14e6),  aes(x = (start + end)/2, y = tajimas_d)) +
+  facet_wrap(~sample, nrow= 4, ncol = 2) +
+    geom_point(shape = 16) +
+    geom_smooth(method = "loess", span = 0.2, se = FALSE, color = "grey") +
+  geom_vline(xintercept = 10964369, lty = 2, color = "pink", lwd = 1.5) +
+  geom_vline(xintercept = 12046688, lty = 2, color = "pink", lwd = 1.5) +
+    labs(x = "Window midpoint (bp)", 
+         y = "Tajima's D") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+
+ggsave(paste0("../../results/by-date/", today, "/hap1_scaffold_25_tajimas_d_scans.pdf"), width = 6, height = 7, device = cairo_pdf)
 ```
 
 # differentiation matrix
@@ -682,6 +761,54 @@ ggplot(fst_df, aes(x = col, y = row, fill = Fst)) +
 
 ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.pdf"), device = cairo_pdf, height = 6, width = 6)
 ggsave(paste0("../../results/by-date/", today, "/fst_heatmap.png"), height = 6, width = 6)
+```
+
+# estimation of haplotype mixtures 
+
+```{r}
+
+freqk_calls <- list.files(path = "/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/results/freqk/hap2_vs_hap1", pattern = "calls.txt", full.names = T)
+
+#freqk_index <- fread("/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/results/freqk/hap2_vs_hap1/ref_index.txt")
+
+freqk_calls <- read_delim(freqk_calls, id = "file_path", delim = "|", col_names = c("x1", "x2"))
+
+#freqk_calls <- freqk_calls %>% filter(!is.na(x1), !is.na(x2))
+
+freqk_calls$sample <- gsub("/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/workflow/results/freqk/hap2_vs_hap1/|_calls.txt", "", freqk_calls$file_path)
+
+freqk_calls <- freqk_calls %>%
+  group_by(sample) %>%
+  mutate(row_id = row_number()) %>%
+  select(x1, x2, sample, row_id)
+
+fixed_diff <- freqk_calls %>% 
+  mutate(sample = as.numeric(sample)) %>%
+  filter(sample %% 2 == 0, x2 >= 1 - 1/50) %>%
+  ungroup() %>%
+  count(row_id) %>%
+  filter(n == 4)
+
+freqk_pink <- freqk_calls %>%
+  mutate(sample = as.numeric(sample)) %>%
+  filter(sample %% 2 == 1, row_id %in% fixed_diff$row_id, x2 <= 0.5, x2 > 0)
+
+freqk_pink %>%
+  group_by(sample) %>%
+  summarize(q = median(x2, na.rm = T))
+
+ggplot(freqk_pink, aes(x = x2)) +
+  facet_grid(~sample) +
+  geom_density() +
+  geom_vline(xintercept = 0.45)
+
+# 2. Compute the kernel density estimation
+density_estimate <- density(freqk_pink %>% filter(sample == 5) %>% pull(x2))
+
+# 3. Find the x-value (the mode) where y is maximized
+continuous_mode <- density_estimate$x[which.max(density_estimate$y)]
+
+print(continuous_mode)
 ```
 
 # coverage from mpileup
@@ -1119,7 +1246,15 @@ div_files <- list.files(path = "../results/vg/hap2_vs_hap1", recursive = T, patt
 
 div_files <- div_files[grepl("four", div_files)]
 
-div_data <- read_csv(div_files, col_names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","missing","numeric","passed","theta_pi","theta_watterson","tajimas_d"), id = "file_path", skip = 1)
+div_data <- read_csv(div_files, col_names = c("chrom","start","end","total.masked","total.missing","total.empty","total.numeric","total.invariant","total.passed","missing","numeric","passed","theta_pi","theta_watterson","tajimas_d"), id = "file_path", skip = 1) %>%
+  filter(sample %% 2 == 1) %>%
+  mutate(mid = (start+end)/2,
+         sample = as.numeric(gsub("/diversity", "", str_extract(file_path, "[1-9]/diversity"))))
+
+
+ggplot(div_data %>% filter(chrom == "hap1_scaffold_25" & end %% 50e3 == 0), aes(x = (start+end)/2, y = theta_pi, color = as.factor(sample))) +
+  geom_point() +
+  xlim(c(10.5e6, 12.5e6))
 
 # chose extent of sweep data
 # pink-specific k-mer region is: scaffold_25:10964369..12046688
@@ -1127,20 +1262,14 @@ div_data <- read_csv(div_files, col_names = c("chrom","start","end","total.maske
 # and the window with midpoint 11575000.5 is very close to this, so we'll choose that as our sweep center
 # after 140kb diversity drops again, producing a weird model fit, so we'll focus on <= 140 kb away from sweep center
 sweep_data <- div_data %>%
-  filter(chrom == "hap1_scaffold_25") %>%
-  mutate(mid = (start+end)/2,
-         sample = as.numeric(gsub("/diversity", "", str_extract(file_path, "[1-9]/diversity"))),
-         dist_bp = abs(mid - 11575000.5)
-  ) %>%
-  filter(sample %% 2 == 1, end %% 10e3 == 0, dist_bp <= 140e3) %>%
-  mutate(sample = factor(sample)) %>%
-  mutate(sample = fct_recode(sample, "1P" = "1", "2P" = "3", "3P" = "5", "4P" = "7"))
+  filter(chrom == "hap1_scaffold_25", end %% 50e3 == 0, end <= 12.8e6, end >= 10.8e6) %>%
+  mutate(dist_bp = abs(mid - 11.8e6),
+         sample = factor(sample),
+         sample = fct_recode(sample, "1P" = "1", "2P" = "3", "3P" = "5", "4P" = "7"))
 
 # quick diagnostic plot
 ggplot(sweep_data, aes(x = dist_bp, y = theta_pi, color = as.factor(sample))) +
-  geom_point() +
-  xlim(0,100e3) + 
-  scale_y_log10()
+  geom_point()
 
 # Choice of recombination rate
 # This is very important. Small values will produce a poor model fit.
@@ -1152,19 +1281,26 @@ ggplot(sweep_data, aes(x = dist_bp, y = theta_pi, color = as.factor(sample))) +
 # Oryza sativa: 8.97e-10 (stdpopsim)
 C_const <- 4e-9
 
-pi0_guess <-sweep_data %>% summarize(max=max(theta_pi, na.rm = T))
+pi0_guess <- sweep_data %>% summarize(max=max(theta_pi, na.rm = T))
 
-fit <- nls(theta_pi ~ pi0 * (1 - exp(-beta * abs(C_const * dist_bp))),
+for(C_const in seq(from = -10, to = -4, by = 0.5)){
+  print(C_const)
+  C_const <- 10^C_const
+fit <- nls(theta_pi ~ pi0 * (1 - exp(-beta*C_const*dist_bp)),
            data = sweep_data,
            start = list(pi0 = pi0_guess$max, beta = 50),
-           control = nls.control(maxiter = 500, minFactor = 1e-7, warnOnly = TRUE))
+           # upper = c(pi0 = 0.1, b = 100),
+           # algorithm = "port",
+           control = nls.control(maxiter = 1e6, minFactor = 1e-12, warnOnly = TRUE))
+}
+
 
 summary(fit)
 beta_hat <- coef(fit)["beta"]
+pi_hat <- coef(fit)["pi0"]
 Ne <- 3e5  # plug in your estimate
 
 pvalues <- summary(fit)$coefficients[,4]
-
 
 # selection coefficient (divide by 2 because its a dominant mutation?)
 s_hat <- 2 * log(2 * Ne) / beta_hat * (1/2)
@@ -1186,10 +1322,9 @@ p <- ggplot() +
   labs(
     x = "Distance from sweep site (bp)",
     y = expression(pi[4]),
-    title = paste0("Hitchiking model\ns = ", signif(s_hat, digits = 3), ", Ne = ", Ne, ", r = ", C_const, "\np-values = \u03c0*: ", format.pval(pvalues[1], digits = 2, eps = 0.001), ", \u03b2: ", format.pval(pvalues[2], digits = 2, eps = 0.001)),
+    title = paste0("Hitchiking model\ns = ", signif(s_hat, digits = 2), ", \u03c0* = ",  signif(pi_hat, digits = 2), ", Ne = ", Ne, ", r = ", C_const, "\np-values = \u03c0*: ", format.pval(pvalues[1], digits = 2, eps = 0.001), ", \u03b2: ", format.pval(pvalues[2], digits = 2, eps = 0.001)),
     shape = "Sample"
-  ) +
-  xlim(0, 140e3)
+  )
 
 p
 

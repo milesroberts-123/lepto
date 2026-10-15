@@ -132,21 +132,31 @@ rule freqk_ref_dedup:
         fai="results/vg/{backbone}_prefixed.fasta.fai",
         #vcf="results/vg/{variant}_vs_{backbone}.vcf.gz",
         #tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi",
-        vcf="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz",
-        tbi="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi"
+        #vcf="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz",
+        #tbi="results/freqk/{variant}_vs_{backbone}/norm.vcf.gz.tbi"
     output:
-        "results/freqk/{variant}_vs_{backbone}/ref_index.txt"
+        temp("results/freqk/{variant}_vs_{backbone}/ref_index.txt")
     benchmark:
         "benchmarks/freqk_index/freqk_ref_dedup_{variant}_vs_{backbone}.bench"
     params:
         binary=config["freqk_binary"]
     shell:
-        "{params.binary} ref-dedup --index {input.index} --fasta {input.fasta} --vcf {input.vcf} --output {output}"
+        "{params.binary} ref-dedup -vvv --index {input.index} --fasta {input.fasta} --output {output}"
+
+rule freqk_filter:
+    input:
+        "results/freqk/{variant}_vs_{backbone}/ref_index.txt"
+    output:
+        "results/freqk/{variant}_vs_{backbone}/filtered_index.txt"
+    params:
+        binary=config["freqk_binary"]
+    shell:
+        "{params.binary} filter --index {input} --output {output} -m 2 -k 5"
 
 rule freqk_count:
     input:
         reads="results/fastp/{ID}.fastq",
-        index="results/freqk/{variant}_vs_{backbone}/ref_index.txt"
+        index="results/freqk/{variant}_vs_{backbone}/filtered_index.txt"
     output:
         counts="results/freqk/{variant}_vs_{backbone}/{ID}_counts.txt",
         freqs="results/freqk/{variant}_vs_{backbone}/{ID}_freqs.txt"
@@ -160,7 +170,7 @@ rule freqk_count:
 rule freqk_call:
     input:
         freqs="results/freqk/{variant}_vs_{backbone}/{ID}_freqs.txt",
-        index="results/freqk/{variant}_vs_{backbone}/ref_index.txt"
+        index="results/freqk/{variant}_vs_{backbone}/filtered_index.txt"
     output:
         "results/freqk/{variant}_vs_{backbone}/{ID}_calls.txt"
     benchmark:

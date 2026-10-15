@@ -52,7 +52,7 @@ set-threads:
   hisat2_index: 1
   hisat2_align: 16
   braker_run: 32
-  freqk_count: 8
+  freqk_count: 16
   freqk_index: 4
   freqk_exclusion_sites: 2
   freqk_exclusion_bed: 2
@@ -239,7 +239,7 @@ set-resources:
     cpus_per_task: 16
     runtime: 240
   freqk_ref_dedup:
-    cpus_per_task: 8
+    cpus_per_task: 16
     runtime: 480
   freqk_count:
     cpus_per_task: 32

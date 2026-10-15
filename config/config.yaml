@@ -159,8 +159,10 @@ anchorwave_minimap_p: 0.4
 anchorwave_minimap_n: 20
 
 # --- dn/ds ---
-dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
-dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
+#dnds_aa_fasta: "../config/dnds/OG0001281_myb_cluster_only_aa.fa"
+dnds_aa_fasta: "OG0000820_aa.fa"
+dnds_cds_fasta: "OG0000820_cds.fa"
+#dnds_cds_fasta: "../config/dnds/OG0001281_myb_cluster_only_cds.fa"
 dnds_yn00_ctl: "../config/dnds/yn00.ctl"
 
 # --- freqk ---
