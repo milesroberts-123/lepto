@@ -204,7 +204,7 @@ rule grenedalf_diversity_interval:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_w{w}_s{s}_diversity.csv",
+        div="results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_w{wlen}_s{sstep}_diversity.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
@@ -217,8 +217,8 @@ rule grenedalf_diversity_interval:
     shell:
         """
         grenedalf diversity --window-type interval \\
-            --window-interval-width {wildcards.w} \\
-            --window-interval-stride {wildcards.s} \\
+            --window-interval-width {wildcards.wlen} \\
+            --window-interval-stride {wildcards.sstep} \\
             --pool-sizes {input.pool_sizes} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
@@ -228,7 +228,7 @@ rule grenedalf_diversity_interval:
             --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
             --out-dir $(dirname {output.div}) \\
-            --file-prefix grenedalf_results_interval_w{wildcards.w}_s{wildcards.s}_ \\
+            --file-prefix grenedalf_results_interval_w{wildcards.wlen}_s{wildcards.sstep}_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
@@ -257,7 +257,7 @@ rule grenedalf_diversity_interval_pooled:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        div="results/vg/{variant}_vs_{backbone}/diversity_pooled/{pool}/{site}/grenedalf_results_pooled_w{w}_s{s}_diversity.csv",
+        div="results/vg/{variant}_vs_{backbone}/diversity_pooled/{pool}/{site}/grenedalf_results_pooled_w{wlen}_s{sstep}_diversity.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         members_str=",".join(pooled_ids),
@@ -279,8 +279,8 @@ rule grenedalf_diversity_interval_pooled:
             {input.pool_sizes} \\
             > results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_pool_sizes.csv
         grenedalf diversity --window-type interval \\
-            --window-interval-width {wildcards.w} \\
-            --window-interval-stride {wildcards.s} \\
+            --window-interval-width {wildcards.wlen} \\
+            --window-interval-stride {wildcards.sstep} \\
             --pool-sizes results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_pool_sizes.csv \\
             --sample-group-merge-table results/vg/{wildcards.variant}_vs_{wildcards.backbone}/diversity_pooled/{wildcards.pool}/{wildcards.pool}_merge_table.csv \\
             --multi-file-locus-set {params.multi_file_locus_set} \\
@@ -292,7 +292,7 @@ rule grenedalf_diversity_interval_pooled:
             --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
             --out-dir $(dirname {output.div}) \\
-            --file-prefix grenedalf_results_{wildcards.pool}_w{wildcards.w}_s{wildcards.s}_ \\
+            --file-prefix grenedalf_results_{wildcards.pool}_w{wildcards.wlen}_s{wildcards.sstep}_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --allow-file-overwriting \\
@@ -388,7 +388,7 @@ rule grenedalf_fst_interval:
         dict="results/vg/{backbone}_prefixed.dict",
         pool_sizes="pool_sizes.csv"
     output:
-        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_w{w}_s{s}_fst.csv",
+        fst="results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_w{wlen}_s{sstep}_fst.csv",
     conda: "../envs/grenedalf.yaml"
     params:
         filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
@@ -402,8 +402,8 @@ rule grenedalf_fst_interval:
     shell:
         """
         grenedalf fst --window-type interval \\
-            --window-interval-width {wildcards.w} \\
-            --window-interval-stride {wildcards.s} \\
+            --window-interval-width {wildcards.wlen} \\
+            --window-interval-stride {wildcards.sstep} \\
             --pool-sizes {input.pool_sizes} \\
             --filter-region-bed {input.bed} \\
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
@@ -411,7 +411,7 @@ rule grenedalf_fst_interval:
             --window-average-policy {params.window_average_policy} \\
             --reference-genome-dict {input.dict} \\
             --out-dir results/vg/{wildcards.variant}_vs_{wildcards.backbone}/fst/{wildcards.site}/ \\
-            --file-prefix grenedalf_results_interval_w{wildcards.w}_s{wildcards.s}_ \\
+            --file-prefix grenedalf_results_interval_w{wildcards.wlen}_s{wildcards.sstep}_ \\
             --sam-min-map-qual {params.min_map_qual} \\
             --sam-min-base-qual {params.min_base_qual} \\
             --method {params.method} \\

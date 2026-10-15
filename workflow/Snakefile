@@ -40,12 +40,12 @@ pooled_diversity_inputs = []
 if pooled_ids:
     pooled_diversity_inputs = [
         expand(
-            "results/vg/{variant}_vs_{backbone}/diversity_pooled/{pool}/{site}/grenedalf_results_pooled_w{w}_s{s}_diversity.csv",
+            "results/vg/{variant}_vs_{backbone}/diversity_pooled/{pool}/{site}/grenedalf_results_pooled_w{wlen}_s{sstep}_diversity.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
             pool=[pooled_diversity_name],
-            w=[config["grenedalf_window_width"]],
-            s=[config["grenedalf_window_interval_stride"]],
+            wlen=[config["grenedalf_window_width"]],
+            sstep=[config["grenedalf_window_interval_stride"]],
             site=["cds", "four", "zero"],
         )
     ]
@@ -58,9 +58,10 @@ with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
 wildcard_constraints:
     group="[PW]",
     acc="SRR[0-9]+",
-    # grenedalf interval window naming (see vg_diversity.smk)
-    w="[0-9]+",
-    s="[0-9]+",
+    # grenedalf interval window naming (see vg_diversity.smk); note
+    # {s}/{t} are taken by sourmash_mutation_rate, so these can't be w/s
+    wlen="[0-9]+",
+    sstep="[0-9]+",
     # grenedalf pooled-diversity merged-sample tag
     pool="[a-zA-Z0-9_]+",
 
@@ -161,21 +162,21 @@ rule vg_diversity_all:
             site=["cds"]),
         # interval windows embed width and stride in the filenames so
         # changing the config keys produces new, unambiguous outputs
-        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_w{w}_s{s}_fst.csv",
+        expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_interval_w{wlen}_s{sstep}_fst.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
-            w=[config["grenedalf_window_width"]],
-            s=[config["grenedalf_window_interval_stride"]],
+            wlen=[config["grenedalf_window_width"]],
+            sstep=[config["grenedalf_window_interval_stride"]],
             site=["cds", "four", "zero"]),
         expand("results/vg/{variant}_vs_{backbone}/fst/{site}/grenedalf_results_genome_fst.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
             site=["cds", "four", "zero"]),
-        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_w{w}_s{s}_diversity.csv",
+        expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_interval_w{wlen}_s{sstep}_diversity.csv",
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
-            w=[config["grenedalf_window_width"]],
-            s=[config["grenedalf_window_interval_stride"]],
+            wlen=[config["grenedalf_window_width"]],
+            sstep=[config["grenedalf_window_interval_stride"]],
             ID=sample_ids,
             site=["cds", "four", "zero"]),
         expand("results/vg/{variant}_vs_{backbone}/{ID}/diversity/{site}/grenedalf_results_genome_diversity.csv",
