@@ -1,8 +1,9 @@
 # MCScanX collinearity between the hap1 and hap2 assemblies.
 # Chain: featureCounts-expressed proteomes/GFFs -> t1-filtered, species-
-# prefixed sequences and gene-level 4-column GFF -> combined all-vs-all
-# BLASTP -> MCScanX. BLAST hit names equal GFF gene names by construction
-# (hapN.gM), since both sides come from the same expressed-gene lists.
+# prefixed sequences and t1-representative 4-column GFF -> combined
+# all-vs-all BLASTP -> MCScanX. BLAST hit names equal GFF gene names by
+# construction (hapN.gM, the .tN suffix stripped on both sides), since
+# both sides come from the same expressed-gene lists.
 
 
 rule mcscanx_take_t1_prefix_faa:
@@ -24,10 +25,14 @@ rule mcscanx_take_t1_prefix_faa:
 
 
 rule mcscanx_gff_to_4col:
-    # Reduce the BRAKER GFF3 to MCScanX's 4-column format (gene, chrom,
-    # start, end), keeping only gene-level rows and prefixing both the
-    # gene ID and the scaffold name. Scaffold numbering collides between
-    # haplotypes, so the chromosome prefix is mandatory.
+    # Reduce the GFF3 to MCScanX's 4-column format (gene, chrom, start,
+    # end). The expressed-gene GFF3 subset has no gene-level rows (the
+    # featureCounts glist is transcript-level), so mRNA rows stand in:
+    # keep only the t1 representative transcript per gene (the same
+    # representative rule as the fasta), strip the .t1 suffix so gene
+    # names match the stripped BLAST names, and prefix both the gene ID
+    # and the scaffold name — scaffold numbering collides between
+    # haplotypes, so the prefix is mandatory.
     input:
         lambda wildcards: config["mcscanx_input_gffs"][wildcards.species]
     output:
@@ -38,7 +43,11 @@ rule mcscanx_gff_to_4col:
         awk -F'\\t' -v OFS='\\t' -v sp='{wildcards.species}' \
             '$3 == "mRNA" {{
                 match($9, /ID=([^;]+)/, id)
-                print sp"."id[1], sp"."$1, $4, $5
+                if (id[1] ~ /\\.t1$/) {{
+                    name = id[1]
+                    sub(/\\.t1$/, "", name)
+                    print sp"."name, sp"."$1, $4, $5
+                }}
             }}' {input} > {output}
         """
 
@@ -60,7 +69,14 @@ rule mcscanx_concat_gffs:
     output:
         "results/mcscanx/leptosiphon_all.gff"
     shell:
-        "cat {input} | awk 'BEGIN {FS="\t"; OFS="\t"} {print $2, $1, $3, $4}' > {output}"
+        # The 4-column rule emits gene first; MCScanX expects chromosome
+        # first (chr, gene, start, end), so the columns swap here. awk
+        # braces are doubled to survive snakemake's shell formatting, and
+        # everything stays inside a triple-quoted block: inner double
+        # quotes in a plain string literal break the Snakefile parse.
+        """
+        cat {input} | awk -F'\\t' -v OFS='\\t' '{{print $2, $1, $3, $4}}' > {output}
+        """
 
 
 rule mcscanx_makeblastdb:
@@ -104,11 +120,12 @@ rule mcscanx_blastp:
 
 
 rule mcscanx_run:
-    # MCScanX wants the .hom and .gff files sharing a basename in its
-    # working directory; it writes .collinearity, .tandem and .html/
+    # MCScanX wants the .blast and .gff files sharing a basename in its
+    # working directory (the binary only reads <prefix>.blast — there is
+    # no .hom fallback); it writes .collinearity, .tandem and .html/
     # next to its input prefix.
     input:
-        hom="results/mcscanx/leptosiphon_all.blast",
+        blast="results/mcscanx/leptosiphon_all.blast",
         gff="results/mcscanx/leptosiphon_all.gff"
     output:
         collinearity="results/mcscanx/collinearity/leptosiphon_all.collinearity",
@@ -121,7 +138,7 @@ rule mcscanx_run:
     shell:
         """
         mkdir -p {params.workdir}
-        cp {input.hom} {params.workdir}/{params.prefix}.blast
+        cp {input.blast} {params.workdir}/{params.prefix}.blast
         cp {input.gff} {params.workdir}/{params.prefix}.gff
         cd {params.workdir} && MCScanX {params.prefix}
         """
