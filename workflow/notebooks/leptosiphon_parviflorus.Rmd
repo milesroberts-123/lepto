@@ -1332,6 +1332,44 @@ ggsave(paste0("../../results/by-date/", today, "/hitchhike_model.pdf"), height =
 
 ```
 
+# linked selection: correlation between CDS density and diversity
+
+```{r}
+#
+library(rventures)
+packageVersion("rventures")
+
+#
+pi4 <- fread("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w500000_s0_diversity.csv")
+
+cds <- fread("../results/cds_windows/cds_windows.bed", col.names = c("chrom", "start", "end", "cds"))
+
+cds_pi <- cds %>% mutate(chrom = gsub("^", "hap1_", chrom),
+               start = start + 1) %>%
+  left_join(pi4, by = c("chrom", "start", "end")) %>%
+  mutate(cds_density = cds/(end - start))
+
+
+r_stats <- corr_ci_autocorr(cds_pi$pooled.theta_pi, cds_pi$cds_density)
+
+ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = "lm", color = "pink") +
+  labs(x = "CDS Density", y = "\u03c04 (pink pools)", title = paste0("r = ", signif(r_stats$r, 2), " [", signif(r_stats$ci_lower, 2), ", ", signif(r_stats$ci_upper, 2),"]", ", p = ", signif(r_stats$p_value, digits = 2))) +
+  xlim(0, 0.2)
+
+ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_point_pink.pdf"), device = cairo_pdf,width=6,height=6)
+
+ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
+  geom_hex() +
+  geom_smooth(method = "lm", color = "pink") +
+  scale_fill_scico(palette = "nuuk") +
+  labs(fill = "Count", x = "CDS Density", y = "\u03c04 (all pools)", title = paste0("r = ", signif(r_stats$r, 2), " [", signif(r_stats$ci_lower, 2), ", ", signif(r_stats$ci_upper, 2),"]", ", p = ", signif(r_stats$p_value, digits = 2)))  +
+  xlim(0, 0.2)
+
+ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_hexbin_pink.pdf"), device=cairo_pdf, width=6, height=6)
+```
+
 # Conceptual diagrams of k-mer arithmetic
 
 ```{r}

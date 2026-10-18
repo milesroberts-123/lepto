@@ -58,7 +58,7 @@ set-threads:
   freqk_exclusion_sites: 2
   freqk_exclusion_bed: 2
   freqk_filter_vcf: 2
-  mcscanx_blastp: 8
+  mcscanx_blastp: 16
   anchorwave_pair_splice_backbone: 8
   anchorwave_pair_splice_variant: 8
   anchorwave_pair_genoali: 2
@@ -231,8 +231,8 @@ set-resources:
     cpus_per_task: 2
     runtime: 120
   mcscanx_blastp:
-    cpus_per_task: 8
-    runtime: 240
+    cpus_per_task: 16
+    runtime: 480
   mcscanx_run:
     cpus_per_task: 1
     runtime: 120

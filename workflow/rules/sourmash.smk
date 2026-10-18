@@ -36,5 +36,5 @@ rule sourmash_mutation_rate:
         sourmash scripts mutation_rate \
             --estimator {params.estimator} \
             --s-sig {input.s} \
-            --t-sig {input.t} > {output}
+            --t-sig {input.t} &> {output}
         """

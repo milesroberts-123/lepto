@@ -36,7 +36,7 @@ rule mcscanx_gff_to_4col:
         """
         mkdir -p results/mcscanx/prefixed
         awk -F'\\t' -v OFS='\\t' -v sp='{wildcards.species}' \
-            '$3 == "gene" {{
+            '$3 == "mRNA" {{
                 match($9, /ID=([^;]+)/, id)
                 print sp"."id[1], sp"."$1, $4, $5
             }}' {input} > {output}
@@ -60,7 +60,7 @@ rule mcscanx_concat_gffs:
     output:
         "results/mcscanx/leptosiphon_all.gff"
     shell:
-        "cat {input} > {output}"
+        "cat {input} | awk 'BEGIN {FS="\t"; OFS="\t"} {print $2, $1, $3, $4}' > {output}"
 
 
 rule mcscanx_makeblastdb:
@@ -86,7 +86,7 @@ rule mcscanx_blastp:
         faa="results/mcscanx/leptosiphon_all.faa",
         db="results/mcscanx/db/leptosiphon.phr"
     output:
-        "results/mcscanx/leptosiphon_all.hom"
+        "results/mcscanx/leptosiphon_all.blast"
     conda: "../envs/blast.yaml"
     params:
         evalue=config["mcscanx_blast_evalue"],
@@ -108,7 +108,7 @@ rule mcscanx_run:
     # working directory; it writes .collinearity, .tandem and .html/
     # next to its input prefix.
     input:
-        hom="results/mcscanx/leptosiphon_all.hom",
+        hom="results/mcscanx/leptosiphon_all.blast",
         gff="results/mcscanx/leptosiphon_all.gff"
     output:
         collinearity="results/mcscanx/collinearity/leptosiphon_all.collinearity",
@@ -121,7 +121,7 @@ rule mcscanx_run:
     shell:
         """
         mkdir -p {params.workdir}
-        cp {input.hom} {params.workdir}/{params.prefix}.hom
+        cp {input.hom} {params.workdir}/{params.prefix}.blast
         cp {input.gff} {params.workdir}/{params.prefix}.gff
         cd {params.workdir} && MCScanX {params.prefix}
         """

@@ -89,8 +89,10 @@ paftools_call_L: 1000
 paftools_call_q: 20
 samtools_mpileup_Q: 20
 samtools_mpileup_q: 20
-grenedalf_window_width: 50000
-grenedalf_window_interval_stride: 5000
+#grenedalf_window_width: 50000
+#grenedalf_window_interval_stride: 5000
+grenedalf_window_width: 500000
+grenedalf_window_interval_stride: 0
 grenedalf_filter_sample_min_read_depth: 5
 grenedalf_window_average_policy: "valid-loci"
 grenedalf_filter_sample_min_count: 2
@@ -110,13 +112,15 @@ grenedalf_fst_method: "unbiased-hudson"
 # pooled-diversity branch. Grenedalf names SAM inputs by file basename,
 # which here is the sample ID.
 grenedalf_pooled_diversity_name: "pooled"
-grenedalf_pooled_diversity_ids: [1, 2, 3, 4, 5, 6, 7, 8]
+grenedalf_pooled_diversity_ids: [1, 3, 5, 7]
 grenedalf_pooled_multi_file_locus_set: "union"
 
 # --- sourmash ---
 sourmash_fastas:
-  hap1: "../resources/reference/hap1.fasta"
-  hap2: "../resources/reference/hap2.fasta"
+        #hap1: "../resources/reference/hap1.fasta"
+        #hap2: "../resources/reference/hap2.fasta"
+  hap1: "../resources/reference/mimulus_guttatus/Mguttatusvar_IM62_948_v4.1.fa"
+  hap2: "../resources/reference/mimulus_guttatus/Mguttatusvar_IM767_887_v2.0.fa"
 sourmash_sketch_modes:
   hap1: "standard"
   hap2: "multiplicity"
@@ -213,8 +217,8 @@ kmate_hash_size: "32G"
 # fixed, non-overlapping windows across every scaffold with the number
 # of (merged) CDS-annotated bases per window, zeros included.
 cds_windows_fasta: "../resources/reference/hap1.fasta"
-cds_windows_gff3: "../resources/annotation/hap1.gff3"
-cds_windows_size: 100000
+cds_windows_gff3: "results/featurecounts/hap1_expressed.gff3"
+cds_windows_size: 500000
 
 # --- VIGS target design ---
 # Transcriptome fasta (all transcript records); record IDs listed in

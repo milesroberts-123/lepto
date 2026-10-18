@@ -239,9 +239,6 @@ rule grenedalf_diversity_interval:
 rule grenedalf_diversity_interval_pooled:
     # Several pools merged into one sample (grenedalf
     # --sample-group-merge-table): base counts are summed per position,
-    # so pi reflects the combined population; the pool size is
-    # recomputed as the sum of the member pools. Grenedalf names SAM
-    # inputs by file basename, which here equals the sample ID.
     input:
         bam=lambda wc: expand(
             "results/vg/{variant}_vs_{backbone}/{ID}/{ID}.bam",
@@ -262,13 +259,12 @@ rule grenedalf_diversity_interval_pooled:
     params:
         members_str=",".join(pooled_ids),
         multi_file_locus_set=config["grenedalf_pooled_multi_file_locus_set"],
-        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"],
+        filter_sample_min_read_depth=config["grenedalf_filter_sample_min_read_depth"]*8,
         window_average_policy=config["grenedalf_window_average_policy"],
         filter_sample_min_count=config["grenedalf_filter_sample_min_count"],
         filter_total_snp_min_count=config["grenedalf_filter_total_snp_min_count"],
         min_map_qual=config["grenedalf_min_map_qual"],
         min_base_qual=config["grenedalf_min_base_qual"],
-        subsample_max_read_depth=config["grenedalf_subsample_max_read_depth"]
     shell:
         """
         # merge table: member sample names -> merged sample tag
@@ -287,7 +283,6 @@ rule grenedalf_diversity_interval_pooled:
             --filter-sample-min-read-depth {params.filter_sample_min_read_depth} \\
             --filter-sample-min-count {params.filter_sample_min_count} \\
             --filter-total-snp-min-count {params.filter_total_snp_min_count} \\
-            --subsample-max-read-depth {params.subsample_max_read_depth} \\
             --window-average-policy {params.window_average_policy} \\
             --filter-region-bed {input.bed} \\
             --reference-genome-dict {input.dict} \\
