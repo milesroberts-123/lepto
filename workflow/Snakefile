@@ -123,6 +123,7 @@ include: "rules/vigs.smk"
 include: "rules/mcscanx.smk"
 include: "rules/kmate.smk"
 include: "rules/cds_windows.smk"
+include: "rules/ldx.smk"
 
 rule vigs_all:
     input:
@@ -218,3 +219,10 @@ rule svim_all:
 rule cds_windows_all:
     input:
         "results/cds_windows/cds_windows.bed"
+
+rule ldx_all:
+    input:
+        expand("results/ldx/{variant}_vs_{backbone}/{ID}.ldx_pairs.tsv",
+               variant=[config["vg_ref_variant"]],
+               backbone=[config["vg_ref_backbone"]],
+               ID=sample_ids)

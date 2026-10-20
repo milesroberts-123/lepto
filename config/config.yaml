@@ -220,6 +220,29 @@ cds_windows_fasta: "../resources/reference/hap1.fasta"
 cds_windows_gff3: "results/featurecounts/hap1_expressed.gff3"
 cds_windows_size: 500000
 
+# --- LDx ---
+# Linkage disequilibrium (r^2) from pooled alignments (Feder, Petrov &
+# Bergland 2012, PLoS ONE 7(11):e48588). One LDx run per pool and
+# scaffold: the script parses only the POS column (col 2) of its SNP
+# list and ignores CHROM, so each run pairs a single-scaffold SAM slice
+# with a single-scaffold SNP-list slice. Options must precede the two
+# positional inputs, and -h sets the maximum site read depth (repeat/
+# paralog guard), not help. Site-depth thresholds are scaled per pool
+# from the mean per-site depth of the grenedalf frequency table:
+# -l = max(floor, mean/divisor), -h = multiple x mean (defaults
+# reproduce the paper's 10..100 geometry at 40x mean depth). The
+# binary is provisioned outside the repo (see AGENTS.md).
+ldx_binary: "/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/bin/LDx.pl"
+ldx_maf: 0.1
+ldx_min_intersect: 11
+ldx_searchlen: 500
+ldx_baseq: 20
+ldx_min_depth_floor: 10
+ldx_min_depth_divisor: 8
+ldx_max_depth_multiple: 2.0
+ldx_min_mapq: 20
+ldx_snplist_min_depth: 10
+
 # --- VIGS target design ---
 # Transcriptome fasta (all transcript records); record IDs listed in
 # vigs_target_transcripts are the VIGS targets, everything else is the
