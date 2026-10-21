@@ -268,8 +268,9 @@ vigs_max_homopolymer: 3
 # primary transcript per gene, "none" keeps every transcript. The
 # lineage dataset (name embedded in output filenames) is fetched by
 # busco_lineage_download into busco_downloads_dir on a login node
-# (compute nodes have no internet).
-busco_lineage: "eudicotyledons_odb12"
+# (compute nodes have no internet). Note the BUSCO-canonical spelling
+# carries a version suffix: "eudicotyledons_odb12.2".
+busco_lineage: "eudicotyledons_odb12.2"
 busco_isoform: "t1"
 busco_downloads_dir: "results/busco/downloads"
 
