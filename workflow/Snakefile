@@ -124,6 +124,7 @@ include: "rules/mcscanx.smk"
 include: "rules/kmate.smk"
 include: "rules/cds_windows.smk"
 include: "rules/ldx.smk"
+include: "rules/busco.smk"
 
 rule vigs_all:
     input:
@@ -226,3 +227,7 @@ rule ldx_all:
                variant=[config["vg_ref_variant"]],
                backbone=[config["vg_ref_backbone"]],
                ID=sample_ids)
+
+rule busco_all:
+    input:
+        expand(busco_summary_txt, ref=braker_refs)

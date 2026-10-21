@@ -73,6 +73,9 @@ set-threads:
   kmate_build_var_pa: 2
   kmate_kmer_db: 8
   kmate_run: 8
+  busco_lineage_download: 1
+  busco_proteins_select: 4
+  busco_proteins: 16
 
 set-resources:
   samtools_fastq:
@@ -310,3 +313,13 @@ set-resources:
     runtime: 30
   cds_windows_windows:
     runtime: 30
+  busco_lineage_download:
+    cpus_per_task: 1
+    runtime: 60
+  busco_proteins_select:
+    cpus_per_task: 4
+    runtime: 30
+  busco_proteins:
+    cpus_per_task: 16
+    mem_mb: 16000
+    runtime: 480
