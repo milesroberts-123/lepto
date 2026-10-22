@@ -64,6 +64,8 @@ wildcard_constraints:
     sstep="[0-9]+",
     # grenedalf pooled-diversity merged-sample tag
     pool="[a-zA-Z0-9_]+",
+    # tubemap chunk tag: sanitized "chrom:start-end" region (see tubemap.smk)
+    region="[A-Za-z0-9_.-]+",
 
 rule all:
     input:
@@ -125,6 +127,7 @@ include: "rules/kmate.smk"
 include: "rules/cds_windows.smk"
 include: "rules/ldx.smk"
 include: "rules/busco.smk"
+include: "rules/tubemap.smk"
 
 rule vigs_all:
     input:
@@ -231,3 +234,11 @@ rule ldx_all:
 rule busco_all:
     input:
         expand(busco_summary_txt, ref=braker_refs)
+
+rule vg_tubemap_all:
+    input:
+        expand(
+            "results/tubemap/{variant}_vs_{backbone}/{region}/tube_map.svg",
+            variant=[config["tubemap_variant"]],
+            backbone=[config["tubemap_backbone"]],
+            region=list(tubemap_parse_regions()))

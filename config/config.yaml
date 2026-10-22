@@ -104,6 +104,20 @@ grenedalf_min_base_qual: 20
 grenedalf_subsample_max_read_depth: 500
 grenedalf_fst_method: "unbiased-hudson"
 
+# --- sequence tube map ---
+# Static tube-map-style subworkflow (workflow/rules/tubemap.smk): renders
+# vg viz SVGs of regions of the minimap2 hap2-vs-hap1 alignment as a graph
+# built with vg construct -a -R (backbone fasta reference path + paf-derived
+# VCF alt paths). Regions are "chrom:start-end" strings; the chunk wildcard
+# sanitizes them to chrom_start_end. Regions must be kb-scale (vg viz draws
+# 1 bp per layout unit); padding gives the graph breathing room around the
+# region of interest, and coordinates inside each graph restart at the
+# region start.
+tubemap_variant: "hap2"
+tubemap_backbone: "hap1"
+tubemap_regions: ["hap1_scaffold_25:1-5000"]
+tubemap_region_pad: 1000
+
 # --- grenedalf pooled diversity ---
 # Pool samples together into one merged sample (grenedalf
 # --sample-group-merge-table): per-position base counts are summed
