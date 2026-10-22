@@ -1530,6 +1530,222 @@ hw_model <- nls(
 
 ```
 
+# LD decay in 500 kb windows along the genome (pool 1)
+
+The LDx pair tables are many GB, so nothing is ever loaded whole:
+Arrow scans the per-scaffold files and pushes the window/bin
+aggregation into the scanner; only the compact summary enters R.
+Each 500 kb window gets its own decay curve (distance lives in the
+0-600 bp range -- LDx pairs never exceed the 500 bp search length).
+
+```{r ld_window_scan}
+vb         <- "hap2_vs_hap1"  # results/ldx/{variant}_vs_{backbone} branch
+id_pool    <- "1"
+window_size<- 5e5            # 500 kb windows along the genome
+bin_width  <- 50             # distance micro-bins for the decay curves
+max_d      <- 1e3            # pairs past this are anomalies (searchlen = 500)
+top_scaffolds <- 12          # biggest scaffolds shown per raster panel
+min_pairs_fit <- 500         # per-window NLS needs >= this many pairs
+min_bins_fit  <- 4           # ... spanning >= this many distance bins
+recompute  <- FALSE          # TRUE forces the expensive re-scan
+
+# Hill & Weir (1988) expected r^2: rventures::hill_weir_r2(d, n, C),
+# loaded above. In a pool of m diploids, n = 2m gene copies.
+smp     <- fread("../config/samples.tsv")
+k       <- smp[as.character(sample_id) == id_pool, 2 * sample_size]
+n_chrom <- if (length(k) && !is.na(k)) k else 50
+
+dir_pairs <- paste0("../results/ldx/", vb, "/", id_pool)
+sum_csv   <- paste0(dir_pairs, "/", id_pool, "_ld_decay_windows.csv")
+
+# headerless 20-col LDx rows (see ldx.smk): names assigned positionally
+ldx_schema <- arrow::schema(
+  chrom = arrow::string(),  pos1 = arrow::float64(), pos2 = arrow::float64(),
+  x11 = arrow::float64(), x12 = arrow::float64(), x21 = arrow::float64(),
+  x22 = arrow::float64(), pa = arrow::float64(), pb = arrow::float64(),
+  d1 = arrow::float64(), d2 = arrow::float64(), shared = arrow::float64(),
+  r2_mle_lo = arrow::float64(), r2_mle = arrow::float64(),
+  r2_mle_hi = arrow::float64(), r2_direct = arrow::float64(),
+  A = arrow::float64(), a = arrow::float64(), B = arrow::float64(),
+  b = arrow::float64())
+
+if (recompute || !file.exists(sum_csv)) {
+  ds_files <- list.files(
+    dir_pairs, pattern = "\\.pairs\\.tsv$", full.names = TRUE)
+  stopifnot("no per-scaffold pairs.tsv under dir_pairs" = length(ds_files) > 0)
+
+  ds <- arrow::open_dataset(
+    ds_files, format = "tsv", schema = ldx_schema,
+    read_options = arrow::csv_read_options(header = FALSE))
+
+  # one pushdown pass: bin = distance bin index; win = 500 kb window idx.
+  # mean_sq lets sd be rebuilt in R (sd() itself has no Arrow aggregate).
+  dt_bins0 <- ds %>%
+    mutate(d   = abs(pos2 - pos1),
+           win = as.integer(floor(pos1 / window_size)),
+           bin = as.integer(d / bin_width)) %>%
+    filter(!is.na(r2_direct)) %>%
+    group_by(chrom, win, bin) %>%
+    summarise(n        = n(),
+              mean_r2  = mean(r2_direct),
+              mean_sq  = mean(r2_direct * r2_direct),
+              mean_r2m = mean(r2_mle, na.rm = TRUE),
+              .groups  = "drop") %>%
+    collect()
+
+  dt_bins <- dt_bins0 %>%
+    mutate(win_start = win * window_size,
+           d     = bin * bin_width + bin_width / 2,
+           sd_r2 = sqrt(pmax(mean_sq - mean_r2^2, 0))) %>%
+    select(-win)
+
+  far <- dt_bins %>% filter(d >= max_d)
+  if (nrow(far))
+    message("dropping ", sum(far$n), " pairs with d >= ", max_d,
+            " bp (searchlen anomalies) on: ",
+            paste(unique(far$chrom), collapse = ", "))
+  dt_bins <- dt_bins %>% filter(d < max_d, mean_r2 >= 0)
+
+  fwrite(dt_bins, sum_csv)
+} else {
+  dt_bins <- fread(sum_csv)
+}
+
+cat(sprintf("%s pairs in %d windows across %d scaffolds\n",
+            sum(dt_bins$n),
+            nrow(dt_bins %>% distinct(chrom, win_start)),
+            nrow(dt_bins %>% distinct(chrom))))
+```
+
+```{r ld_decay_global}
+# genome-wide curve: all windows+scaffolds pooled per distance bin
+gb <- dt_bins %>%
+  group_by(bin) %>%
+  summarise(n_bin = sum(n),
+            r2_bin = sum(n * mean_r2) / sum(n),
+            .groups = "drop") %>%
+  mutate(d = (bin + 0.5) * bin_width)
+
+gfit <- nls(r2_bin ~ hill_weir_r2(d, n_chrom, C),
+            data = gb, weights = n_bin, start = list(C = 0.01),
+            control = nls.control(maxiter = 1000, warnOnly = TRUE))
+gfit_C  <- coef(gfit)[["C"]]
+pred_d  <- seq(0, max(gb$d), length.out = 1000)
+pred_df <- data.frame(d = pred_d,
+                      R2 = hill_weir_r2(pred_d, n_chrom, gfit_C))
+decay_d <- pred_d[which.min(abs(pred_df$R2 - 0.2))]
+
+today_dir <- paste0("../../results/by-date/", today)
+dir.create(today_dir, recursive = TRUE, showWarnings = FALSE)
+
+gcur <- ggplot(gb, aes(x = d, y = r2_bin)) +
+  geom_point(aes(size = n_bin)) +
+  geom_line(data = pred_df, aes(x = d, y = R2),
+            color = "skyblue", linewidth = 1.2, inherit.aes = FALSE) +
+  geom_hline(yintercept = 0.2, linetype = "dashed", color = "pink") +
+  geom_vline(xintercept = decay_d, linetype = "dashed", color = "pink") +
+  scale_size_area(max_size = 8) +
+  labs(title = sprintf("%s, pool %s (%d chromosomes): fitted 4Nc = %.3g, r^2 = 0.2 at %.2f kb",
+                       vb, id_pool, n_chrom, gfit_C, decay_d / 1000),
+       x = "Pair distance (bp)", y = "LD (r^2)")
+gcur
+
+ggsave(file.path(today_dir, "ld_decay_windows_global.pdf"), gcur,
+       width = 7, height = 6)
+```
+
+```{r ld_decay_heatmap}
+# decay shape per region: window x distance-bin raster of mean r^2,
+# biggest scaffolds only (by total pair count); scaffold order by span.
+sc <- dt_bins %>%
+  group_by(chrom) %>%
+  summarise(pairs = sum(n),
+            span  = max(win_start) + window_size,
+            .groups = "drop") %>%
+  mutate(chrom = fct_reorder(chrom, span, .desc = TRUE))
+sc_top <- sc %>% slice_max(pairs, n = top_scaffolds)
+
+p_heat <- ggplot(dt_bins %>%
+                   semi_join(sc_top, by = "chrom") %>%
+                   mutate(chrom = factor(chrom, levels = levels(sc$chrom))),
+                 aes(x = d, y = win_start + window_size / 2, fill = mean_r2)) +
+  geom_tile(width = 0.9 * bin_width, height = window_size) +
+  facet_wrap(~ chrom, ncol = 4, scales = "free_x") +
+  scale_fill_scico(palette = "lajolla", direction = -1, name = "mean r^2") +
+  labs(title = paste0("LD decay per ", window_size / 1e3,
+                      " kb window -- ", vb, " pool ", id_pool,
+                      ", top ", top_scaffolds, " scaffolds"),
+       x = "Pair distance (bp)", y = "Genome position (bp)") +
+  theme_bw()
+p_heat
+
+ggsave(file.path(today_dir, "ld_decay_windows_heat.pdf"), p_heat,
+       width = 16, height = 10)
+```
+
+```{r ld_decay_heatmap_all}
+# same raster, every scaffold, paged via ggforce
+p_all <- ggplot(dt_bins %>%
+                  mutate(chrom = factor(chrom, levels = levels(sc$chrom))),
+                aes(x = d, y = win_start + window_size / 2, fill = mean_r2)) +
+  geom_tile(width = 0.9 * bin_width, height = window_size) +
+  scale_fill_scico(palette = "lajolla", direction = -1, name = "mean r^2") +
+  facet_wrap_paginate(~ chrom, ncol = 4, nrow = 3, scales = "free_x") +
+  labs(title = paste0("LD decay per ", window_size / 1e3,
+                      " kb window -- ", vb, " pool ", id_pool),
+       x = "Pair distance (bp)", y = "Genome position (bp)") +
+  theme_bw()
+
+pdf(file.path(today_dir, "ld_decay_windows_all.pdf"), width = 16, height = 10)
+for (pg in seq_len(n_pages(p_all))) {
+  print(p_all + facet_wrap_paginate(~ chrom, ncol = 4, nrow = 3,
+                                    scales = "free_x", page = pg))
+}
+dev.off()
+```
+
+```{r ld_decay_C_track}
+# one Hill-Weir NLS per window on the bin means; sparse windows -> NA
+fit_one <- function(df) {
+  if (sum(df$n) < min_pairs_fit ||
+      dplyr::n_distinct(df$bin) < min_bins_fit) {
+    return(data.frame(C = NA_real_))
+  }
+  bdf <- df %>%
+    group_by(bin) %>%
+    summarise(n_bin  = sum(n),
+              r2_bar = sum(n * mean_r2) / sum(n),
+              .groups = "drop") %>%
+    mutate(d_bin = (bin + 0.5) * bin_width)
+  m <- tryCatch(
+    nls(r2_bar ~ hill_weir_r2(d_bin, n_chrom, C),
+        data = bdf, weights = n_bin, start = list(C = 0.01),
+        control = nls.control(maxiter = 1000, warnOnly = TRUE)),
+    error = function(e) NULL)
+  data.frame(C = if (is.null(m)) NA_real_ else coef(m)[["C"]])
+}
+
+dt_C <- dt_bins %>%
+  group_by(chrom, win_start) %>%
+  group_modify(fit_one) %>%
+  semi_join(sc_top, by = "chrom") %>%
+  mutate(chrom = factor(chrom, levels = levels(sc$chrom)))
+
+p_C <- ggplot(dt_C,
+              aes(x = win_start + window_size / 2, y = C)) +
+  geom_point(alpha = 0.4, shape = 16) +
+  geom_hline(yintercept = gfit_C, linetype = "dashed", color = "pink") +
+  facet_wrap(~ chrom, ncol = 4, scales = "free_x") +
+  labs(title = paste0("Per-window fitted 4Nc -- ", vb, " pool ", id_pool,
+                      ", top ", top_scaffolds, " scaffolds"),
+       x = "Genome position (bp)", y = "Fitted 4Nc") +
+  theme_bw()
+p_C
+
+ggsave(file.path(today_dir, "ld_decay_windows_C.pdf"), p_C,
+       width = 16, height = 10)
+```
+
 # Conceptual diagrams of k-mer arithmetic
 
 ```{r}
