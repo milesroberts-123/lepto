@@ -1598,6 +1598,7 @@ if (recompute || !file.exists(sum_csv)) {
            bin = as.integer(d / bin_width)) %>%
     filter(!is.na(r2_direct)) %>%
     group_by(chrom, win, bin) %>%
+    filter(r2_direct < 1, r2_mle > 0) |>
     summarise(n        = n(),
               mean_r2  = mean(r2_direct),
               mean_sq  = mean(r2_direct * r2_direct),
@@ -1719,6 +1720,7 @@ p_all <- ggplot(dt_bins %>%
 
 pdf(file.path(today_dir, "ld_decay_windows_all.pdf"), width = 16, height = 10)
 for (pg in seq_len(n_pages(p_all))) {
+  print(pg)
   print(p_all + facet_wrap_paginate(~ chrom, ncol = 4, nrow = 3,
                                     scales = "free_x", page = pg))
 }
@@ -1797,6 +1799,7 @@ if (!exists("cds")) {
 cds_ld <- cds %>%
   mutate(chrom = gsub("^", "hap1_", chrom), start = start + 1) %>%
   left_join(ld_win, by = c("chrom", "start", "end"))
+
 cds_ld %>%
   summarise(n_cds_windows = n(),
             windows_with_r2 = sum(!is.na(mean_r2_direct)),
@@ -1805,11 +1808,82 @@ cds_ld %>%
                                             w = !is.na(mean_r2_direct),
                                             na.rm = TRUE))
 
+if(!exists("pi4")){
+  pi4 <- fread("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w500000_s0_diversity.csv")
+}
+
 pi_ld <- pi4 %>%
-  left_join(ld_win, by = c("chrom", "start", "end"))
+  left_join(ld_win, by = c("chrom", "start", "end")) |>
+  left_join(cds |> mutate(chrom = gsub("^", "hap1_", chrom), start = start+1), by = c("chrom", "start", "end")) |>
+  mutate(cds_density = cds/(end - start + 1))
+
 pi_ld %>%
   summarise(n_div_windows = n(),
             windows_with_r2 = sum(!is.na(mean_r2_direct)))
+```
+
+```{r ld_vs_cds_and_pi}
+
+ggplot(pi_ld, aes(x = cds_density, y = pooled.theta_pi)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+corr_ci_autocorr(pi_ld$cds_density, pi_ld$mean_r2_direct)
+
+corr_ci_autocorr(pi_ld$cds_density, pi_ld$mean_r2_mle)
+
+ggplot(pi_ld, aes(x = cds_density, y = mean_r2_direct)) +
+  geom_point(alpha = 0.2) +
+  #geom_hex() +  
+  geom_smooth(method = "lm", color = "pink") +
+  labs(x = "CDS density", y = "Mean R^2 (Direct)", color = "Count")
+
+mod <- lm(pooled.theta_pi ~ cds_density + mean_r2_direct, pi_ld)
+summary(mod)
+
+bs_model <- function(data, indices) {
+  df_boot <- data[indices, ]               # Resample the dataset
+  fit <- lm(pooled.theta_pi ~ cds_density + mean_r2_direct, data = df_boot)   # Fit the lm model
+  return(coef(fit))                        # Return coefficients
+}
+
+# 2. Run the bootstrap (e.g., 2000 replications)
+#set.seed(123) # For reproducibility
+library(boot)
+boot_results <- boot(data = pi_ld, statistic = bs_model, R = 1000)
+
+boot.ci(boot_results, type = "basic", index = 2) 
+
+# 2. Loop through each coefficient index and extract the "basic" interval
+num_coefs <- 3
+coef_names <- c("Intercept", "CDS density", "Mean R2")
+ci_list <- lapply(1:num_coefs, function(i) {
+  # Run boot.ci for the specific coefficient index
+  res <- boot.ci(boot_results, type = "basic", index = i)
+  
+  # Extract the lower and upper bounds (found in the last 2 positions of the basic vector)
+  # res$basic contains [conf_level, index1, index2, lower_bound, upper_bound]
+  data.frame(
+    Term = coef_names[i],
+    Estimate = boot_results$t0[i],
+    Lower_CI = res$basic[4],
+    Upper_CI = res$basic[5],
+    stringsAsFactors = FALSE
+  )
+})
+
+ci_table <- do.call(rbind, ci_list)
+rownames(ci_table) <- NULL # Clean up row names
+
+ggplot(ci_table %>% filter(Term != "Intercept"), aes(x = Term, y = Estimate)) +
+  geom_linerange(aes(ymin = Lower_CI, ymax = Upper_CI), color = "red", linewidth = 1) +
+  geom_point(shape = 16, color = "black", size = 1.5) +
+  geom_hline(yintercept = 0, lty = 2) +
+  coord_flip() +
+  theme(title = element_text(size = 16)) +
+  labs(y = "Bootstrap estimate of\nscaled coefficient", x = "Model term", title = "\u03c0 ~ Mean LD (R^2) + CDS density")
+
+ggsave(paste0("../../results/by-date/", today, "/pi_model.pdf"), device = cairo_pdf, width = 6, height = 4)
 ```
 
 # Conceptual diagrams of k-mer arithmetic
