@@ -1769,6 +1769,49 @@ ggsave(file.path(today_dir, "ld_decay_windows_slope.pdf"), p_slope,
        width = 16, height = 10)
 ```
 
+```{r ld_r2_windows}
+# mean r^2 per 500 kb window for merging with other windowed tables.
+# Keyed exactly like the pooled grenedalf diversity windows (prefixed
+# chrom, 1-based start, window end) so it left_join()s straight onto pi4
+# and onto cds_windows.bed after the usual gsub("hap1_") + start+1 hop.
+# The window mean is pair-count-weighted over the distance bins inside
+# it, consistent with the global curve's bin averages.
+ld_win <- dt_bins %>%
+  group_by(chrom, win_start) %>%
+  summarise(n_pairs        = sum(n),
+            mean_r2_direct = sum(n * mean_r2) / sum(n),
+            mean_r2_mle    = sum(n * mean_r2m, na.rm = TRUE) /
+              sum(n[!is.na(mean_r2m)]),
+            .groups = "drop") %>%
+  mutate(start = win_start + 1,
+         end   = win_start + window_size) %>%
+  select(chrom, start, end, n_pairs, mean_r2_direct, mean_r2_mle)
+
+fwrite(ld_win, paste0(dir_pairs, "/", id_pool, "_r2_windows.csv"))
+
+# sanity: does it merge with the diversity + CDS windows as-is?
+if (!exists("cds")) {
+  cds <- fread("../results/cds_windows/cds_windows.bed",
+               col.names = c("chrom", "start", "end", "cds"))
+}
+cds_ld <- cds %>%
+  mutate(chrom = gsub("^", "hap1_", chrom), start = start + 1) %>%
+  left_join(ld_win, by = c("chrom", "start", "end"))
+cds_ld %>%
+  summarise(n_cds_windows = n(),
+            windows_with_r2 = sum(!is.na(mean_r2_direct)),
+            mean_cds_bases  = mean(cds),
+            mean_r2_direct  = weighted.mean(mean_r2_direct,
+                                            w = !is.na(mean_r2_direct),
+                                            na.rm = TRUE))
+
+pi_ld <- pi4 %>%
+  left_join(ld_win, by = c("chrom", "start", "end"))
+pi_ld %>%
+  summarise(n_div_windows = n(),
+            windows_with_r2 = sum(!is.na(mean_r2_direct)))
+```
+
 # Conceptual diagrams of k-mer arithmetic
 
 ```{r}
