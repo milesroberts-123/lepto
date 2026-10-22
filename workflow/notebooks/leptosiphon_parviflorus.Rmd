@@ -1477,13 +1477,20 @@ dt_sample <- dt_sample %>%
   mutate(d = abs(pos1-pos2),
          n = 50,
          R2 = dc_r2) %>%
-  select(R2, d, n)
+  mutate(bin = cut(d, breaks = 40)) %>%
+  group_by(bin) |>
+  summarize(d = mean(d),
+            R2 = mean(R2),
+            n = mean(n),
+            S = n()) |>
+  select(R2, d, n, S)
 
 # Fit Hill and Weir Non-Linear Least Squares (NLS) Model
 hw_model <- nls(
   R2 ~ hill_weir_r2(d, n, C),
   data = dt_sample,
   start = list(C = 0.001),
+  weights = S,
   control = nls.control(maxiter = 1000, warnOnly = TRUE)
 )
 
@@ -1506,8 +1513,8 @@ hw_model <- nls(
   
   # Plot the Raw Data Bins and the Fitted Hill & Weir Curve
   ggplot(dt_sample, aes(x = d, y = R2)) +
-    #geom_point(alpha = 0.3, color = "darkgray", shape = 16) +
-    geom_hex() +
+    geom_point(alpha = 0.3, color = "darkgray", shape = 16) +
+    #geom_hex() +
     geom_line(
       data = plot_data,
       aes(x = d, y = R2),
@@ -1540,20 +1547,20 @@ Each 500 kb window gets its own decay curve (distance lives in the
 
 ```{r ld_window_scan}
 vb         <- "hap2_vs_hap1"  # results/ldx/{variant}_vs_{backbone} branch
-id_pool    <- "1"
+id_pool    <- "2"
 window_size<- 5e5            # 500 kb windows along the genome
-bin_width  <- 50             # distance micro-bins for the decay curves
+bin_width  <- 10             # distance micro-bins for the decay curves
 max_d      <- 1e3            # pairs past this are anomalies (searchlen = 500)
 top_scaffolds <- 12          # biggest scaffolds shown per raster panel
-min_pairs_fit <- 500         # per-window NLS needs >= this many pairs
+min_pairs_fit <- 50         # per-window NLS needs >= this many pairs
 min_bins_fit  <- 4           # ... spanning >= this many distance bins
 recompute  <- FALSE          # TRUE forces the expensive re-scan
 
 # Hill & Weir (1988) expected r^2: rventures::hill_weir_r2(d, n, C),
 # loaded above. In a pool of m diploids, n = 2m gene copies.
-smp     <- fread("../config/samples.tsv")
-k       <- smp[as.character(sample_id) == id_pool, 2 * sample_size]
-n_chrom <- if (length(k) && !is.na(k)) k else 50
+smp     <- fread("../../config/samples.tsv")
+k       <- smp[as.character(sample_id) == id_pool, sample_size]
+n_chrom <- if (length(k) && !is.na(k)) k else stop("sample size not found!!!")
 
 dir_pairs <- paste0("../results/ldx/", vb, "/", id_pool)
 sum_csv   <- paste0(dir_pairs, "/", id_pool, "_ld_decay_windows.csv")
@@ -1574,9 +1581,11 @@ if (recompute || !file.exists(sum_csv)) {
     dir_pairs, pattern = "\\.pairs\\.tsv$", full.names = TRUE)
   stopifnot("no per-scaffold pairs.tsv under dir_pairs" = length(ds_files) > 0)
 
+  # remove emptry files
+  ds_files <- ds_files[file.size(ds_files) > 0]
+  
   ds <- arrow::open_dataset(
-    ds_files, format = "tsv", schema = ldx_schema,
-    read_options = arrow::csv_read_options(header = FALSE))
+    ds_files, format = "tsv", schema = ldx_schema)
 
   # one pushdown pass: bin = distance bin index; win = 500 kb window idx.
   # mean_sq lets sd be rebuilt in R (sd() itself has no Arrow aggregate).
