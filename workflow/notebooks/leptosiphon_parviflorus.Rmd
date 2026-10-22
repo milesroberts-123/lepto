@@ -1332,6 +1332,18 @@ ggsave(paste0("../../results/by-date/", today, "/hitchhike_model.pdf"), height =
 
 ```
 
+
+# genome-wide average pi in 1001G Arabidopsis thaliana, for comparison
+
+```{r}
+atpi <- read_tsv("/global/scratch/users/milesroberts/genomes/arabidopsis_thaliana/four_fold/1135_pi.txt")
+
+atpi %>%
+  group_by(pop) %>%
+  summarise(genome_wide_pi = sum(count_diffs, na.rm = TRUE) /
+                             sum(count_comparisons, na.rm = TRUE))
+
+```
 # linked selection: correlation between CDS density and diversity
 
 ```{r}
@@ -1358,7 +1370,7 @@ ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
   labs(x = "CDS Density", y = "\u03c04 (pink pools)", title = paste0("r = ", signif(r_stats$r, 2), " [", signif(r_stats$ci_lower, 2), ", ", signif(r_stats$ci_upper, 2),"]", ", p = ", signif(r_stats$p_value, digits = 2))) +
   xlim(0, 0.2)
 
-ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_point_pink.pdf"), device = cairo_pdf,width=6,height=6)
+ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_point_pink.pdf"), device = cairo_pdf,width=4,height=4)
 
 ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
   geom_hex() +
@@ -1368,6 +1380,154 @@ ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
   xlim(0, 0.2)
 
 ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_hexbin_pink.pdf"), device=cairo_pdf, width=6, height=6)
+```
+
+# synteny plot
+
+```{r}
+#devtools::install_github("Jiawang1209/ggSynteny")
+#library(ggSynteny)
+
+#remotes::install_github("loukesio/ggsynteny", upgrade = "never")
+library(ggsynteny)
+
+# 1. Load — use the ORIGINAL files (not the _renamed copies)
+syn <- read_mcscanx("../results/mcscanx/collinearity/leptosiphon_all.collinearity",
+                    "../results/mcscanx/collinearity/leptosiphon_all.gff")
+
+# 2. Display labels: keys = the token before the first dot of the mangled species
+sp_fix <- c("hap1" = "Leptosiphon hap1",
+            "hap2" = "Leptosiphon hap2",
+            "lin"  = "Linanthus",
+            "linanthus" = "Linanthus")   # covers both mcscanx-key spellings
+
+# 3. Scaffold number recovery:
+#    hapN: ggsynteny strips leading letters -> "1.scaffold_25"; number = trailing digit run
+#    linanthus (raw NCBI accessions): ".JALGPY010000001.1" -> JALGPY01 + 6-digit scaffold number
+ch <- function(x) {   # mangled chr -> bare scaffold number as character
+  n <- ifelse(str_detect(x, "JALGPY"),
+              as.numeric(sub(".*JALGPY01([0-9]+).*", "\\1", x)),   # 7-digit serial, greedy
+              as.numeric(str_extract(x, "[0-9]+$")))               # hapN: trailing run
+  as.character(n)
+}
+sp_key <- \(x) str_extract(x, "^[^.]+")
+
+# 4. Rebuild both tables in the list
+syn$chromosomes <- syn$chromosomes |>
+  mutate(species = sp_fix[sp_key(species)], chr = ch(chr))
+
+syn$blocks <- syn$blocks |>
+  mutate(across(c(species1, species2), \(s) sp_fix[sp_key(s)]),
+         across(c(chr1, chr2), ch))
+
+# 5. Guard: any NA here means an uncaught name regime — fix before plotting
+stopifnot(!anyNA(syn$chromosomes$species), !anyNA(syn$blocks$species1),
+          !anyNA(syn$blocks$species2), !anyNA(syn$chromosomes$chr))
+
+# 6. Optional: thin the ribbons (1669 blocks raw; package's own precedent is n>=20)
+#syn$blocks <- syn$blocks |> filter(n_genes >= 20)
+
+# 7. Plot
+plot_synteny(syn,
+             species_order = c("Leptosiphon hap2", "Leptosiphon hap1", "Linanthus"),
+             palette = "casa_natal", chr_fill = "per_species")
+
+ggsave(paste0("../../results/by-date/", today, "/synenty_all.pdf"), width = 18, height = 5)
+
+# 8. subset to particular focal chromosomes, then plot
+picked <- list(
+  "Leptosiphon hap1" = c("25"),
+  "Leptosiphon hap2" = c("1", "2", "3"),
+  "Linanthus"        = c("1", "2", "7")
+)
+
+keep <- function(sp, chr) mapply(\(s, c) c %in% picked[[s]], sp, chr)   # unknown species -> dropped
+
+sub_syn <- syn
+
+sub_syn$chromosomes <- syn$chromosomes |> filter(keep(species, chr))
+sub_syn$blocks      <- syn$blocks      |> filter(keep(species1, chr1), keep(species2, chr2))
+
+plot_synteny(sub_syn,
+             species_order = c("Leptosiphon hap2", "Leptosiphon hap1", "Linanthus"),
+             palette = "casa_natal", chr_fill = "per_species")
+
+ggsave(paste0("../../results/by-date/", today, "/synenty_hap1_scaffold_25.pdf"), width = 14, height = 5)
+```
+
+# linkage within single reads
+
+```{r}
+
+library(arrow)
+threshold <- 0.2
+
+# Point to the file without loading it
+file_path <- ("../results/ldx/hap2_vs_hap1/1/1.hap1_scaffold_25.pairs.tsv")
+
+dt_sample <- fread(cmd = paste0("shuf -n 1000000 ", file_path), col.names = c("chrom", "pos1", "pos2", "x11", "x12", "x21", "x22", "pa", "pb", "d1", "d2", "di", "li_mle_r2", "mle_r2", "up_mle_r2", "dc_r2", "A", "a", "B", "b"))
+
+# Create a random filtering mask using a fast internal bernoulli sample
+# dt_sample <- ds %>%
+#   filter(bernoulli_sample(0.005)) %>%
+#   collect() # Only now does the data enter R memory
+
+# calculate distance
+dt_sample <- dt_sample %>% 
+  mutate(d = abs(pos1-pos2),
+         n = 50,
+         R2 = dc_r2) %>%
+  select(R2, d, n)
+
+# Fit Hill and Weir Non-Linear Least Squares (NLS) Model
+hw_model <- nls(
+  R2 ~ hill_weir_r2(d, n, C),
+  data = dt_sample,
+  start = list(C = 0.001),
+  control = nls.control(maxiter = 1000, warnOnly = TRUE)
+)
+
+# Extract the fitted recombination parameter (C)
+  fitted_C <- coef(hw_model)["C"]
+  line1 <- paste("Estimated 4Nc:", signif(fitted_C,3), "\n")
+  
+  # Generate Predicted Trend Line Values
+  pred_distances <- seq(0, max(dt_sample$d), length.out = 1000)
+  pred_r2 <- predict(hw_model, newdata = data.frame(d = pred_distances, n = 50))
+  plot_data <- data.frame(d = pred_distances, R2 = pred_r2)
+  
+  # Calculate LD Decay Distance at r^2 threshold (e.g., r2 = 0.2)
+  decay_distance <- pred_distances[which.min(abs(pred_r2 - threshold))]
+  line2 <- paste("LD decays to r^2 =",
+      threshold,
+      "at:",
+      round(decay_distance / 1000, 2),
+      "kb\n")
+  
+  # Plot the Raw Data Bins and the Fitted Hill & Weir Curve
+  ggplot(dt_sample, aes(x = d, y = R2)) +
+    #geom_point(alpha = 0.3, color = "darkgray", shape = 16) +
+    geom_hex() +
+    geom_line(
+      data = plot_data,
+      aes(x = d, y = R2),
+      color = "skyblue",
+      size = 1.2
+    ) +
+    scale_fill_gradient(low = "lightblue1", high = "darkblue", trans = "log10") +
+    geom_hline(yintercept = threshold,
+               linetype = "dashed",
+               color = "pink") +
+    geom_vline(xintercept = decay_distance,
+               linetype = "dashed",
+               color = "pink") +
+    labs(title = paste(line1,line2, sep = ""), 
+         x = "Physical Distance (bp)", 
+         y = "LD (r^2)",
+         fill = "Count")
+  
+    ggsave(paste0("../../results/by-date/", today, "/ld_decay.pdf", sep = ""), width = 7, height = 6)
+
 ```
 
 # Conceptual diagrams of k-mer arithmetic

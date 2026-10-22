@@ -76,11 +76,13 @@ featurecounts_paired: true
 mcscanx_input_fastas:
   hap1: "results/featurecounts/hap1_expressed.faa"
   hap2: "results/featurecounts/hap2_expressed.faa"
+  linanthus: "results/braker/linanthus/braker_expressed.faa"
 mcscanx_input_gffs:
   hap1: "results/featurecounts/hap1_expressed.gff3"
   hap2: "results/featurecounts/hap2_expressed.gff3"
+  linanthus: "results/braker/linanthus/braker_expressed.gff3"
 mcscanx_blast_evalue: 1e-5
-mcscanx_blast_max_targets: 5
+mcscanx_blast_max_targets: 15
 
 # --- vg graph genome & diversity ---
 vg_ref_backbone: "hap1"
@@ -232,7 +234,7 @@ cds_windows_size: 500000
 # -l = max(floor, mean/divisor), -h = multiple x mean (defaults
 # reproduce the paper's 10..100 geometry at 40x mean depth). The
 # binary is provisioned outside the repo (see AGENTS.md).
-ldx_binary: "/global/scratch/users/milesroberts/brandvain_lab_projects/lepto/bin/LDx.pl"
+ldx_binary: "/global/home/users/milesroberts/bin/LDx.pl"
 ldx_maf: 0.1
 ldx_min_intersect: 11
 ldx_searchlen: 500

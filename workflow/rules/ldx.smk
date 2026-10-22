@@ -95,8 +95,7 @@ rule ldx_snplist:
     shell:
         """
         mkdir -p $(dirname {output})
-        awk -F, -v d={params.min_depth} 'NR > 1 && $7 >= d && $8 > 0 && $8 < 1 {{ print $1"\\t"$2 }}' \\
-            {input.freq} | sort -k1,1 -k2,2n > {output}
+        awk -F, -v d={params.min_depth} 'NR > 1 && $7 >= d && $8 > 0 && $8 < 1 {{ print $1"\\t"$2 }}' {input.freq} > {output}
         """
 
 

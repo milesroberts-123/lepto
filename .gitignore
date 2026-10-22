@@ -1,6 +1,7 @@
 benchmarks/
 braker/
 gyd/
+busco_*/
 *.names
 *.gff
 *.nwk

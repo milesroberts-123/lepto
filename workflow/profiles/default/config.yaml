@@ -235,7 +235,7 @@ set-resources:
     runtime: 120
   mcscanx_blastp:
     cpus_per_task: 16
-    runtime: 480
+    runtime: 960
   mcscanx_run:
     cpus_per_task: 1
     runtime: 120
@@ -307,6 +307,9 @@ set-resources:
     cpus_per_task: 8
     runtime: "max(4*input.size_mb/1024, 480)"
     mem_mb: 64000
+  ldx_run:
+    cpus_per_task: 4
+    runtime: 1440
   cds_windows_faidx:
     runtime: 30
   cds_windows_cds_bed:
