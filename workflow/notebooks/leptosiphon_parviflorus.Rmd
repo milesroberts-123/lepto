@@ -1551,7 +1551,7 @@ id_pool    <- "2"
 window_size<- 5e5            # 500 kb windows along the genome
 bin_width  <- 10             # distance micro-bins for the decay curves
 max_d      <- 1e3            # pairs past this are anomalies (searchlen = 500)
-top_scaffolds <- 12          # biggest scaffolds shown per raster panel
+top_scaffolds <- 25          # biggest scaffolds shown per raster panel
 min_pairs_fit <- 50         # per-window NLS needs >= this many pairs
 min_bins_fit  <- 4           # ... spanning >= this many distance bins
 recompute  <- FALSE          # TRUE forces the expensive re-scan
@@ -1662,9 +1662,10 @@ gcur <- ggplot(gb, aes(x = d, y = r2_bin)) +
   geom_point(aes(size = n_bin)) +
   geom_line(data = pred_df, aes(x = d, y = R2),
             color = "skyblue", linewidth = 1.2, inherit.aes = FALSE) +
-  geom_hline(yintercept = 0.2, linetype = "dashed", color = "pink") +
-  geom_vline(xintercept = decay_d, linetype = "dashed", color = "pink") +
+  #geom_hline(yintercept = 0.2, linetype = "dashed", color = "pink") +
+  #geom_vline(xintercept = decay_d, linetype = "dashed", color = "pink") +
   scale_size_area(max_size = 8) +
+  scale_x_log10() +
   labs(title = sprintf("%s, pool %s (n = %d): head mean r^2 = %.2f vs Hill-Weir cap %.2f; r^2 = 0.2 at %.2f kb",
                        vb, id_pool, n_chrom, head_mean, hw_cap, decay_d / 1000),
        x = "Pair distance (bp)", y = "LD (r^2)")
