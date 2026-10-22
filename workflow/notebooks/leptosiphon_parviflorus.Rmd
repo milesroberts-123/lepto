@@ -1556,8 +1556,11 @@ min_pairs_fit <- 50         # per-window NLS needs >= this many pairs
 min_bins_fit  <- 4           # ... spanning >= this many distance bins
 recompute  <- FALSE          # TRUE forces the expensive re-scan
 
-# Hill & Weir (1988) expected r^2: rventures::hill_weir_r2(d, n, C),
-# loaded above. In a pool of m diploids, n = 2m gene copies.
+# n = chromosomes for the Hill-Weir plateau diagnostic only (see
+# ld_decay_global): rventures::hill_weir_r2 caps expected r^2 at
+# (10/22)*(1 + 36/(22*n)) -- 0.55 at n = sample_size for pool 2 --
+# far below LDx's 0.6-0.9 r^2_direct at short distances, so the decay
+# fit itself is the empirical log-distance model (Feder et al. 2012).
 smp     <- fread("../../config/samples.tsv")
 k       <- smp[as.character(sample_id) == id_pool, sample_size]
 n_chrom <- if (length(k) && !is.na(k)) k else stop("sample size not found!!!")
@@ -1635,14 +1638,22 @@ gb <- dt_bins %>%
             .groups = "drop") %>%
   mutate(d = (bin + 0.5) * bin_width)
 
-gfit <- nls(r2_bin ~ hill_weir_r2(d, n_chrom, C),
-            data = gb, weights = n_bin, start = list(C = 0.01),
-            control = nls.control(maxiter = 1000, warnOnly = TRUE))
-gfit_C  <- coef(gfit)[["C"]]
-pred_d  <- seq(0, max(gb$d), length.out = 1000)
-pred_df <- data.frame(d = pred_d,
-                      R2 = hill_weir_r2(pred_d, n_chrom, gfit_C))
-decay_d <- pred_d[which.min(abs(pred_df$R2 - 0.2))]
+# empirical decay fit (LDx-paper style, Feder et al. 2012 Fig 4):
+# distance-class bin means + log-distance regression. Hill-Weir NLS is
+# NOT used: its curve caps at (10/22)*(1+36/(22*n_chrom)), below the
+# 0.6-0.9 r2_direct LDx reports at short distances (ascertained pairs,
+# upward-biased direct estimator), so its NLS had no headroom.
+hw_cap <- (10 / 22) * (1 + 36 / (22 * n_chrom))
+head_mean <- dt_bins %>%
+  filter(bin * bin_width < 100) %>%
+  summarise(sum(n * mean_r2) / sum(n)) %>%
+  pull()
+ldfit  <- lm(r2_bin ~ log10(d), data = gb, weights = n_bin)
+a_int  <- coef(ldfit)[["(Intercept)"]]
+b_log  <- coef(ldfit)[["log10(d)"]]
+decay_d <- if (b_log < 0) 10^((0.2 - a_int) / b_log) else NA_real_
+pred_d  <- seq(min(gb$d), max(gb$d), length.out = 500)
+pred_df <- data.frame(d = pred_d, R2 = predict(ldfit, data.frame(d = pred_d)))
 
 today_dir <- paste0("../../results/by-date/", today)
 dir.create(today_dir, recursive = TRUE, showWarnings = FALSE)
@@ -1654,8 +1665,8 @@ gcur <- ggplot(gb, aes(x = d, y = r2_bin)) +
   geom_hline(yintercept = 0.2, linetype = "dashed", color = "pink") +
   geom_vline(xintercept = decay_d, linetype = "dashed", color = "pink") +
   scale_size_area(max_size = 8) +
-  labs(title = sprintf("%s, pool %s (%d chromosomes): fitted 4Nc = %.3g, r^2 = 0.2 at %.2f kb",
-                       vb, id_pool, n_chrom, gfit_C, decay_d / 1000),
+  labs(title = sprintf("%s, pool %s (n = %d): head mean r^2 = %.2f vs Hill-Weir cap %.2f; r^2 = 0.2 at %.2f kb",
+                       vb, id_pool, n_chrom, head_mean, hw_cap, decay_d / 1000),
        x = "Pair distance (bp)", y = "LD (r^2)")
 gcur
 
@@ -1713,12 +1724,16 @@ for (pg in seq_len(n_pages(p_all))) {
 dev.off()
 ```
 
-```{r ld_decay_C_track}
-# one Hill-Weir NLS per window on the bin means; sparse windows -> NA
+```{r ld_decay_slope_track}
+# per-window decay rate on the bin means: weighted log-distance
+# regression, slope = r^2 change per decade of distance (negative =
+# decaying); Hill-Weir's 4Nc was dropped (its curve caps at
+# (10/22)*(1+36/(22*n)) far below LDx's short-distance r^2_direct).
+# Sparse windows -> NA.
 fit_one <- function(df) {
   if (sum(df$n) < min_pairs_fit ||
       dplyr::n_distinct(df$bin) < min_bins_fit) {
-    return(data.frame(C = NA_real_))
+    return(data.frame(slope = NA_real_))
   }
   bdf <- df %>%
     group_by(bin) %>%
@@ -1727,31 +1742,29 @@ fit_one <- function(df) {
               .groups = "drop") %>%
     mutate(d_bin = (bin + 0.5) * bin_width)
   m <- tryCatch(
-    nls(r2_bar ~ hill_weir_r2(d_bin, n_chrom, C),
-        data = bdf, weights = n_bin, start = list(C = 0.01),
-        control = nls.control(maxiter = 1000, warnOnly = TRUE)),
+    lm(r2_bar ~ log10(d_bin), data = bdf, weights = n_bin),
     error = function(e) NULL)
-  data.frame(C = if (is.null(m)) NA_real_ else coef(m)[["C"]])
+  data.frame(slope = if (is.null(m)) NA_real_ else coef(m)[["log10(d_bin)"]])
 }
 
-dt_C <- dt_bins %>%
+dt_slope <- dt_bins %>%
   group_by(chrom, win_start) %>%
   group_modify(fit_one) %>%
   semi_join(sc_top, by = "chrom") %>%
   mutate(chrom = factor(chrom, levels = levels(sc$chrom)))
 
-p_C <- ggplot(dt_C,
-              aes(x = win_start + window_size / 2, y = C)) +
+p_slope <- ggplot(dt_slope,
+                  aes(x = win_start + window_size / 2, y = slope)) +
   geom_point(alpha = 0.4, shape = 16) +
-  geom_hline(yintercept = gfit_C, linetype = "dashed", color = "pink") +
+  geom_hline(yintercept = b_log, linetype = "dashed", color = "pink") +
   facet_wrap(~ chrom, ncol = 4, scales = "free_x") +
-  labs(title = paste0("Per-window fitted 4Nc -- ", vb, " pool ", id_pool,
+  labs(title = paste0("Per-window LD decay rate -- ", vb, " pool ", id_pool,
                       ", top ", top_scaffolds, " scaffolds"),
-       x = "Genome position (bp)", y = "Fitted 4Nc") +
+       x = "Genome position (bp)", y = "r^2 per decade of distance") +
   theme_bw()
-p_C
+p_slope
 
-ggsave(file.path(today_dir, "ld_decay_windows_C.pdf"), p_C,
+ggsave(file.path(today_dir, "ld_decay_windows_slope.pdf"), p_slope,
        width = 16, height = 10)
 ```
 
