@@ -292,7 +292,7 @@ set-resources:
     cpus_per_task: 1
     runtime: 60
   kmate_build_index:
-    cpus_per_task: 8
+    cpus_per_task: 16
     runtime: 480
   kmate_build_kmer_pa:
     cpus_per_task: 2
