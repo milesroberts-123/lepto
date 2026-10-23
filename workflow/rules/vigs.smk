@@ -87,8 +87,6 @@ rule vigs_nontarget_kmers:
     log:
         "logs/vigs/nontarget_kmers.log"
     threads: 8
-    resources:
-        mem_mb=12000
     conda: "../envs/kmc.yaml"
     params:
         k=config["vigs_k"]

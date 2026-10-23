@@ -123,6 +123,7 @@ set-resources:
     runtime: 120
   vg_autoindex:
     cpus_per_task: 32
+    # passed to vg autoindex itself (-M in-process cap), not a slurm mem request
     max_mem: "32G"
     runtime: 240
   vg_giraffe:
@@ -274,7 +275,6 @@ set-resources:
     runtime: 720
   vigs_nontarget_kmers:
     cpus_per_task: 8
-    mem_mb: 12000
     runtime: 120
   vigs_split:
     cpus_per_task: 2
@@ -301,12 +301,14 @@ set-resources:
     cpus_per_task: 2
     runtime: 120
   kmate_kmer_db:
-    cpus_per_task: 8
+    # Jellyfish's 32G hash table alone is 32 GiB; memory derives from cores
+    # (savio4 htc DefMemPerCPU=4000 MB) so 12 cores -> 48 GB, never mem_mb
+    cpus_per_task: 12
     runtime: "max(4*input.size_mb/1024, 240)"
   kmate_run:
-    cpus_per_task: 8
+    # loads the 32 GiB jf again; 12 cores -> 48 GB derived memory
+    cpus_per_task: 12
     runtime: "max(4*input.size_mb/1024, 480)"
-    mem_mb: 64000
   ldx_run:
     cpus_per_task: 4
     runtime: 1440
@@ -324,5 +326,4 @@ set-resources:
     runtime: 30
   busco_proteins:
     cpus_per_task: 16
-    mem_mb: 16000
     runtime: 480
