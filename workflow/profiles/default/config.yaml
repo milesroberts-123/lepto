@@ -302,7 +302,7 @@ set-resources:
     runtime: 120
   kmate_kmer_db:
     # Jellyfish's 32G hash table alone is 32 GiB; memory derives from cores
-    # (savio4 htc DefMemPerCPU=4000 MB) so 12 cores -> 48 GB, never mem_mb
+    # (savio4 htc DefMemPerCPU=4000 MB) so 32 cores -> 128 GB, never mem_mb
     cpus_per_task: 32
     runtime: "max(4*input.size_mb/1024, 240)"
   kmate_run:
