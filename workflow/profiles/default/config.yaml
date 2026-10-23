@@ -71,7 +71,7 @@ set-threads:
   kmate_build_index: 8
   kmate_build_kmer_pa: 2
   kmate_build_var_pa: 2
-  kmate_kmer_db: 8
+  kmate_kmer_db: 4
   kmate_run: 8
   busco_lineage_download: 1
   busco_proteins_select: 4
