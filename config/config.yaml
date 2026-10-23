@@ -115,8 +115,8 @@ grenedalf_fst_method: "unbiased-hudson"
 # region start.
 tubemap_variant: "hap2"
 tubemap_backbone: "hap1"
-tubemap_regions: ["hap1_scaffold_25:1-5000"]
-tubemap_region_pad: 1000
+tubemap_regions: ["hap1_scaffold_25:6000-7000"]
+tubemap_region_pad: 100
 
 # --- grenedalf pooled diversity ---
 # Pool samples together into one merged sample (grenedalf

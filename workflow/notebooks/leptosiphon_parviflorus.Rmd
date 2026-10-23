@@ -1547,11 +1547,11 @@ Each 500 kb window gets its own decay curve (distance lives in the
 
 ```{r ld_window_scan}
 vb         <- "hap2_vs_hap1"  # results/ldx/{variant}_vs_{backbone} branch
-id_pool    <- "2"
+id_pool    <- "1"
 window_size<- 5e5            # 500 kb windows along the genome
 bin_width  <- 10             # distance micro-bins for the decay curves
 max_d      <- 1e3            # pairs past this are anomalies (searchlen = 500)
-top_scaffolds <- 25          # biggest scaffolds shown per raster panel
+top_scaffolds <- 50          # biggest scaffolds shown per raster panel
 min_pairs_fit <- 50         # per-window NLS needs >= this many pairs
 min_bins_fit  <- 4           # ... spanning >= this many distance bins
 recompute  <- FALSE          # TRUE forces the expensive re-scan
@@ -1592,6 +1592,7 @@ if (recompute || !file.exists(sum_csv)) {
 
   # one pushdown pass: bin = distance bin index; win = 500 kb window idx.
   # mean_sq lets sd be rebuilt in R (sd() itself has no Arrow aggregate).
+  # filter out inflated number of 1's for direct method and 0's for mle method
   dt_bins0 <- ds %>%
     mutate(d   = abs(pos2 - pos1),
            win = as.integer(floor(pos1 / window_size)),
@@ -1667,108 +1668,12 @@ gcur <- ggplot(gb, aes(x = d, y = r2_bin)) +
   #geom_vline(xintercept = decay_d, linetype = "dashed", color = "pink") +
   scale_size_area(max_size = 8) +
   scale_x_log10() +
-  labs(title = sprintf("%s, pool %s (n = %d): head mean r^2 = %.2f vs Hill-Weir cap %.2f; r^2 = 0.2 at %.2f kb",
-                       vb, id_pool, n_chrom, head_mean, hw_cap, decay_d / 1000),
-       x = "Pair distance (bp)", y = "LD (r^2)")
+  labs(title = sprintf("pool %s (n = %d): head mean r^2 = %.2f vs\nHill-Weir cap %.2f; r^2 = 0.2 at %.2f kb", id_pool, n_chrom, head_mean, hw_cap, decay_d / 1000),
+       x = "Pair distance (bp)", y = "LD (r^2)", size = "# Pairs")
 gcur
 
-ggsave(file.path(today_dir, "ld_decay_windows_global.pdf"), gcur,
+ggsave(file.path(today_dir, paste0(id_pool, "_ld_decay_windows_global.pdf")), gcur,
        width = 7, height = 6)
-```
-
-```{r ld_decay_heatmap}
-# decay shape per region: window x distance-bin raster of mean r^2,
-# biggest scaffolds only (by total pair count); scaffold order by span.
-sc <- dt_bins %>%
-  group_by(chrom) %>%
-  summarise(pairs = sum(n),
-            span  = max(win_start) + window_size,
-            .groups = "drop") %>%
-  mutate(chrom = fct_reorder(chrom, span, .desc = TRUE))
-sc_top <- sc %>% slice_max(pairs, n = top_scaffolds)
-
-p_heat <- ggplot(dt_bins %>%
-                   semi_join(sc_top, by = "chrom") %>%
-                   mutate(chrom = factor(chrom, levels = levels(sc$chrom))),
-                 aes(x = d, y = win_start + window_size / 2, fill = mean_r2)) +
-  geom_tile(width = 0.9 * bin_width, height = window_size) +
-  facet_wrap(~ chrom, ncol = 4, scales = "free_x") +
-  scale_fill_scico(palette = "lajolla", direction = -1, name = "mean r^2") +
-  labs(title = paste0("LD decay per ", window_size / 1e3,
-                      " kb window -- ", vb, " pool ", id_pool,
-                      ", top ", top_scaffolds, " scaffolds"),
-       x = "Pair distance (bp)", y = "Genome position (bp)") +
-  theme_bw()
-p_heat
-
-ggsave(file.path(today_dir, "ld_decay_windows_heat.pdf"), p_heat,
-       width = 16, height = 10)
-```
-
-```{r ld_decay_heatmap_all}
-# same raster, every scaffold, paged via ggforce
-p_all <- ggplot(dt_bins %>%
-                  mutate(chrom = factor(chrom, levels = levels(sc$chrom))),
-                aes(x = d, y = win_start + window_size / 2, fill = mean_r2)) +
-  geom_tile(width = 0.9 * bin_width, height = window_size) +
-  scale_fill_scico(palette = "lajolla", direction = -1, name = "mean r^2") +
-  facet_wrap_paginate(~ chrom, ncol = 4, nrow = 3, scales = "free_x") +
-  labs(title = paste0("LD decay per ", window_size / 1e3,
-                      " kb window -- ", vb, " pool ", id_pool),
-       x = "Pair distance (bp)", y = "Genome position (bp)") +
-  theme_bw()
-
-pdf(file.path(today_dir, "ld_decay_windows_all.pdf"), width = 16, height = 10)
-for (pg in seq_len(n_pages(p_all))) {
-  print(pg)
-  print(p_all + facet_wrap_paginate(~ chrom, ncol = 4, nrow = 3,
-                                    scales = "free_x", page = pg))
-}
-dev.off()
-```
-
-```{r ld_decay_slope_track}
-# per-window decay rate on the bin means: weighted log-distance
-# regression, slope = r^2 change per decade of distance (negative =
-# decaying); Hill-Weir's 4Nc was dropped (its curve caps at
-# (10/22)*(1+36/(22*n)) far below LDx's short-distance r^2_direct).
-# Sparse windows -> NA.
-fit_one <- function(df) {
-  if (sum(df$n) < min_pairs_fit ||
-      dplyr::n_distinct(df$bin) < min_bins_fit) {
-    return(data.frame(slope = NA_real_))
-  }
-  bdf <- df %>%
-    group_by(bin) %>%
-    summarise(n_bin  = sum(n),
-              r2_bar = sum(n * mean_r2) / sum(n),
-              .groups = "drop") %>%
-    mutate(d_bin = (bin + 0.5) * bin_width)
-  m <- tryCatch(
-    lm(r2_bar ~ log10(d_bin), data = bdf, weights = n_bin),
-    error = function(e) NULL)
-  data.frame(slope = if (is.null(m)) NA_real_ else coef(m)[["log10(d_bin)"]])
-}
-
-dt_slope <- dt_bins %>%
-  group_by(chrom, win_start) %>%
-  group_modify(fit_one) %>%
-  semi_join(sc_top, by = "chrom") %>%
-  mutate(chrom = factor(chrom, levels = levels(sc$chrom)))
-
-p_slope <- ggplot(dt_slope,
-                  aes(x = win_start + window_size / 2, y = slope)) +
-  geom_point(alpha = 0.4, shape = 16) +
-  geom_hline(yintercept = b_log, linetype = "dashed", color = "pink") +
-  facet_wrap(~ chrom, ncol = 4, scales = "free_x") +
-  labs(title = paste0("Per-window LD decay rate -- ", vb, " pool ", id_pool,
-                      ", top ", top_scaffolds, " scaffolds"),
-       x = "Genome position (bp)", y = "r^2 per decade of distance") +
-  theme_bw()
-p_slope
-
-ggsave(file.path(today_dir, "ld_decay_windows_slope.pdf"), p_slope,
-       width = 16, height = 10)
 ```
 
 ```{r ld_r2_windows}
@@ -1824,22 +1729,57 @@ pi_ld %>%
 
 ```{r ld_vs_cds_and_pi}
 
+## CDS density vs pi
+cds_vs_pi_corr <- corr_ci_autocorr(pi_ld$cds_density, pi_ld$pooled.theta_pi)
+cds_vs_pi_corr <- lapply(cds_vs_pi_corr, signif, digits = 3)
+
 ggplot(pi_ld, aes(x = cds_density, y = pooled.theta_pi)) +
   geom_point() +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm", color = "pink") +
+  theme(text = element_text(size = 20)) +
+  labs(x = "CDS density", y = "\u03c04", title = paste0("r = ", cds_vs_pi_corr$r, " [", cds_vs_pi_corr$ci_lower, ", ", cds_vs_pi_corr$ci_upper, "], p = ", cds_vs_pi_corr$p_value))
 
-corr_ci_autocorr(pi_ld$cds_density, pi_ld$mean_r2_direct)
+ggsave(file.path(today_dir, paste0(id_pool, "_cds_vs_pi.pdf")),
+       width = 6.5, height = 6, device = cairo_pdf)
 
-corr_ci_autocorr(pi_ld$cds_density, pi_ld$mean_r2_mle)
+## LD vs CDS density
+ld_vs_cds_corr <- corr_ci_autocorr(pi_ld$cds_density, pi_ld$mean_r2_mle)
+ld_vs_cds_corr <- lapply(ld_vs_cds_corr, signif, digits = 3)
 
 ggplot(pi_ld, aes(x = cds_density, y = mean_r2_direct)) +
   geom_point(alpha = 0.2) +
   #geom_hex() +  
   geom_smooth(method = "lm", color = "pink") +
-  labs(x = "CDS density", y = "Mean R^2 (Direct)", color = "Count")
+  theme(text = element_text(size = 20)) +
+  labs(x = "CDS density", y = "Mean R^2 (Direct)", title = paste0("r = ", ld_vs_cds_corr$r, " [", ld_vs_cds_corr$ci_lower, ", ", ld_vs_cds_corr$ci_upper, "], p = ", ld_vs_cds_corr$p_value))
 
-mod <- lm(pooled.theta_pi ~ cds_density + mean_r2_direct, pi_ld)
-summary(mod)
+ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_cds.pdf")),
+       width = 7, height = 6, device = cairo_pdf)
+
+# facet zoom vs just filter
+ggplot(pi_ld, aes(x = mean_r2_direct, y = pooled.theta_pi)) +
+  geom_point(alpha = 0.2) +
+  #geom_hex() +  
+  geom_smooth(method = "lm", color = "pink", data = pi_ld |> filter(mean_r2_direct < 0.65, mean_r2_direct > 0.3)) +
+  facet_zoom(xlim = c(0.3, 0.65)) +
+  theme(zoom = element_rect(colour = "pink", linewidth = 0.8, fill = alpha("pink", 0.01))) +
+  labs(x = "Mean R^2 (Direct LDx)", y = "\u03c04", color = "Count")
+
+pi_ld_filt <- pi_ld |> filter(mean_r2_direct < 0.65, mean_r2_direct > 0.3)
+pi_vs_ld_corr <- corr_ci_autocorr(pi_ld_filt$pooled.theta_pi, pi_ld_filt$mean_r2_mle)
+pi_vs_ld_corr <- lapply(pi_vs_ld_corr, signif, digits = 3) # round 
+
+ggplot(pi_ld_filt, aes(x = mean_r2_direct, y = pooled.theta_pi)) +
+  geom_point(alpha = 0.2) +
+  #geom_hex() +  
+  geom_smooth(method = "lm", color = "pink") +
+  #facet_zoom(xlim = c(0.3, 0.65)) +
+  #theme(zoom = element_rect(colour = "pink", linewidth = 0.8, fill = alpha("pink", 0.01))) +
+  theme(text = element_text(size = 20)) +
+  labs(x = "Mean R^2 (Direct LDx)", y = "\u03c04", title = paste0("r = ", pi_vs_ld_corr$r, " [", pi_vs_ld_corr$ci_lower, ", ", pi_vs_ld_corr$ci_upper, "], p = ", pi_vs_ld_corr$p_value))
+
+ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_pi.pdf")),
+       width = 7, height = 6, device = cairo_pdf)
 
 bs_model <- function(data, indices) {
   df_boot <- data[indices, ]               # Resample the dataset
@@ -1876,14 +1816,15 @@ ci_table <- do.call(rbind, ci_list)
 rownames(ci_table) <- NULL # Clean up row names
 
 ggplot(ci_table %>% filter(Term != "Intercept"), aes(x = Term, y = Estimate)) +
-  geom_linerange(aes(ymin = Lower_CI, ymax = Upper_CI), color = "red", linewidth = 1) +
-  geom_point(shape = 16, color = "black", size = 1.5) +
+  geom_linerange(aes(ymin = Lower_CI, ymax = Upper_CI), color = "red", linewidth = 3) +
+  geom_point(shape = 16, color = "black", size = 3) +
   geom_hline(yintercept = 0, lty = 2) +
   coord_flip() +
-  theme(title = element_text(size = 16)) +
-  labs(y = "Bootstrap estimate of\nscaled coefficient", x = "Model term", title = "\u03c0 ~ Mean LD (R^2) + CDS density")
+  theme(text = element_text(size = 20)) +
+  labs(y = "Block bootstrap estimate of\nscaled coefficient", x = "Model term", title = "\u03c0 ~ Mean R^2 + CDS density")
 
-ggsave(paste0("../../results/by-date/", today, "/pi_model.pdf"), device = cairo_pdf, width = 6, height = 4)
+ggsave(file.path(today_dir, paste0(id_pool, "_bootstrap_coefficients.pdf")),
+       width = 7, height = 6, device = cairo_pdf)
 ```
 
 # Conceptual diagrams of k-mer arithmetic
