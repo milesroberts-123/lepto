@@ -51,6 +51,16 @@ rule kmate_panel_vcf:
     # carried at every record by construction). A minimal VCF header is
     # emitted because the reheadered source header is not preserved;
     # bgzip+tabix are required by the kmate builders.
+    #
+    # kmate build-index assumes records never share reference bases:
+    # bubble allele paths fetch ref_fasta.fetch(chrom, v.end, next.start)
+    # and pysam raises on inverted intervals. The paf-derived VCF has
+    # 1,831 same-POS insertion+deletion pairs among 10.5 M records
+    # (2026-10-22 panel scan), so the second awk drops any record whose
+    # POS precedes the previous kept record's exclusive REF end
+    # (keep-first), and also POS <= k-1 records whose left-flank fetch
+    # would go negative (one scaffold-head record existed). Dropping
+    # ~0.02% of records leaves the panel AFs statistically untouched.
     input:
         vcf="results/vg/{variant}_vs_{backbone}.vcf.gz",
         tbi="results/vg/{variant}_vs_{backbone}.vcf.gz.tbi",
@@ -63,7 +73,8 @@ rule kmate_panel_vcf:
         "benchmarks/kmate/kmate_panel_vcf_{variant}_vs_{backbone}.bench"
     params:
         min_qual=config["freqk_min_qual"],
-        excl_stage=kmate_exclusion_stage
+        excl_stage=kmate_exclusion_stage,
+        k=config["kmate_k"]
     shell:
         """
         mkdir -p $(dirname {output.panel})
@@ -75,6 +86,10 @@ rule kmate_panel_vcf:
                         print "##FORMAT=<ID=GT,Number=1,Type=String,Description=\\"Genotype\\">";
                         print "#CHROM\\tPOS\\tID\\tREF\\tALT\\tQUAL\\tFILTER\\tINFO\\tFORMAT\\thap1\\thap2"}} \\
                  !/^#/ {{print $1,$2,".",$4,$5,$6,".",".","GT",0,1}}' \\
+            | awk -F '\\t' -v km={params.k} \\
+                '/^#/ {{print; next}} \\
+                 !/^#/ && $1 != pc {{pc = $1; pe = 0}} \\
+                 !/^#/ {{p = $2 + 0; if (p <= km - 1) next; if (p < pe) next; print; pe = p + length($4)}}' \\
             | bgzip -c > {output.panel}
         tabix -p vcf {output.panel}
         """
