@@ -63,11 +63,11 @@ set-threads:
   anchorwave_pair_splice_variant: 8
   anchorwave_pair_genoali: 2
   vigs_split: 2
-  vigs_nontarget_rc: 2
-  vigs_nontarget_kmers: 8
-  vigs_target_seq: 2
-  vigs_target_kmers: 4
-  vigs_assemble: 1
+  vigs_target_slice: 2
+  vigs_unitig_caller: 8
+  vigs_probe: 4
+  vigs_unitigs_map: 1
+  vigs_concat: 1
   kmate_build_index: 8
   kmate_build_kmer_pa: 2
   kmate_build_var_pa: 2
@@ -273,23 +273,23 @@ set-resources:
   anchorwave_pair_genoali:
     cpus_per_task: 8
     runtime: 720
-  vigs_nontarget_kmers:
+  vigs_unitig_caller:
     cpus_per_task: 8
     runtime: 120
+  vigs_probe:
+    cpus_per_task: 4
+    runtime: 120
+  vigs_unitigs_map:
+    cpus_per_task: 1
+    runtime: 120
+  vigs_concat:
+    cpus_per_task: 1
+    runtime: 60
+  vigs_target_slice:
+    cpus_per_task: 2
+    runtime: 60
   vigs_split:
     cpus_per_task: 2
-    runtime: 60
-  vigs_nontarget_rc:
-    cpus_per_task: 2
-    runtime: 60
-  vigs_target_seq:
-    cpus_per_task: 2
-    runtime: 60
-  vigs_target_kmers:
-    cpus_per_task: 4
-    runtime: 240
-  vigs_assemble:
-    cpus_per_task: 1
     runtime: 60
   kmate_build_index:
     cpus_per_task: 16

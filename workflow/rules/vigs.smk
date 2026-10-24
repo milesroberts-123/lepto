@@ -3,10 +3,18 @@
 # (config["vigs_transcriptome_fasta"], guidelines doc: reject any target
 # containing a >=19-21 nt contiguous match with a non-target
 # transcript). Logic: split the transcriptome into target and
-# non-target records, count non-target k-mers with KMC (both strands),
-# subtract them from the sliding-window k-mers of the targets, then
-# assemble the surviving runs into 200-300 bp insert candidate blocks
-# passing GC 40-55% and no homopolymer runs > vigs_max_homopolymer.
+# non-target records; for EACH target build a Bifrost coloured de
+# Bruijn graph over just that transcript plus the non-target records
+# with unitig-caller --call (canonical k-mers cover both strands; the
+# per-target graph prevents cross-transcript graph glue from stealing
+# another target's attribution); keep the unitigs present only in the
+# target colour; probe their endpoint k-mers against the non-target
+# set with unitig-caller --simple (the tool's head/tail colour
+# intersection can over-claim shared endpoint k-mers, so any endpoint
+# k-mer found in the non-target transcripts costs its 19 bp); locate
+# the trimmed unitigs back onto the target transcript, then cut the
+# surviving stretches into 200-300 bp insert candidate blocks passing
+# GC 40-55% and no homopolymer runs > vigs_max_homopolymer.
 
 
 rule vigs_split:
@@ -22,7 +30,6 @@ rule vigs_split:
         nontarget=temp("results/vigs/nontarget.fasta")
     log:
         "logs/vigs/split.log"
-    threads: 2
     conda: "../envs/vigs.yaml"
     params:
         # Space-joined so a multi-target list stays on one shell line;
@@ -61,134 +68,150 @@ rule vigs_split:
         """
 
 
-rule vigs_nontarget_rc:
-    # Reverse complement of the non-target records: the KMC k-mer set
-    # must cover both strands.
-    input:
-        "results/vigs/nontarget.fasta"
-    output:
-        temp("results/vigs/nontarget_rc.fasta")
-    log:
-        "logs/vigs/nontarget_rc.log"
-    threads: 2
-    conda: "../envs/vigs.yaml"
-    shell:
-        "seqkit seq -r {input} > {output} 2> {log}"
-
-
-rule vigs_nontarget_kmers:
-    # KMC set of every non-target k-mer, forward and reverse strand,
-    # dumped as one k-mer per line.
-    input:
-        fwd="results/vigs/nontarget.fasta",
-        rev="results/vigs/nontarget_rc.fasta"
-    output:
-        "results/vigs/nontarget_kmers.txt"
-    log:
-        "logs/vigs/nontarget_kmers.log"
-    threads: 8
-    conda: "../envs/kmc.yaml"
-    params:
-        k=config["vigs_k"]
-    shell:
-        """
-        mkdir -p results/vigs logs/vigs
-        printf '%s\\n' {input.fwd} {input.rev} > results/vigs/.kmc_inputs.txt
-        local_tmp=.snakemake/tmp_kmc_vigs
-        mkdir -p $local_tmp
-        # KMC option flags must precede the @input-list argument; flags
-        # after the working directory are silently ignored (verified on
-        # kmc 3.2.4: -k19 after @file ran as k=25).
-        kmc -k{params.k} -m8 -sm -t{threads} -ci1 -fm \\
-            @results/vigs/.kmc_inputs.txt results/vigs/.nontarget_db $local_tmp \\
-            > {log} 2>&1
-        kmc_tools -t{threads} transform results/vigs/.nontarget_db dump \\
-            results/vigs/.nontarget_dump.txt >> {log} 2>&1
-        cut -f1 results/vigs/.nontarget_dump.txt > {output}
-        rm -f results/vigs/.kmc_inputs.txt results/vigs/.nontarget_db.kmc_pre \\
-            results/vigs/.nontarget_db.kmc_suf results/vigs/.nontarget_dump.txt
-        """
-
-
-rule vigs_target_seq:
-    # Target sequences as id<TAB>seq, for GC/homopolymer filters and
-    # block extraction.
+rule vigs_target_slice:
+    # One target record (id + fasta copy) on its own; {idx} indexes
+    # config["vigs_target_transcripts"]. Each index gets its own graph
+    # in vigs_unitig_caller so unitigs cannot glue across target
+    # transcripts. The rtab colour column for the slice is basenamed
+    # target_{idx}.
     input:
         "results/vigs/target.fasta"
     output:
-        temp("results/vigs/target_seq.tsv")
+        fasta=temp("results/vigs/target_{idx}.fasta"),
+        seq=temp("results/vigs/target_{idx}.seq.tsv")
     log:
-        "logs/vigs/target_seq.log"
-    threads: 2
+        "logs/vigs/slice_{idx}.log"
     conda: "../envs/vigs.yaml"
+    params:
+        name=lambda wc: config["vigs_target_transcripts"][int(wc.idx) - 1],
+        ntargets=lambda wc: len(config["vigs_target_transcripts"])
     shell:
-        "mkdir -p results/vigs logs/vigs; seqkit fx2tab -i {input} > {output} 2> {log}"
+        """
+        mkdir -p results/vigs logs/vigs
+        if [ "{wildcards.idx}" -lt 1 ] || [ "{wildcards.idx}" -gt "{params.ntargets}" ]; then
+            echo "target index {wildcards.idx} out of range 1..{params.ntargets}" >&2
+            exit 1
+        fi
+        seqkit grep -p '{params.name}' {input} > {output.fasta} 2> {log}
+        if [ ! -s {output.fasta} ]; then
+            echo "target transcript '{params.name}' not found in the transcriptome fasta" >&2
+            exit 1
+        fi
+        recs=$(seqkit seq -n -i {output.fasta} | wc -l)
+        if [ "$recs" -ne 1 ]; then
+            echo "record ID '{params.name}' matches $recs records (duplicate IDs in the transcriptome fasta)" >&2
+            exit 1
+        fi
+        seqkit fx2tab -i {output.fasta} > {output.seq} 2>> {log}
+        """
 
 
-rule vigs_target_kmers:
-    # Sliding k-mers of every target record (fx2tab adds a trailing
-    # empty column after the sequence), filtered to ACGT k-mers that
-    # occur in neither orientation in the non-target set. Columns:
-    # target, 1-based start, end, kmer.
+rule vigs_unitig_caller:
+    # unitig-caller --call builds a Bifrost compacted coloured de Bruijn
+    # graph over this target's slice plus the non-target records
+    # (canonical k-mers: both strands handled, no separate RC copy) and
+    # reports every unitig with its colours. Colours are per input
+    # FILE: the .rtab columns are the ref-file basenames minus
+    # extension in refs.txt order (target_{idx}, nontarget); rows are
+    # unitig sequence and 1/0 per colour. The head/tail colour
+    # intersection keeps the claim target-only only when both path ends
+    # agree; interior k-mers of a simple path cannot be shared (a
+    # shared k-mer's off-path edges break the path at it), but shared
+    # END k-mers get intersected away - the probe rule re-checks them.
     input:
-        kmers_src="results/vigs/target.fasta",
-        set="results/vigs/nontarget_kmers.txt"
+        slice="results/vigs/target_{idx}.fasta",
+        nontarget="results/vigs/nontarget.fasta"
     output:
-        temp("results/vigs/target_kmers.tsv")
+        rtab="results/vigs/unitig_caller_{idx}.rtab"
     log:
-        "logs/vigs/target_kmers.log"
-    threads: 4
-    conda: "../envs/vigs.yaml"
+        "logs/vigs/unitig_caller_{idx}.log"
+    conda: "../envs/unitig_caller.yaml"
     params:
         k=config["vigs_k"]
     shell:
         """
         mkdir -p results/vigs logs/vigs
-        seqkit sliding -W {params.k} -s 1 {input.kmers_src} \\
-            | seqkit fx2tab -i \\
-            | awk -F'\\t' -v OFS='\\t' -v k={params.k} \\
-                -v setfile={input.set} '
-                BEGIN {{
-                    while ((getline s < setfile) > 0) set[s] = 1
-                }}
-                {{
-                    id = $1; sub(/_sliding:.*/, "", id)
-                    pos = $1; sub(/^.*_sliding:/, "", pos)
-                    sub(/-.*/, "", pos)
-                    seq = $2
-                    if (seq !~ /^[ACGT]+$/) next
-                    rc = ""
-                    for (i = length(seq); i >= 1; i--) {{
-                        c = substr(seq, i, 1)
-                        rc = rc ((c == "A") ? "T" : (c == "C") ? "G" : (c == "G") ? "C" : "A")
-                    }}
-                    if (seq in set || rc in set) next
-                    end = pos + k - 1
-                    print id, pos, end, seq
-                }}' > {output} 2> {log}
+        printf '%s\\n' {input.slice} {input.nontarget} > results/vigs/.refs_{wildcards.idx}.txt
+        unitig-caller --call --refs results/vigs/.refs_{wildcards.idx}.txt \\
+            --kmer {params.k} --rtab --threads {threads} \\
+            --out results/vigs/.caller_{wildcards.idx} > {log} 2>&1
+        mv results/vigs/.caller_{wildcards.idx}.rtab {output.rtab}
+        rm results/vigs/.refs_{wildcards.idx}.txt
         """
 
 
-rule vigs_assemble:
-    # Cluster surviving k-mers into maximal runs of consecutive
-    # positions: a run of L k-mers at positions p..p+L-1 is the unique
-    # stretch [p, p+L+k-2] (every k-mer fully inside it survives, and
-    # the flanking k-mers fail only because they hit a non-target
-    # transcript). Each stretch yields one recommended insert block:
-    # the whole stretch if 200-300 bp (vigs_insert_min/max), else the
-    # earliest longest <=vigs_insert_max window >=vigs_insert_min
-    # passing GC and homopolymer filters. No block is chosen for
-    # stretches < vigs_insert_min.
+rule vigs_probe:
+    # unitig-caller's --simple mode (FM-index exact matching, both
+    # strands) over the non-target fasta, queried with both endpoint
+    # k-mers of every target-only unitig from the rtab. --simple omits
+    # queries found nowhere, so the output is a SET of non-target-shared
+    # endpoint k-mers; the map rule trims 19 bp behind any member.
     input:
-        seq="results/vigs/target_seq.tsv",
-        kmers="results/vigs/target_kmers.tsv"
+        rtab="results/vigs/unitig_caller_{idx}.rtab",
+        nontarget="results/vigs/nontarget.fasta"
     output:
-        blocks="results/vigs/vigs_targets.tsv",
-        fasta="results/vigs/vigs_target_blocks.fasta",
-        unitigs="results/vigs/vigs_unitigs.tsv"
+        probe="results/vigs/probe_{idx}.pyseer"
     log:
-        "logs/vigs/assemble.log"
-    threads: 1
+        "logs/vigs/probe_{idx}.log"
+    conda: "../envs/unitig_caller.yaml"
+    params:
+        k=config["vigs_k"]
+    shell:
+        """
+        mkdir -p results/vigs logs/vigs
+        awk -F'\\t' -v OFS='\\t' -v k={params.k} '
+            NR == 1 {{
+                for (c = 2; c <= NF; c++) {{
+                    if ($c == "nontarget") ncol = c
+                    else if ($c != "Unitig_sequence") tcol = c
+                }}
+                if (!tcol || !ncol) {{
+                    print "rtab header lacks expected colour columns" > "/dev/stderr"
+                    exit 1
+                }}
+                print "probe"
+                next
+            }}
+            {{
+                u = $1
+                if (u !~ /^[ACGT]+$/) next
+                if ($tcol != 1 || $ncol != 0) next
+                print substr(u, 1, k)
+                print substr(u, length(u) - k + 1, k)
+            }}' {input.rtab} > results/vigs/.probe_{wildcards.idx}.txt
+        printf '%s\\n' {input.nontarget} > results/vigs/.probe_refs_{wildcards.idx}.txt
+        unitig-caller --simple --refs results/vigs/.probe_refs_{wildcards.idx}.txt \\
+            --unitigs results/vigs/.probe_{wildcards.idx}.txt --no-save-idx \\
+            --threads {threads} --out results/vigs/.probe_{wildcards.idx} > {log} 2>&1
+        mv results/vigs/.probe_{wildcards.idx}.pyseer {output.probe}
+        rm results/vigs/.probe_{wildcards.idx}.txt results/vigs/.probe_refs_{wildcards.idx}.txt
+        """
+
+
+rule vigs_unitigs_map:
+    # Trim target-only unitigs whose endpoint k-mer is non-target-shared
+    # (both the head and the tail k-mer are checked against the probe
+    # set, 19 bp each), locate each trimmed unitig - in whichever
+    # orientation occurs - onto its target transcript (all
+    # occurrences), and emit one unitig row per occurrence plus insert
+    # candidate blocks: the whole occurrence if 200-300 bp
+    # (vigs_insert_min/max), else the earliest longest
+    # <=vigs_insert_max window >=vigs_insert_min passing GC and
+    # homopolymer filters. Occurrences < vigs_insert_min yield no
+    # block. The per-target graph should make every target-only unitig
+    # map somewhere; a residual warning on stderr keeps silent loss
+    # visible (possible for unitigs glued across inverted-repeat
+    # junctions within one transcript).
+    input:
+        rtab="results/vigs/unitig_caller_{idx}.rtab",
+        probe="results/vigs/probe_{idx}.pyseer",
+        seq="results/vigs/target_{idx}.seq.tsv"
+    output:
+        unitigs=temp("results/vigs/unitigs_{idx}.tsv"),
+        blocks=temp("results/vigs/targets_{idx}.tsv"),
+        fasta=temp("results/vigs/blocks_{idx}.fasta")
+    log:
+        "logs/vigs/unitigs_map_{idx}.log"
     conda: "../envs/vigs.yaml"
     params:
         k=config["vigs_k"],
@@ -201,9 +224,18 @@ rule vigs_assemble:
         """
         mkdir -p results/vigs logs/vigs
         awk -F'\\t' -v OFS='\\t' \\
-            -v k={params.k} -v imin={params.imin} -v imax={params.imax} \\
+            -v k={params.k} \\
+            -v imin={params.imin} -v imax={params.imax} \\
             -v mingc={params.mingc} -v maxgc={params.maxgc} -v maxhp={params.maxhp} \\
-            -v seqfile={input.seq} '
+            -v seqfile={input.seq} -v probefile={input.probe} '
+            function revcomp(s,   i, c, o) {{
+                o = ""
+                for (i = length(s); i >= 1; i--) {{
+                    c = substr(s, i, 1)
+                    o = o ((c == "A") ? "T" : (c == "C") ? "G" : (c == "G") ? "C" : (c == "T") ? "A" : c)
+                }}
+                return o
+            }}
             function maxrun(s,   n, i, m) {{
                 m = 1; n = 1
                 for (i = 2; i <= length(s); i++) {{
@@ -220,45 +252,121 @@ rule vigs_assemble:
             function pass(s) {{
                 return gcf(s) >= mingc && gcf(s) <= maxgc && maxrun(s) <= maxhp
             }}
-            function emit_block(   L, seq, gc, W, j, cand, blk, bs, be) {{
-                L = run_end - run_start + 1
-                seq = substr(seqs[run_id], run_start, L)
-                gc = gcf(seq)
-                print run_id, run_start, run_end, L, sprintf("%.3f", gc) >> unitigs_path
+            function emit_block(s2,   L, W, j, cand, blk, bs, be) {{
+                L = bend - bstart + 1
                 blk = ""; bs = 0; be = 0
                 if (L >= imin) {{
                     for (W = imax; W >= imin && blk == ""; W--) {{
                         if (W > L) continue
-                        for (j = run_start; j <= run_start + L - W && blk == ""; j++) {{
-                            cand = substr(seq, j - run_start + 1, W)
+                        for (j = bstart; j <= bstart + L - W && blk == ""; j++) {{
+                            cand = substr(s2, j - bstart + 1, W)
                             if (pass(cand)) {{ blk = cand; bs = j; be = j + W - 1 }}
                         }}
                     }}
                 }}
                 if (blk != "") {{
-                    print run_id, bs, be, length(blk), sprintf("%.3f", gcf(blk)) >> blocks_path
-                    printf ">%s_p%d-%d_len%d_gc%.3f\\n%s\\n", run_id, bs, be, length(blk), gcf(blk), blk >> fasta_path
+                    print tid, bs, be, length(blk), sprintf("%.3f", gcf(blk)) >> blocks_path
+                    printf ">%s_p%d-%d_len%d_gc%.3f\\n%s\\n", tid, bs, be, length(blk), gcf(blk), blk >> fasta_path
                 }}
             }}
+            function emit_stretch(s2,   L) {{
+                L = bend - bstart + 1
+                print tid, bstart, bend, L, sprintf("%.3f", gcf(s2)) >> unitigs_path
+                emit_block(s2)
+            }}
+            function locate(u,   s, p, cnt) {{
+                # emit every occurrence of u in the target sequence
+                s = tseq; p = index(s, u); cnt = 0
+                while (p > 0) {{
+                    bstart = p; bend = p + length(u) - 1
+                    emit_stretch(u)
+                    cnt++
+                    # advance past the match start to find overlapping hits
+                    p = index(substr(s, p + 1), u) + p
+                }}
+                return cnt
+            }}
             BEGIN {{
-                while ((getline line < seqfile) > 0) {{
-                    split(line, a, "\\t"); seqs[a[1]] = a[2]
+                # single-record target sequence
+                getline line < seqfile
+                split(line, b, "\\t"); tid = b[1]; tseq = b[2]
+                # probes present in the non-target transcriptome (a set;
+                # --simple omits queries found nowhere, order is not kept)
+                while ((getline line < probefile) > 0) {{
+                    split(line, p, " "); pset[p[1]] = 1
                 }}
                 unitigs_path = "{output.unitigs}"
                 blocks_path = "{output.blocks}"
                 fasta_path = "{output.fasta}"
-                print "target\\tstretch_start\\tstretch_end\\tlength\\tgc" >> unitigs_path
-                print "target\\tblock_start\\tblock_end\\tlength\\tgc" >> blocks_path
-                run_id = ""; run_start = 0; run_end = -1
+                tcol = ncol = 0
             }}
             {{
-                if ($1 != run_id || $2 != prev_start + 1) {{
-                    if (run_id != "" && run_end >= run_start) emit_block()
-                    run_id = $1; run_start = $2
+                if ($1 == "Unitig_sequence") {{
+                    for (c = 2; c <= NF; c++) {{
+                        if ($c == "nontarget") ncol = c
+                        else if ($c != "Unitig_sequence") tcol = c
+                    }}
+                    if (!tcol || !ncol) {{
+                        print "rtab header lacks expected colour columns" > "/dev/stderr"
+                        exit 1
+                    }}
+                    next
                 }}
-                run_end = $3; prev_start = $2
+                u = $1
+                if (u !~ /^[ACGT]+$/) next
+                if ($tcol != 1 || $ncol != 0) next
+                L = length(u)
+                s = (substr(u, 1, k) in pset) ? k + 1 : 1
+                e = (substr(u, L - k + 1, k) in pset) ? L - k : L
+                if (e - s + 1 < k) next
+                u2 = substr(u, s, e - s + 1)
+                hits = locate(u2)
+                if (hits == 0) hits = locate(revcomp(u2))
+                if (hits == 0) {{
+                    print "unitig (len " length(u2) " bp) target-only but maps onto no whole transcript (likely glued across inverted-repeat junctions); dropped" > "/dev/stderr"
+                }}
             }}
             END {{
-                if (run_id != "" && run_end >= run_start) emit_block()
-            }}' 2> {log}
+                if (!tcol || !ncol) {{
+                    print "rtab is empty: unitig-caller produced no unitigs" > "/dev/stderr"
+                    exit 1
+                }}
+            }}' {input.rtab} 2> {log}
+        """
+
+
+rule vigs_concat:
+    # Assembly of the per-target intermediates into the final output
+    # files (same paths and schemas as before the unitig-caller swap).
+    input:
+        unitigs_list=expand("results/vigs/unitigs_{idx}.tsv",
+                            idx=range(1, len(config["vigs_target_transcripts"]) + 1)),
+        blocks_list=expand("results/vigs/targets_{idx}.tsv",
+                           idx=range(1, len(config["vigs_target_transcripts"]) + 1)),
+        fasta_list=expand("results/vigs/blocks_{idx}.fasta",
+                          idx=range(1, len(config["vigs_target_transcripts"]) + 1)),
+    output:
+        unitigs="results/vigs/vigs_unitigs.tsv",
+        blocks="results/vigs/vigs_targets.tsv",
+        fasta="results/vigs/vigs_target_blocks.fasta"
+    log:
+        "logs/vigs/concat.log"
+    conda: "../envs/vigs.yaml"
+    params:
+        # Same empty-config guard as vigs_split: an empty target list
+        # must fail loudly here, since only this rule runs in that case.
+        ids=lambda wc: " ".join(config["vigs_target_transcripts"])
+    shell:
+        """
+        mkdir -p results/vigs logs/vigs
+        n=$(printf '%s\\n' {params.ids} | grep -c .)
+        if [ "$n" -eq 0 ]; then
+            echo "vigs_target_transcripts is empty: set record IDs in config.yaml" >&2
+            exit 1
+        fi
+        printf 'target\\tstretch_start\\tstretch_end\\tlength\\tgc\\n' > {output.unitigs}
+        cat {input.unitigs_list} >> {output.unitigs}
+        printf 'target\\tblock_start\\tblock_end\\tlength\\tgc\\n' > {output.blocks}
+        cat {input.blocks_list} >> {output.blocks}
+        cat {input.fasta_list} > {output.fasta}
         """
