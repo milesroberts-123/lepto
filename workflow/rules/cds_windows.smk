@@ -3,7 +3,11 @@
 # results/, never written next to the fasta) -> GFF3 CDS extraction to
 # 0-based BED with merger of isoform-overlapping CDS (each base counted
 # once) -> bedtools makewindows | bedtools coverage -> chrom start end
-# cds_bases (all windows kept, zeros included).
+# cds_bases (all windows kept, zeros included). The window width is a
+# wildcard {wlen} embedded in the output filename
+# cds_windows_w{wlen}.bed (grenedalf interval naming pattern), so
+# results for different window sizes coexist; cds_windows_all expands
+# over config["cds_windows_sizes"].
 
 
 rule cds_windows_faidx:
@@ -39,16 +43,14 @@ rule cds_windows_windows:
         fai="results/cds_windows/assembly.fai",
         cds="results/cds_windows/cds.merged.bed"
     output:
-        "results/cds_windows/cds_windows.bed"
-    params:
-        size=config["cds_windows_size"]
+        "results/cds_windows/cds_windows_w{wlen}.bed"
     conda: "../envs/cds_windows.yaml"
     benchmark:
-        "benchmarks/cds_windows/cds_windows_windows.bench"
+        "benchmarks/cds_windows/cds_windows_windows_w{wlen}.bench"
     shell:
         """
         cut -f1,2 {input.fai} > {output}.genome
-        bedtools makewindows -g {output}.genome -w {params.size} \
+        bedtools makewindows -g {output}.genome -w {wildcards.wlen} \
             | bedtools coverage -a - -b {input.cds} \
             | awk -v OFS='\\t' '{{print $1, $2, $3, $5}}' > {output}
         rm {output}.genome

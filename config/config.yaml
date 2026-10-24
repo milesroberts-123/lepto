@@ -231,10 +231,13 @@ kmate_hash_size: "32G"
 # --- CDS windows ---
 # One assembly fasta + one matching GFF3 annotation; output is a BED of
 # fixed, non-overlapping windows across every scaffold with the number
-# of (merged) CDS-annotated bases per window, zeros included.
+# of (merged) CDS-annotated bases per window, zeros included. The
+# window width is embedded in the output filename
+# (results/cds_windows/cds_windows_w{wlen}.bed), so results for
+# different sizes coexist; add sizes to the list to generate more.
 cds_windows_fasta: "../resources/reference/hap1.fasta"
 cds_windows_gff3: "results/featurecounts/hap1_expressed.gff3"
-cds_windows_size: 500000
+cds_windows_sizes: [500000]
 
 # --- LDx ---
 # Linkage disequilibrium (r^2) from pooled alignments (Feder, Petrov &

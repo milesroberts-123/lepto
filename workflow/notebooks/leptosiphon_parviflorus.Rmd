@@ -1355,7 +1355,11 @@ packageVersion("rventures")
 #
 pi4 <- fread("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w500000_s0_diversity.csv")
 
-cds <- fread("../results/cds_windows/cds_windows.bed", col.names = c("chrom", "start", "end", "cds"))
+# window size is embedded in the filename; assert a single size file
+# exists (multiple sizes: read the desired cds_windows_w<len>.bed explicitly)
+cds_bed_files <- Sys.glob("../results/cds_windows/cds_windows_w*.bed")
+stopifnot(length(cds_bed_files) == 1)
+cds <- fread(cds_bed_files, col.names = c("chrom", "start", "end", "cds"))
 
 cds_pi <- cds %>% mutate(chrom = gsub("^", "hap1_", chrom),
                start = start + 1) %>%
@@ -1681,7 +1685,7 @@ ggsave(file.path(today_dir, paste0(id_pool, "_ld_decay_windows_global.pdf")), gc
 # mean r^2 per 500 kb window for merging with other windowed tables.
 # Keyed exactly like the pooled grenedalf diversity windows (prefixed
 # chrom, 1-based start, window end) so it left_join()s straight onto pi4
-# and onto cds_windows.bed after the usual gsub("hap1_") + start+1 hop.
+# and onto cds_windows_w<wlen>.bed after the usual gsub("hap1_") + start+1 hop.
 # The window mean is pair-count-weighted over the distance bins inside
 # it, consistent with the global curve's bin averages.
 ld_win <- dt_bins %>%
@@ -1699,7 +1703,11 @@ fwrite(ld_win, paste0(dir_pairs, "/", id_pool, "_r2_windows.csv"))
 
 # sanity: does it merge with the diversity + CDS windows as-is?
 if (!exists("cds")) {
-  cds <- fread("../results/cds_windows/cds_windows.bed",
+  if (!exists("cds_bed_files")) {
+    cds_bed_files <- Sys.glob("../results/cds_windows/cds_windows_w*.bed")
+  }
+  stopifnot(length(cds_bed_files) == 1)
+  cds <- fread(cds_bed_files,
                col.names = c("chrom", "start", "end", "cds"))
 }
 cds_ld <- cds %>%

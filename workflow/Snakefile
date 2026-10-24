@@ -66,6 +66,8 @@ wildcard_constraints:
     pool="[a-zA-Z0-9_]+",
     # tubemap chunk tag: sanitized "chrom:start-end" region (see tubemap.smk)
     region="[A-Za-z0-9_.-]+",
+    # vigs per-target index over config["vigs_target_transcripts"] (vigs.smk)
+    idx="[0-9]+",
 
 rule all:
     input:
@@ -222,7 +224,8 @@ rule svim_all:
 
 rule cds_windows_all:
     input:
-        "results/cds_windows/cds_windows.bed"
+        expand("results/cds_windows/cds_windows_w{wlen}.bed",
+               wlen=config["cds_windows_sizes"])
 
 rule ldx_all:
     input:
