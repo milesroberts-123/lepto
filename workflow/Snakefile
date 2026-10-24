@@ -66,8 +66,6 @@ wildcard_constraints:
     pool="[a-zA-Z0-9_]+",
     # tubemap chunk tag: sanitized "chrom:start-end" region (see tubemap.smk)
     region="[A-Za-z0-9_.-]+",
-    # vigs per-target index over config["vigs_target_transcripts"] (vigs.smk)
-    idx="[0-9]+",
 
 rule all:
     input:
@@ -133,8 +131,7 @@ include: "rules/tubemap.smk"
 
 rule vigs_all:
     input:
-        "results/vigs/vigs_targets.tsv",
-        "results/vigs/vigs_target_blocks.fasta"
+        "results/vigs/vigs_stretches.tsv"
 
 rule mcscanx_all:
     input:
