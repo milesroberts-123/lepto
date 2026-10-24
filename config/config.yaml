@@ -237,7 +237,7 @@ kmate_hash_size: "32G"
 # different sizes coexist; add sizes to the list to generate more.
 cds_windows_fasta: "../resources/reference/hap1.fasta"
 cds_windows_gff3: "results/featurecounts/hap1_expressed.gff3"
-cds_windows_sizes: [500000]
+cds_windows_sizes: [50000, 100000, 500000]
 
 # --- LDx ---
 # Linkage disequilibrium (r^2) from pooled alignments (Feder, Petrov &
@@ -264,17 +264,13 @@ ldx_snplist_min_depth: 10
 
 # --- VIGS target design ---
 # Transcriptome fasta (all transcript records); record IDs listed in
-# vigs_target_transcripts are the VIGS targets. The targets' k-mers
-# (size vigs_k) are counted with KMC and mapped back to the whole
-# transcriptome with bwa mem; stretches of consecutive k-mers whose
-# every exact locus is inside the chosen targets land in
-# results/vigs/vigs_stretches.tsv (docx: reject any target containing
-# a >=19-21 nt contiguous match with a non-target transcript).
-vigs_transcriptome_fasta: "../resources/annotation/hap1_cds.fasta"
-vigs_target_transcripts: []
-# vigs_target_transcripts:
-#   - "gene00001"
-#   - "gene00099"
+# vigs_target_transcripts are the VIGS targets, everything else is the
+# off-target background. K-mers of size vigs_k shared with any
+# non-target transcript disqualify a region (docx: reject any target
+# containing a >=19-21 nt contiguous match with a non-target
+# transcript); surviving k-mer runs are assembled into insert blocks.
+vigs_transcriptome_fasta: "../resources/annotation/LPJR3B1_scaf_hap1.codingseq"
+vigs_target_transcripts: ["g166507.t1"]
 vigs_k: 19
 
 # --- BUSCO annotation completeness ---
