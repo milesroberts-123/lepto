@@ -264,11 +264,15 @@ ldx_snplist_min_depth: 10
 
 # --- VIGS target design ---
 # Transcriptome fasta (all transcript records); record IDs listed in
-# vigs_target_transcripts are the VIGS targets, everything else is the
-# off-target background. K-mers of size vigs_k shared with any
-# non-target transcript disqualify a region (docx: reject any target
-# containing a >=19-21 nt contiguous match with a non-target
-# transcript); surviving k-mer runs are assembled into insert blocks.
+# --- VIGS target design ---
+# Transcriptome fasta (all transcript records); record IDs listed in
+# vigs_target_transcripts are the VIGS targets. The targets' k-mers
+# (size vigs_k) are counted with KMC and mapped back to the whole
+# transcriptome with bwa mem; the workflow stops at the coordinate-
+# sorted, indexed results/vigs/kmers_mapped.bam — deciding which
+# k-mers are target-unique and assembling stretches is downstream
+# analysis (docx: reject any target containing a >=19-21 nt contiguous
+# match with a non-target transcript).
 vigs_transcriptome_fasta: "../resources/annotation/LPJR3B1_scaf_hap1.codingseq"
 vigs_target_transcripts: ["g166507.t1"]
 vigs_k: 19

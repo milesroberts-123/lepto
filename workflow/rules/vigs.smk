@@ -1,14 +1,11 @@
-# VIGS target design: find stretches of consecutive target k-mers that
-# occur nowhere else in the transcriptome (config["vigs_transcriptome_fasta"],
-# guidelines doc: reject any target containing a >=19-21 nt contiguous
-# match with a non-target transcript, either orientation). Three rules:
-# isolate the chosen target records, count their distinct k-mers with
-# KMC, then map those k-mers back to the whole transcriptome with
-# bwa mem and keep the stretches whose every k-mer aligns only to
-# chosen target records. bwa checks both strands and, with -T k on
-# k-nt queries, an alignment scores >= k only as a full-length exact
-# match; -a reports every locus. Stretches of consecutive surviving
-# k-mers land in results/vigs/vigs_stretches.tsv.
+# VIGS target design: map the targets' k-mers back to the whole
+# transcriptome (config["vigs_transcriptome_fasta"], guidelines doc:
+# reject any target containing a >=19-21 nt contiguous match with a
+# non-target transcript, either orientation). Three rules: isolate the
+# chosen target records, count their distinct k-mers with KMC, then
+# map those k-mers back with bwa mem and stop at the coordinate-sorted,
+# indexed BAM. Downstream analysis (which k-mers only hit the chosen
+# targets, stretch assembly) happens outside the workflow.
 
 
 rule vigs_target:
@@ -85,20 +82,21 @@ rule vigs_kmers:
 
 
 rule vigs_map:
-    # bwa mem over the whole transcriptome with -a (-T k: on k-nt
-    # queries any mismatch drops the score below threshold, so only
-    # full-length exact alignments are reported; -a reports every
-    # locus, both strands). A k-mer survives when its complete set of
-    # hit loci lies inside the chosen target records. Surviving k-mers
-    # are located back onto the target records (either orientation) and
-    # compressed into maximal runs of consecutive k-mer positions -
-    # one tsv row per stretch.
+    # bwa mem over the whole transcriptome; -T k makes every reported
+    # alignment of a k-nt query a full-length exact match (any mismatch
+    # scores below the threshold) and -a reports every locus as its own
+    # record, reverse-strand hits included. samtools sort + index make
+    # a standard coordinate-sorted, indexed BAM for downstream analysis;
+    # each k-mer's records are reunifiable because the QNAME is the
+    # k-mer sequence itself. The index prefix keeps bwa files out of
+    # resources/ and is removed after the run.
     input:
         ref=config["vigs_transcriptome_fasta"],
         target="results/vigs/target.fasta",
         kmers="results/vigs/kmers.fasta"
     output:
-        stretches="results/vigs/vigs_stretches.tsv"
+        bam="results/vigs/kmers_mapped.bam",
+        bai="results/vigs/kmers_mapped.bam.bai"
     log:
         "logs/vigs/map.log"
     conda: "../envs/vigs.yaml"
@@ -109,81 +107,9 @@ rule vigs_map:
         mkdir -p results/vigs logs/vigs
         bwa index -p results/vigs/.idx {input.ref} > {log} 2>&1
         bwa mem -a -T {params.k} -k {params.k} -t {threads} \\
-            results/vigs/.idx {input.kmers} > results/vigs/.kmers.sam 2>> {log}
-        # header first, rows appended by the awk's END block
-        printf 'target\\tstretch_start\\tstretch_end\\tlength\\tgc\\n' > {output.stretches}
-        awk -F'\\t' -v OFS='\\t' -v k={params.k} -v out_path={output.stretches} '
-            function revcomp(s,   i, c, o) {{
-                o = ""
-                for (i = length(s); i >= 1; i--) {{
-                    c = substr(s, i, 1)
-                    o = o ((c == "A") ? "T" : (c == "C") ? "G" : (c == "G") ? "C" : (c == "T") ? "A" : c)
-                }}
-                return o
-            }}
-            function gcf(s,   L, n) {{
-                L = length(s)
-                n = gsub(/[GC]/, "", s)
-                return n / L
-            }}
-            # file 1: the chosen target fasta (record IDs + sequences)
-            FNR == NR {{
-                if ($0 ~ /^>/) {{
-                    id = substr($0, 2)
-                    ids[id] = 1
-                    nt++; order[nt] = id
-                }} else {{
-                    seqs[id] = seqs[id] $0
-                }}
-                next
-            }}
-            # file 2: the bwa mem -a SAM (qname = the k-mer sequence)
-            {{
-                if ($1 ~ /^@/) next
-                if ($3 == "*" || $3 == "") next
-                seen[$1] = 1
-                hits[$1 SUBSEP $3] = 1
-            }}
-            END {{
-                if (!nt) {{
-                    print "target fasta has no records" > "/dev/stderr"
-                    exit 1
-                }}
-                # a k-mer survives when no reported locus falls outside
-                # the chosen target records
-                for (key in hits) {{
-                    split(key, p, SUBSEP)
-                    if (p[2] in ids) ontarget[p[1]] = 1
-                    else off[p[1]] = 1
-                }}
-                for (q in seen) {{
-                    if (ontarget[q] && !off[q]) kept[q] = 1
-                }}
-                # per target, ascending pass: a window counts when it
-                # hosts a kept k-mer in either orientation; gaps split
-                # the stretches
-                for (i = 1; i <= nt; i++) {{
-                    t = order[i]; s = seqs[t]
-                    L = length(s)
-                    if (L < k) continue
-                    run = 0; rs = 0; re = 0
-                    for (ps = 1; ps <= L - k + 1; ps++) {{
-                        x = substr(s, ps, k)
-                        if ((x in kept) || (revcomp(x) in kept)) {{
-                            if (!run) {{ rs = ps; run = 1 }}
-                            re = ps + k - 1
-                        }} else if (run) {{
-                            seq2 = substr(s, rs, re - rs + 1)
-                            print t, rs, re, re - rs + 1, sprintf("%.3f", gcf(seq2)) >> out_path
-                            run = 0
-                        }}
-                    }}
-                    if (run) {{
-                        seq2 = substr(s, rs, re - rs + 1)
-                        print t, rs, re, re - rs + 1, sprintf("%.3f", gcf(seq2)) >> out_path
-                    }}
-                }}
-            }}' {input.target} {input.sam} 2> {log}
-        rm results/vigs/.kmers.sam results/vigs/.idx.amb results/vigs/.idx.ann \\
+            results/vigs/.idx {input.kmers} 2>> {log} \\
+            | samtools sort -o {output.bam}
+        samtools index {output.bam}
+        rm results/vigs/.idx.amb results/vigs/.idx.ann \\
             results/vigs/.idx.bwt results/vigs/.idx.pac results/vigs/.idx.sa
         """

@@ -131,7 +131,8 @@ include: "rules/tubemap.smk"
 
 rule vigs_all:
     input:
-        "results/vigs/vigs_stretches.tsv"
+        "results/vigs/kmers_mapped.bam",
+        "results/vigs/kmers_mapped.bam.bai"
 
 rule mcscanx_all:
     input:

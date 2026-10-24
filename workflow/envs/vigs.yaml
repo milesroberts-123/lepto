@@ -5,3 +5,4 @@ channels:
 dependencies:
   - seqkit=2.13.0
   - bwa=0.7.17
+  - samtools=1.24

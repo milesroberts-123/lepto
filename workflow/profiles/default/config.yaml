@@ -277,8 +277,7 @@ set-resources:
     cpus_per_task: 8
     runtime: 120
   vigs_map:
-    # bwa index of the transcriptome fasta dominates; mem of the small
-    # k-mer fasta is near-instant
+    # bwa index + mem of the small k-mer fasta, then samtools sort+index
     cpus_per_task: 4
     runtime: 240
   kmate_build_index:
