@@ -1836,6 +1836,31 @@ ggsave(file.path(today_dir, paste0(id_pool, "_bootstrap_coefficients.pdf")),
        width = 7, height = 6, device = cairo_pdf)
 ```
 
+
+# VIGS: virus induced gene silencing
+
+```{r}
+
+vigs <- read.table("C:/Users/miles/Downloads/match_list.txt", header = T)
+
+target <- vigs |>
+  filter(seqID == "g166507.t1")
+
+off_target <-  vigs |>
+  filter(seqID != "g166507.t1")
+
+x <- target |> 
+  filter(!(patternName %in% off_target$patternName)) |>
+  arrange(start, end) %>%
+  mutate(diff = c(1, diff(start))) |>
+  filter(diff == 1) |>
+  pull(start)
+
+stretches <- split(x, cumsum(c(1, diff(sort(x)) > 1)))
+
+lapply(stretches, length)
+```
+
 # Conceptual diagrams of k-mer arithmetic
 
 ```{r}
