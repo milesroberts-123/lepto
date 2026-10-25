@@ -81,6 +81,16 @@ rule vigs_kmers:
         """
 
 
+rule vigs_locate:
+    input:
+        trans=config["vigs_transcriptome_fasta"],
+        kmers="results/vigs/kmers.fasta"
+    output:
+        "results/vigs/match_list.txt"
+    conda: "../envs/vigs.yaml"
+    shell:
+        "seqkit locate --threads {threads} -f {input.kmers} {input.trans} > {output}"
+
 rule vigs_map:
     # bwa mem over the whole transcriptome; -T k makes every reported
     # alignment of a k-nt query a full-length exact match (any mismatch

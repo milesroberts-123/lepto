@@ -131,6 +131,7 @@ include: "rules/tubemap.smk"
 
 rule vigs_all:
     input:
+        "results/vigs/match_list.txt",
         "results/vigs/kmers_mapped.bam",
         "results/vigs/kmers_mapped.bam.bai"
 

@@ -64,6 +64,7 @@ set-threads:
   anchorwave_pair_genoali: 2
   vigs_target: 2
   vigs_kmers: 8
+  vigs_locate: 4
   vigs_map: 4
   kmate_build_index: 8
   kmate_build_kmer_pa: 2
@@ -276,13 +277,16 @@ set-resources:
   vigs_kmers:
     cpus_per_task: 8
     runtime: 120
+  vigs_locate:
+    cpus_per_task: 4
+    runtime: 120
   vigs_map:
     # bwa index + mem of the small k-mer fasta, then samtools sort+index
     cpus_per_task: 4
     runtime: 240
   kmate_build_index:
     cpus_per_task: 16
-    runtime: 480
+    runtime: 960
   kmate_build_kmer_pa:
     cpus_per_task: 2
     runtime: 240
