@@ -1841,7 +1841,7 @@ ggsave(file.path(today_dir, paste0(id_pool, "_bootstrap_coefficients.pdf")),
 
 ```{r}
 
-vigs <- read.table("C:/Users/miles/Downloads/match_list.txt", header = T)
+vigs <- read.table("C:/Users/miles/Downloads/match_list_19.txt", header = T)
 
 target <- vigs |>
   filter(seqID == "g166507.t1")
