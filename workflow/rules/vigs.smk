@@ -86,7 +86,7 @@ rule vigs_locate:
         trans=config["vigs_transcriptome_fasta"],
         kmers="results/vigs/kmers.fasta"
     output:
-        "results/vigs/match_list.txt"
+        "results/vigs/match_list_" + str(config["vigs_k"]) + ".txt"
     conda: "../envs/vigs.yaml"
     shell:
         "seqkit locate --threads {threads} -f {input.kmers} {input.trans} > {output}"

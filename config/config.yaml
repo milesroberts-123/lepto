@@ -275,7 +275,7 @@ ldx_snplist_min_depth: 10
 # match with a non-target transcript).
 vigs_transcriptome_fasta: "../resources/annotation/LPJR3B1_scaf_hap1.codingseq"
 vigs_target_transcripts: ["g166507.t1"]
-vigs_k: 21
+vigs_k: 19
 
 # --- BUSCO annotation completeness ---
 # Protein-mode BUSCO over the BRAKER3 annotations (braker_genomes keys).
