@@ -1586,13 +1586,20 @@ hw_model <- nls(
 The LDx pair tables are many GB, so nothing is ever loaded whole:
 Arrow scans the per-scaffold files and pushes the window/bin
 aggregation into the scanner; only the compact summary enters R.
-Each 500 kb window gets its own decay curve (distance lives in the
-0-600 bp range -- LDx pairs never exceed the 500 bp search length).
+Every window size of the linked-selection join (500 kb, 100 kb,
+50 kb) gets its own decay curve and its own per-window r^2 table
+(distance lives in the 0-600 bp range -- LDx pairs never exceed the
+500 bp search length). Same pairs, three window geometries: the
+curves show how much the decay estimate depends on the bins.
 
 ```{r ld_window_scan}
 vb         <- "hap2_vs_hap1"  # results/ldx/{variant}_vs_{backbone} branch
 id_pool    <- "1"
-window_size<- 5e5            # 500 kb windows along the genome
+
+# one decay curve per window size of the linked-selection join; each size
+# caches its own summary CSV so adding a size never rescans a done size
+window_sizes <- c(5e5, 1e5, 5e4)   # 500 kb, 100 kb, 50 kb
+window_size  <- 5e5                # primary size for the joins below
 bin_width  <- 10             # distance micro-bins for the decay curves
 max_d      <- 1e3            # pairs past this are anomalies (searchlen = 500)
 top_scaffolds <- 50          # biggest scaffolds shown per raster panel
@@ -1610,7 +1617,10 @@ k       <- smp[as.character(sample_id) == id_pool, sample_size]
 n_chrom <- if (length(k) && !is.na(k)) k else stop("sample size not found!!!")
 
 dir_pairs <- paste0("../results/ldx/", vb, "/", id_pool)
-sum_csv   <- paste0(dir_pairs, "/", id_pool, "_ld_decay_windows.csv")
+
+ld_csv <- function(window_size)
+  paste0(dir_pairs, "/", id_pool, "_ld_decay_windows_w",
+         as.integer(window_size), ".csv")
 
 # headerless 20-col LDx rows (see ldx.smk): names assigned positionally
 ldx_schema <- arrow::schema(
@@ -1623,21 +1633,22 @@ ldx_schema <- arrow::schema(
   A = arrow::float64(), a = arrow::float64(), B = arrow::float64(),
   b = arrow::float64())
 
-if (recompute || !file.exists(sum_csv)) {
+open_ld_pairs <- function() {
   ds_files <- list.files(
     dir_pairs, pattern = "\\.pairs\\.tsv$", full.names = TRUE)
   stopifnot("no per-scaffold pairs.tsv under dir_pairs" = length(ds_files) > 0)
+  ds_files <- ds_files[file.size(ds_files) > 0]   # drop empty scaffolds
+  arrow::open_dataset(ds_files, format = "tsv", schema = ldx_schema)
+}
 
-  # remove emptry files
-  ds_files <- ds_files[file.size(ds_files) > 0]
-  
-  ds <- arrow::open_dataset(
-    ds_files, format = "tsv", schema = ldx_schema)
+scan_ld_bins <- function(window_size) {
+  sum_csv <- ld_csv(window_size)
+  if (!recompute && file.exists(sum_csv)) return(fread(sum_csv))
 
-  # one pushdown pass: bin = distance bin index; win = 500 kb window idx.
+  # one pushdown pass: bin = distance bin index; win = window index.
   # mean_sq lets sd be rebuilt in R (sd() itself has no Arrow aggregate).
   # filter out inflated number of 1's for direct method and 0's for mle method
-  dt_bins0 <- ds %>%
+  dt_bins <- open_ld_pairs() %>%
     mutate(d   = abs(pos2 - pos1),
            win = as.integer(floor(pos1 / window_size)),
            bin = as.integer(d / bin_width)) %>%
@@ -1649,9 +1660,7 @@ if (recompute || !file.exists(sum_csv)) {
               mean_sq  = mean(r2_direct * r2_direct),
               mean_r2m = mean(r2_mle, na.rm = TRUE),
               .groups  = "drop") %>%
-    collect()
-
-  dt_bins <- dt_bins0 %>%
+    collect() %>%
     mutate(win_start = win * window_size,
            d     = bin * bin_width + bin_width / 2,
            sd_r2 = sqrt(pmax(mean_sq - mean_r2^2, 0))) %>%
@@ -1659,147 +1668,215 @@ if (recompute || !file.exists(sum_csv)) {
 
   far <- dt_bins %>% filter(d >= max_d)
   if (nrow(far))
-    message("dropping ", sum(far$n), " pairs with d >= ", max_d,
-            " bp (searchlen anomalies) on: ",
+    message("w", as.integer(window_size), ": dropping ", sum(far$n),
+            " pairs with d >= ", max_d, " bp (searchlen anomalies) on: ",
             paste(unique(far$chrom), collapse = ", "))
   dt_bins <- dt_bins %>% filter(d < max_d, mean_r2 >= 0)
 
   fwrite(dt_bins, sum_csv)
-} else {
-  dt_bins <- fread(sum_csv)
+  dt_bins
 }
 
-cat(sprintf("%s pairs in %d windows across %d scaffolds\n",
-            sum(dt_bins$n),
-            nrow(dt_bins %>% distinct(chrom, win_start)),
-            nrow(dt_bins %>% distinct(chrom))))
+ld_bins <- setNames(lapply(window_sizes, scan_ld_bins),
+                    as.character(as.integer(window_sizes)))
+dt_bins <- ld_bins[[as.character(as.integer(window_size))]]  # primary size
+
+for (ws in names(ld_bins))
+  cat(sprintf("w%s: %s pairs in %d windows across %d scaffolds\n",
+              ws, sum(ld_bins[[ws]]$n),
+              nrow(distinct(ld_bins[[ws]], chrom, win_start)),
+              nrow(distinct(ld_bins[[ws]], chrom))))
 ```
 
 ```{r ld_decay_global}
-# genome-wide curve: all windows+scaffolds pooled per distance bin
-gb <- dt_bins %>%
-  group_by(bin) %>%
-  summarise(n_bin = sum(n),
-            r2_bin = sum(n * mean_r2) / sum(n),
-            .groups = "drop") %>%
-  mutate(d = (bin + 0.5) * bin_width)
-
+# genome-wide curve per window size: all windows+scaffolds pooled per
+# distance bin. The window size changes which windows contribute pairs
+# (and how the bin means are weighted), not the distance bins.
+#
 # empirical decay fit (LDx-paper style, Feder et al. 2012 Fig 4):
 # distance-class bin means + log-distance regression. Hill-Weir NLS is
 # NOT used: its curve caps at (10/22)*(1+36/(22*n_chrom)), below the
 # 0.6-0.9 r2_direct LDx reports at short distances (ascertained pairs,
 # upward-biased direct estimator), so its NLS had no headroom.
 hw_cap <- (10 / 22) * (1 + 36 / (22 * n_chrom))
-head_mean <- dt_bins %>%
-  filter(bin * bin_width < 100) %>%
-  summarise(sum(n * mean_r2) / sum(n)) %>%
-  pull()
-ldfit  <- lm(r2_bin ~ log10(d), data = gb, weights = n_bin)
-a_int  <- coef(ldfit)[["(Intercept)"]]
-b_log  <- coef(ldfit)[["log10(d)"]]
-decay_d <- if (b_log < 0) 10^((0.2 - a_int) / b_log) else NA_real_
-pred_d  <- seq(min(gb$d), max(gb$d), length.out = 500)
-pred_df <- data.frame(d = pred_d, R2 = predict(ldfit, data.frame(d = pred_d)))
+
+ld_global <- function(dt_bins) {
+  gb <- dt_bins %>%
+    group_by(bin) %>%
+    summarise(n_bin = sum(n),
+              r2_bin = sum(n * mean_r2) / sum(n),
+              .groups = "drop") %>%
+    mutate(d = (bin + 0.5) * bin_width)
+  head_mean <- dt_bins %>%
+    filter(bin * bin_width < 100) %>%
+    summarise(sum(n * mean_r2) / sum(n)) %>%
+    pull()
+  ldfit  <- lm(r2_bin ~ log10(d), data = gb, weights = n_bin)
+  a_int  <- coef(ldfit)[["(Intercept)"]]
+  b_log  <- coef(ldfit)[["log10(d)"]]
+  pred_d <- seq(min(gb$d), max(gb$d), length.out = 500)
+  list(gb        = gb,
+       head_mean = head_mean,
+       decay_d   = if (b_log < 0) 10^((0.2 - a_int) / b_log) else NA_real_,
+       pred      = data.frame(d = pred_d,
+                              R2 = predict(ldfit, data.frame(d = pred_d))))
+}
 
 today_dir <- paste0("../../results/by-date/", today)
 dir.create(today_dir, recursive = TRUE, showWarnings = FALSE)
 
-gcur <- ggplot(gb, aes(x = d, y = r2_bin)) +
-  geom_point(aes(size = n_bin)) +
-  geom_line(data = pred_df, aes(x = d, y = R2),
-            color = "skyblue", linewidth = 1.2, inherit.aes = FALSE) +
-  #geom_hline(yintercept = 0.2, linetype = "dashed", color = "pink") +
-  #geom_vline(xintercept = decay_d, linetype = "dashed", color = "pink") +
+ld_glob <- setNames(lapply(ld_bins, ld_global), names(ld_bins))
+
+for (ws in names(ld_glob)) {
+  g <- ld_glob[[ws]]
+  gcur <- ggplot(g$gb, aes(x = d, y = r2_bin)) +
+    geom_point(aes(size = n_bin)) +
+    geom_line(data = g$pred, aes(x = d, y = R2),
+              color = "skyblue", linewidth = 1.2, inherit.aes = FALSE) +
+    scale_size_area(max_size = 8) +
+    scale_x_log10() +
+    labs(title = sprintf("pool %s, %s bp windows (n = %d): head mean r^2 = %.2f vs\nHill-Weir cap %.2f; r^2 = 0.2 at %.2f kb",
+                         id_pool, ws, n_chrom, g$head_mean, hw_cap, g$decay_d / 1000),
+         x = "Pair distance (bp)", y = "LD (r^2)", size = "# Pairs")
+  print(gcur)
+  ggsave(file.path(today_dir, paste0(id_pool, "_ld_decay_windows_global_w", ws, ".pdf")),
+         gcur, width = 7, height = 6)
+}
+
+# overlay: how much does the decay curve depend on the window geometry?
+gb_all   <- imap_dfr(ld_glob, ~ mutate(.x$gb,   window_length = .y))
+pred_all <- imap_dfr(ld_glob, ~ mutate(.x$pred, window_length = .y))
+gcmp <- ggplot(gb_all, aes(x = d, y = r2_bin, colour = window_length)) +
+  geom_point(aes(size = n_bin), alpha = 0.4) +
+  geom_line(data = pred_all, aes(x = d, y = R2, colour = window_length),
+            linewidth = 1.1, inherit.aes = FALSE) +
   scale_size_area(max_size = 8) +
   scale_x_log10() +
-  labs(title = sprintf("pool %s (n = %d): head mean r^2 = %.2f vs\nHill-Weir cap %.2f; r^2 = 0.2 at %.2f kb", id_pool, n_chrom, head_mean, hw_cap, decay_d / 1000),
-       x = "Pair distance (bp)", y = "LD (r^2)", size = "# Pairs")
-gcur
-
-ggsave(file.path(today_dir, paste0(id_pool, "_ld_decay_windows_global.pdf")), gcur,
-       width = 7, height = 6)
+  labs(title = sprintf("pool %s: LD decay by window size", id_pool),
+       x = "Pair distance (bp)", y = "LD (r^2)",
+       size = "# Pairs", colour = "Window (bp)")
+print(gcmp)
+ggsave(file.path(today_dir, paste0(id_pool, "_ld_decay_windows_global_by_size.pdf")),
+       gcmp, width = 7.5, height = 6)
 ```
 
 ```{r ld_r2_windows}
-# mean r^2 per 500 kb window for merging with other windowed tables.
-# Keyed exactly like the pooled grenedalf diversity windows (prefixed
-# chrom, 1-based start, window end) so it left_join()s straight onto pi4
-# and onto cds_windows_w<wlen>.bed after the usual gsub("hap1_") + start+1 hop.
+# mean r^2 per window, one table per window size, for merging with the
+# other windowed tables. Keyed exactly like the pooled grenedalf
+# diversity windows and cds_windows_w<wlen>.bed: prefixed chrom,
+# 1-based start, window end, and the filename-parsed window_length
+# (character), so it left_join()s straight onto cds_pi / pi4 (the
+# gsub("hap1_") + start+1 hop is already baked into cds_pi).
 # The window mean is pair-count-weighted over the distance bins inside
 # it, consistent with the global curve's bin averages.
-ld_win <- dt_bins %>%
-  group_by(chrom, win_start) %>%
-  summarise(n_pairs        = sum(n),
-            mean_r2_direct = sum(n * mean_r2) / sum(n),
-            mean_r2_mle    = sum(n * mean_r2m, na.rm = TRUE) /
-              sum(n[!is.na(mean_r2m)]),
-            .groups = "drop") %>%
-  mutate(start = win_start + 1,
-         end   = win_start + window_size) %>%
-  select(chrom, start, end, n_pairs, mean_r2_direct, mean_r2_mle)
+make_ld_win <- function(dt_bins, window_size) {
+  dt_bins %>%
+    group_by(chrom, win_start) %>%
+    summarise(n_pairs        = sum(n),
+              mean_r2_direct = sum(n * mean_r2) / sum(n),
+              mean_r2_mle    = sum(n * mean_r2m, na.rm = TRUE) /
+                sum(n[!is.na(mean_r2m)]),
+              .groups = "drop") %>%
+    mutate(start = win_start + 1,
+           end   = win_start + window_size,
+           window_length = as.character(as.integer(window_size))) %>%
+    select(chrom, start, end, window_length,
+           n_pairs, mean_r2_direct, mean_r2_mle)
+}
 
-fwrite(ld_win, paste0(dir_pairs, "/", id_pool, "_r2_windows.csv"))
+ld_wins <- setNames(
+  lapply(window_sizes, function(ws)
+    make_ld_win(ld_bins[[as.character(as.integer(ws))]], ws)),
+  names(ld_bins))
 
-# sanity: does it merge with the diversity + CDS windows as-is?
-# if (!exists("cds")) {
-#   if (!exists("cds_bed_files")) {
-#     cds_bed_files <- Sys.glob("../results/cds_windows/cds_windows_w*.bed")
-#   }
-#   stopifnot(length(cds_bed_files) == 1)
-#   cds <- fread(cds_bed_files,
-#                col.names = c("chrom", "start", "end", "cds"))
-# }
+for (ws in names(ld_wins))
+  fwrite(ld_wins[[ws]],
+         paste0(dir_pairs, "/", id_pool, "_r2_windows_w", ws, ".csv"))
+
+ld_win <- ld_wins[[as.character(as.integer(window_size))]]   # primary (500 kb)
+
+# per-size sanity: does every LD window table merge onto the CDS/pi tables?
+ld_win_all <- bind_rows(ld_wins)
+
 cds_ld_pi <- cds_pi %>%
-  mutate(start = start, window_length = as.numeric(end - start + 1)) %>%
-  left_join(ld_win |> mutate(window_length = as.numeric(end - start + 1)), by = c("chrom", "start", "end", "window_length"))
+  left_join(ld_win_all, by = c("chrom", "start", "end", "window_length"))
 
-cds_ld %>%
-  summarise(n_cds_windows = n(),
+cds_ld_pi %>%
+  group_by(window_length) %>%
+  summarise(n_cds_windows   = n(),
             windows_with_r2 = sum(!is.na(mean_r2_direct)),
             mean_cds_bases  = mean(cds),
             mean_r2_direct  = weighted.mean(mean_r2_direct,
                                             w = !is.na(mean_r2_direct),
-                                            na.rm = TRUE))
+                                            na.rm = TRUE),
+            .groups = "drop")
 
-if(!exists("pi4")){
-  pi4 <- fread("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w500000_s0_diversity.csv")
-}
-
+# merge pi, LD, and CDS density across all three window sizes: pi4 and
+# cds are already multi-size (filename-parsed window_length), and each
+# LD table carries the same key, so one join keys all three.
 pi_ld <- pi4 %>%
-  left_join(ld_win, by = c("chrom", "start", "end")) |>
-  left_join(cds |> mutate(chrom = gsub("^", "hap1_", chrom), start = start+1), by = c("chrom", "start", "end")) |>
+  left_join(ld_win_all, by = c("chrom", "start", "end", "window_length")) |>
+  left_join(cds |> mutate(chrom = gsub("^", "hap1_", chrom), start = start+1),
+            by = c("chrom", "start", "end", "window_length")) |>
   mutate(cds_density = cds/(end - start + 1))
 
+stopifnot("no diversity windows to join against" = nrow(pi_ld) > 0)
+
 pi_ld %>%
-  summarise(n_div_windows = n(),
-            windows_with_r2 = sum(!is.na(mean_r2_direct)))
+  group_by(window_length) %>%
+  summarise(n_div_windows   = n(),
+            windows_with_r2 = sum(!is.na(mean_r2_direct)),
+            .groups = "drop")
 ```
 
 ```{r ld_vs_cds_and_pi}
 
+# per-size correlation stats. Windows are nested across sizes (each 50 kb
+# window sits inside a 100 kb and a 500 kb window), so pooling rows would
+# inflate n with duplicated signal -- corr_ci_autocorr corrects
+# along-genome autocorrelation but not cross-size reuse. Stats and plots
+# are therefore faceted per window_length, mirroring the cds_pi chunk.
+corr_wide <- function(tbl, x, y) {
+  tbl %>%
+    group_by(window_length) %>%
+    reframe(enframe(corr_ci_autocorr(.data[[x]], .data[[y]]),
+                    name = "statistic", value = "value")) |>
+    mutate(value = unlist(value)) |>
+    pivot_wider(names_from = statistic, values_from = value)
+}
+size_titles <- function(w)
+  setNames(with(w, paste0("L = ", window_length, "\n",
+                          "r = ", signif(r, 2),
+                          " [", signif(ci_lower, 2), ", ", signif(ci_upper, 2), "]",
+                          "\np = ", signif(p_value, 2),
+                          ", n = ", as.integer(n_eff))),
+           w$window_length)
+
 ## CDS density vs pi
-cds_vs_pi_corr <- corr_ci_autocorr(pi_ld$cds_density, pi_ld$pooled.theta_pi)
-cds_vs_pi_corr <- lapply(cds_vs_pi_corr, signif, digits = 3)
+cds_pi_corr <- corr_wide(pi_ld, "cds_density", "pooled.theta_pi")
 
 ggplot(pi_ld, aes(x = cds_density, y = pooled.theta_pi)) +
   geom_point() +
   geom_smooth(method = "lm", color = "pink") +
+  facet_wrap(~window_length, scales = "free_x",
+             labeller = as_labeller(size_titles(cds_pi_corr))) +
   theme(text = element_text(size = 20)) +
-  labs(x = "CDS density", y = "\u03c04", title = paste0("r = ", cds_vs_pi_corr$r, " [", cds_vs_pi_corr$ci_lower, ", ", cds_vs_pi_corr$ci_upper, "], p = ", cds_vs_pi_corr$p_value))
+  labs(x = "CDS density", y = "\u03c04")
 
 ggsave(file.path(today_dir, paste0(id_pool, "_cds_vs_pi.pdf")),
        width = 6.5, height = 6, device = cairo_pdf)
 
 ## LD vs CDS density
-ld_vs_cds_corr <- corr_ci_autocorr(pi_ld$cds_density, pi_ld$mean_r2_mle)
-ld_vs_cds_corr <- lapply(ld_vs_cds_corr, signif, digits = 3)
+ld_cds_corr <- corr_wide(pi_ld, "cds_density", "mean_r2_mle")
 
 ggplot(pi_ld, aes(x = cds_density, y = mean_r2_direct)) +
   geom_point(alpha = 0.2) +
-  #geom_hex() +  
+  #geom_hex() +
   geom_smooth(method = "lm", color = "pink") +
+  facet_wrap(~window_length, scales = "free_x",
+             labeller = as_labeller(size_titles(ld_cds_corr))) +
   theme(text = element_text(size = 20)) +
-  labs(x = "CDS density", y = "Mean R^2 (Direct)", title = paste0("r = ", ld_vs_cds_corr$r, " [", ld_vs_cds_corr$ci_lower, ", ", ld_vs_cds_corr$ci_upper, "], p = ", ld_vs_cds_corr$p_value))
+  labs(x = "CDS density", y = "Mean R^2 (Direct)")
 
 ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_cds.pdf")),
        width = 7, height = 6, device = cairo_pdf)
@@ -1807,24 +1884,25 @@ ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_cds.pdf")),
 # facet zoom vs just filter
 ggplot(pi_ld, aes(x = mean_r2_direct, y = pooled.theta_pi)) +
   geom_point(alpha = 0.2) +
-  #geom_hex() +  
+  #geom_hex() +
   geom_smooth(method = "lm", color = "pink", data = pi_ld |> filter(mean_r2_direct < 0.65, mean_r2_direct > 0.3)) +
   facet_zoom(xlim = c(0.3, 0.65)) +
   theme(zoom = element_rect(colour = "pink", linewidth = 0.8, fill = alpha("pink", 0.01))) +
   labs(x = "Mean R^2 (Direct LDx)", y = "\u03c04", color = "Count")
 
 pi_ld_filt <- pi_ld |> filter(mean_r2_direct < 0.65, mean_r2_direct > 0.3)
-pi_vs_ld_corr <- corr_ci_autocorr(pi_ld_filt$pooled.theta_pi, pi_ld_filt$mean_r2_mle)
-pi_vs_ld_corr <- lapply(pi_vs_ld_corr, signif, digits = 3) # round 
+pi_ld_corr <- corr_wide(pi_ld_filt, "pooled.theta_pi", "mean_r2_mle")
 
 ggplot(pi_ld_filt, aes(x = mean_r2_direct, y = pooled.theta_pi)) +
   geom_point(alpha = 0.2) +
-  #geom_hex() +  
+  #geom_hex() +
   geom_smooth(method = "lm", color = "pink") +
   #facet_zoom(xlim = c(0.3, 0.65)) +
   #theme(zoom = element_rect(colour = "pink", linewidth = 0.8, fill = alpha("pink", 0.01))) +
+  facet_wrap(~window_length,
+             labeller = as_labeller(size_titles(pi_ld_corr))) +
   theme(text = element_text(size = 20)) +
-  labs(x = "Mean R^2 (Direct LDx)", y = "\u03c04", title = paste0("r = ", pi_vs_ld_corr$r, " [", pi_vs_ld_corr$ci_lower, ", ", pi_vs_ld_corr$ci_upper, "], p = ", pi_vs_ld_corr$p_value))
+  labs(x = "Mean R^2 (Direct LDx)", y = "\u03c04")
 
 ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_pi.pdf")),
        width = 7, height = 6, device = cairo_pdf)
