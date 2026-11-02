@@ -1923,4 +1923,4 @@ ggVennDiagram(x, label_size = 0, edge_size = 0) +
   scale_color_manual(values = rep("black", length(x)))
 
   ggsave(paste0("../../results/by-date/", today, "/white_venn_diagram.pdf"), width = 6, height = 6)
-```
+ ``` 
