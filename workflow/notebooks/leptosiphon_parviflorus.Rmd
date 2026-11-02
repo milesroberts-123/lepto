@@ -1345,7 +1345,8 @@ atpi %>%
                              sum(count_comparisons, na.rm = TRUE))
 
 ```
-# linked selection: correlation between CDS density and diversity
+
+# correlation between CDS density and diversity
 
 ```{r}
 #
@@ -1353,38 +1354,76 @@ library(rventures)
 packageVersion("rventures")
 
 #
-pi4 <- fread("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w500000_s0_diversity.csv")
+pi4_files <- Sys.glob("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w*")
+
+pi4 <- pi4_files %>% 
+  set_names() %>% 
+  map_dfr(~fread(.x), .id = "source_file") |>
+  mutate(window_length = gsub(".*grenedalf_results_pooled_w|_s0_diversity.csv", "", str_extract(source_file, "grenedalf_results_pooled_w.*")))
+
+#pi4 <- fread("../results/vg/hap2_vs_hap1/diversity_pooled/pooled/four/grenedalf_results_pooled_w500000_s0_diversity.csv")
 
 # window size is embedded in the filename; assert a single size file
 # exists (multiple sizes: read the desired cds_windows_w<len>.bed explicitly)
 cds_bed_files <- Sys.glob("../results/cds_windows/cds_windows_w*.bed")
-stopifnot(length(cds_bed_files) == 1)
-cds <- fread(cds_bed_files, col.names = c("chrom", "start", "end", "cds"))
+#stopifnot(length(cds_bed_files) == 1)
+#cds <- fread(cds_bed_files, col.names = c("chrom", "start", "end", "cds"))
+cds <- cds_bed_files %>% 
+  set_names() %>% 
+  map_dfr(~fread(.x, col.names = c("chrom", "start", "end", "cds")), .id = "source_file") |>
+  mutate(window_length = gsub(".*cds_windows_w|.bed", "", str_extract(source_file, "cds_windows_w.*")))
 
 cds_pi <- cds %>% mutate(chrom = gsub("^", "hap1_", chrom),
                start = start + 1) %>%
-  left_join(pi4, by = c("chrom", "start", "end")) %>%
+  left_join(pi4, by = c("chrom", "start", "end", "window_length")) %>%
   mutate(cds_density = cds/(end - start))
 
 
-r_stats <- corr_ci_autocorr(cds_pi$pooled.theta_pi, cds_pi$cds_density)
+r_stats <- cds_pi |>
+  group_by(window_length) |>
+  reframe(enframe(corr_ci_autocorr(pooled.theta_pi, cds_density), name = "statistic", value = "value"))
+
+r_wide <- r_stats |>
+  mutate(value = unlist(value)) |>
+  pivot_wider(names_from = statistic, values_from = value)
+
+custom_titles <- with(
+  r_wide,
+  paste0(
+    "L = ", window_length, "\n",
+    "r = ", signif(r, 2),
+    " [", signif(ci_lower, 2), ", ", signif(ci_upper, 2), "]",
+    "\np = ", signif(p_value, 2), ", n = ", as.integer(n_eff)
+  )
+)
+
+names(custom_titles) <- r_wide$window_length
 
 ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
   geom_point(alpha = 0.2) +
   geom_smooth(method = "lm", color = "pink") +
-  labs(x = "CDS Density", y = "\u03c04 (pink pools)", title = paste0("r = ", signif(r_stats$r, 2), " [", signif(r_stats$ci_lower, 2), ", ", signif(r_stats$ci_upper, 2),"]", ", p = ", signif(r_stats$p_value, digits = 2))) +
-  xlim(0, 0.2)
+  facet_wrap(~window_length, scales = "free_x", labeller = as_labeller(custom_titles)) +
+  labs(x = "CDS Density", y = "\u03c04 (pink pools)")
 
-ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_point_pink.pdf"), device = cairo_pdf,width=4,height=4)
+ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_point_pink.pdf"), device = cairo_pdf,width=8,height=4)
 
-ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
-  geom_hex() +
+ggplot(cds_pi |> filter(window_length == "500000"), aes(x = cds_density, y = pooled.theta_pi)) +
+  geom_point(alpha = 0.1) +
   geom_smooth(method = "lm", color = "pink") +
-  scale_fill_scico(palette = "nuuk") +
-  labs(fill = "Count", x = "CDS Density", y = "\u03c04 (all pools)", title = paste0("r = ", signif(r_stats$r, 2), " [", signif(r_stats$ci_lower, 2), ", ", signif(r_stats$ci_upper, 2),"]", ", p = ", signif(r_stats$p_value, digits = 2)))  +
-  xlim(0, 0.2)
+  facet_wrap(~window_length, scales = "free_x", labeller = as_labeller(custom_titles)) +
+  labs(x = "CDS Density", y = "\u03c04 (pink pools)") +
+  xlim(c(0, 0.2))
 
-ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_hexbin_pink.pdf"), device=cairo_pdf, width=6, height=6)
+ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_point_pink_w500000.pdf"), device = cairo_pdf,width=4,height=4)
+
+# ggplot(cds_pi, aes(x = cds_density, y = pooled.theta_pi)) +
+#   geom_hex() +
+#   geom_smooth(method = "lm", color = "pink") +
+#   scale_fill_scico(palette = "nuuk") +
+#   labs(fill = "Count", x = "CDS Density", y = "\u03c04 (all pools)", title = paste0("r = ", signif(r_stats$r, 2), " [", signif(r_stats$ci_lower, 2), ", ", signif(r_stats$ci_upper, 2),"]", ", p = ", signif(r_stats$p_value, digits = 2)))  +
+#   xlim(0, 0.2)
+# 
+# ggsave(paste0("../../results/by-date/", today, "/cds_vs_pi_hexbin_pink.pdf"), device=cairo_pdf, width=6, height=6)
 ```
 
 # synteny plot
@@ -1542,7 +1581,7 @@ hw_model <- nls(
 
 ```
 
-# LD decay in 500 kb windows along the genome (pool 1)
+# LD decay in windows along the genome (pool 1)
 
 The LDx pair tables are many GB, so nothing is ever loaded whole:
 Arrow scans the per-scaffold files and pushes the window/bin
@@ -1604,7 +1643,7 @@ if (recompute || !file.exists(sum_csv)) {
            bin = as.integer(d / bin_width)) %>%
     filter(!is.na(r2_direct)) %>%
     group_by(chrom, win, bin) %>%
-    filter(r2_direct < 1, r2_mle > 0) |>
+    #filter(r2_direct < 1, r2_mle > 0) |>
     summarise(n        = n(),
               mean_r2  = mean(r2_direct),
               mean_sq  = mean(r2_direct * r2_direct),
@@ -1702,17 +1741,17 @@ ld_win <- dt_bins %>%
 fwrite(ld_win, paste0(dir_pairs, "/", id_pool, "_r2_windows.csv"))
 
 # sanity: does it merge with the diversity + CDS windows as-is?
-if (!exists("cds")) {
-  if (!exists("cds_bed_files")) {
-    cds_bed_files <- Sys.glob("../results/cds_windows/cds_windows_w*.bed")
-  }
-  stopifnot(length(cds_bed_files) == 1)
-  cds <- fread(cds_bed_files,
-               col.names = c("chrom", "start", "end", "cds"))
-}
-cds_ld <- cds %>%
-  mutate(chrom = gsub("^", "hap1_", chrom), start = start + 1) %>%
-  left_join(ld_win, by = c("chrom", "start", "end"))
+# if (!exists("cds")) {
+#   if (!exists("cds_bed_files")) {
+#     cds_bed_files <- Sys.glob("../results/cds_windows/cds_windows_w*.bed")
+#   }
+#   stopifnot(length(cds_bed_files) == 1)
+#   cds <- fread(cds_bed_files,
+#                col.names = c("chrom", "start", "end", "cds"))
+# }
+cds_ld_pi <- cds_pi %>%
+  mutate(start = start, window_length = as.numeric(end - start + 1)) %>%
+  left_join(ld_win |> mutate(window_length = as.numeric(end - start + 1)), by = c("chrom", "start", "end", "window_length"))
 
 cds_ld %>%
   summarise(n_cds_windows = n(),
