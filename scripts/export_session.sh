@@ -27,7 +27,7 @@ EOF
 json="$out_dir/$session_id.json"
 xz_file="$out_dir/$session_id.json.xz"
 
-opencode export "$session_id" > "$json"
+opencode session export "$session_id" > "$json"
 python3 - "$json" <<'EOF'
 import json, sys
 with open(sys.argv[1]) as f:
