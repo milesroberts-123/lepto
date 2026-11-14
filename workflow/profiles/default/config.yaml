@@ -335,10 +335,15 @@ set-resources:
     cpus_per_task: 1
     runtime: 480
   mk_polymorphism:
+<<<<<<< Updated upstream
     # per-scaffold bisect index (~20 B/CDS site), not string sets; the awk
     # prefilter (mk_frequency_filter) keeps the CSV pass at C speed
     cpus_per_task: 2
     runtime: 480
+=======
+    cpus_per_task: 16
+    runtime: 1440
+>>>>>>> Stashed changes
   mk_divergence:
     cpus_per_task: 2
     runtime: 480
