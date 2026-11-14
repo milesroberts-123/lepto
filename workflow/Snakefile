@@ -128,6 +128,7 @@ include: "rules/cds_windows.smk"
 include: "rules/ldx.smk"
 include: "rules/busco.smk"
 include: "rules/tubemap.smk"
+include: "rules/mk.smk"
 
 rule vigs_all:
     input:
@@ -244,3 +245,10 @@ rule vg_tubemap_all:
             variant=[config["tubemap_variant"]],
             backbone=[config["tubemap_backbone"]],
             region=list(tubemap_parse_regions()))
+
+rule mk_all:
+    input:
+        "results/mk/divergence.tsv",
+        "results/mk/dnds.tsv",
+        expand("results/mk/mk_stats_{ID}.tsv", ID=sample_ids),
+        "results/mk/mk_stats_pooled.tsv"

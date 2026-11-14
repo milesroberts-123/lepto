@@ -74,6 +74,8 @@ set-threads:
   busco_lineage_download: 1
   busco_proteins_select: 4
   busco_proteins: 16
+  mk_codon_align: 16
+  mk_codeml: 16
 
 set-resources:
   samtools_fastq:
@@ -322,3 +324,24 @@ set-resources:
   busco_proteins:
     cpus_per_task: 16
     runtime: 480
+  mk_ortholog_pairs:
+    cpus_per_task: 1
+    runtime: 60
+  mk_cds_extract:
+    cpus_per_task: 2
+    runtime: 120
+  mk_codon_align:
+    cpus_per_task: 16
+    runtime: 1440
+  mk_polymorphism:
+    cpus_per_task: 8
+    runtime: 1440
+  mk_divergence:
+    cpus_per_task: 2
+    runtime: 480
+  mk_codeml:
+    cpus_per_task: 16
+    runtime: 1440
+  mk_stats:
+    cpus_per_task: 2
+    runtime: 60

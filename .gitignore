@@ -61,3 +61,7 @@ results/
 *.paml
 *.sig
 workflow/yn
+
+# python bytecode (workflow/scripts)
+__pycache__/
+*.pyc

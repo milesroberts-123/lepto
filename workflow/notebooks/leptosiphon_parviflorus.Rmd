@@ -1954,6 +1954,67 @@ ggsave(file.path(today_dir, paste0(id_pool, "_bootstrap_coefficients.pdf")),
 ```
 
 
+# McDonald-Kreitman tests
+
+Standard MK per gene: Dn/Ds from codon alignments of 1:1 orthologs
+against *Linanthus parryae*, Pn/Ps from the pool allele frequencies
+classified with the degenotate 0-fold/4-fold BEDs. Tables come from the
+`mk` subworkflow (`mk_all`); one table per pool plus a pooled one, with
+codeml pairwise dN/dS reported alongside.
+
+```{r mk_tests}
+
+if (!exists("today_dir")) today_dir <- paste0("../../results/by-date/", today)
+
+mk_by_pool <- list.files("../results/mk", pattern = "^mk_stats_[0-9]+\\.tsv$",
+                         full.names = TRUE) %>%
+  set_names(~ sub("^mk_stats_|\\.tsv$", "", basename(.x))) %>%
+  map_dfr(fread, .id = "pool")
+
+mk_pooled <- fread("../results/mk/mk_stats_pooled.tsv")
+
+# per-pool alpha, restricted to genes with both Dn and Ps (alpha defined)
+mk_by_pool %>%
+  filter(!is.na(alpha)) %>%
+  group_by(pool) %>%
+  summarise(n_genes = n(),
+            mean_alpha = mean(alpha),
+            median_alpha = median(alpha),
+            frac_alpha_pos = mean(alpha > 0),
+            .groups = "drop")
+
+mk_pooled %>%
+  filter(!is.na(alpha)) %>%
+  summarise(n_genes = n(),
+            mean_alpha = mean(alpha),
+            median_alpha = median(alpha),
+            frac_alpha_pos = mean(alpha > 0))
+
+ggplot(mk_pooled |> filter(!is.na(alpha)), aes(x = alpha)) +
+  geom_histogram(bins = 50) +
+  labs(x = expression(alpha), y = "Genes",
+       title = "Per-gene standard MK alpha (pooled polymorphism)")
+
+ggsave(file.path(today_dir, "mk_alpha_pooled.pdf"),
+       width = 7, height = 5, device = cairo_pdf)
+
+# alpha vs pairwise dN/dS (codeml runmode -2)
+dnds <- fread("../results/mk/dnds.tsv")
+
+mk_omega <- mk_pooled |>
+  inner_join(dnds |> select(gene, omega), by = "gene") |>
+  filter(!is.na(alpha), !is.na(omega))
+
+ggplot(mk_omega, aes(x = omega, y = alpha)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth(method = "lm", color = "pink") +
+  labs(x = expression(omega == d[N]/d[S]), y = expression(alpha))
+
+ggsave(file.path(today_dir, "mk_alpha_vs_omega.pdf"),
+       width = 7, height = 6, device = cairo_pdf)
+```
+
+
 # VIGS: virus induced gene silencing
 
 ```{r}
