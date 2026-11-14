@@ -111,7 +111,8 @@ def main():
             out.write(CTL.format(seqfile=seqfile, treefile=treefile,
                                  outfile=outfile))
         r = subprocess.run(["codeml", ctlfile], cwd=tmp,
-                           capture_output=True, text=True)
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True)
         if r.returncode != 0 or not os.path.exists(outfile):
             return emit("NA", "NA", "NA", "NA", "codeml_failed")
         values = parse_mlc(outfile)

@@ -95,8 +95,12 @@ def main():
         if r.returncode != 0 or os.path.getsize(aa_aln) == 0:
             return fail(args.outdir, args.only, "mafft_failed")
 
+        # stdout/stderr=PIPE + universal_newlines (not capture_output/text)
+        # so this also runs on python 3.6, which is what a bare `python3`
+        # resolves to when a rule's conda env ships no interpreter
         r = subprocess.run([pal2nal, aa_aln, cds_in, "-output", "fasta"],
-                           capture_output=True, text=True)
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                           universal_newlines=True)
         if r.returncode != 0 or not r.stdout.strip():
             return fail(args.outdir, args.only, "pal2nal_failed")
 

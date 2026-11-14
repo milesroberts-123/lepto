@@ -6,3 +6,8 @@ dependencies:
   - mafft=7.525
   - paml=4.10.10
   - pal2nal=14.1
+  # python is required by the mk subworkflow scripts that run in this env
+  # (mk_codon_align -> mk_align_pairs.py, mk_codeml -> mk_codeml.py). Without
+  # it `python3` fell through to the Savio OS python 3.6 and the scripts died
+  # on 3.7+ APIs (subprocess capture_output). The dnds rules don't use it.
+  - python=3.12
