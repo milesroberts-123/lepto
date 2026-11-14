@@ -20,11 +20,6 @@
 # CHROM, col2 POS, col6 ALT count, col7 depth, col8 ALT frequency.
 
 mk_pad = config["mk_degenotate_species"]
-mk_freq_csvs = expand(
-    "results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv",
-    variant=[config["vg_ref_variant"]],
-    backbone=[config["vg_ref_backbone"]],
-    ID=sample_ids)
 
 
 rule mk_ortholog_pairs:
@@ -109,15 +104,45 @@ rule mk_codon_align:
         """
 
 
+rule mk_frequency_filter:
+    # Stream each pool's genome-wide grenedalf frequency table down to just
+    # the polymorphic CDS-relevant rows (constant memory + C speed in awk).
+    # Output: chrom,pos,alt_count,depth,alt_freq, no header. The thresholds
+    # are the same config keys mk_polymorphism uses, so the intermediate
+    # cannot drift from the counting logic; temp() keeps the extracts out
+    # of the durable tree.
+    input:
+        freq=lambda wc: (
+            "results/vg/{variant}_vs_{backbone}/{ID}/"
+            "grenedalf_results_frequency.csv".format(
+                variant=config["vg_ref_variant"],
+                backbone=config["vg_ref_backbone"],
+                ID=wc.ID))
+    output:
+        temp("results/mk/frequency/{ID}_polymorphic.csv")
+    params:
+        min_depth=config["mk_min_depth"],
+        min_alt_count=config["mk_min_alt_count"],
+    shell:
+        """
+        mkdir -p results/mk/frequency
+        awk -F, -v d={params.min_depth} -v a={params.min_alt_count} \\
+            'NR == 1 || $1 == "CHROM" {{ next }}
+             ($6 + 0) >= a && ($7 + 0) >= d && ($8 + 0) > 0 && ($8 + 0) < 1 \\
+                {{ print $1 "," $2 "," $6 "," $7 "," $8 }}' \\
+            {input} > {output}
+        """
+
+
 rule mk_polymorphism:
-    # Pn/Ps per gene per pool from grenedalf allele frequencies; the
+    # Pn/Ps per gene per pool from the filtered allele frequencies; the
     # pooled table counts a site once if it is polymorphic in any pool,
     # and polymorphic_sites.tsv feeds the divergence exclusion.
     input:
         map="results/mk/cds/{ingroup}_map.tsv".format(ingroup=config["mk_ingroup"]),
         zero="results/degenotate/{pad}/degeneracy-zero-sites.bed".format(pad=mk_pad),
         four="results/degenotate/{pad}/degeneracy-four-sites.bed".format(pad=mk_pad),
-        freq=mk_freq_csvs,
+        freq=expand("results/mk/frequency/{ID}_polymorphic.csv", ID=sample_ids),
     output:
         pooled="results/mk/polymorphism/pooled_polymorphism.tsv",
         sites="results/mk/polymorphism/polymorphic_sites.tsv",
@@ -126,10 +151,7 @@ rule mk_polymorphism:
     conda: "../envs/mk.yaml"
     params:
         freq_args=" ".join(
-            "--freq {ID}=results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv".format(
-                ID=ID,
-                variant=config["vg_ref_variant"],
-                backbone=config["vg_ref_backbone"])
+            "--freq {ID}=results/mk/frequency/{ID}_polymorphic.csv".format(ID=ID)
             for ID in sample_ids),
         min_depth=config["mk_min_depth"],
         min_alt_count=config["mk_min_alt_count"],

@@ -101,8 +101,6 @@ set-resources:
     runtime: 60
   orthofinder_stage:
     runtime: 10
-  orthofinder_stage_external:
-    runtime: 10
   orthofinder_run:
     slurm_account: "co_moilab"
     slurm_partition: "savio4_htc"
@@ -333,9 +331,14 @@ set-resources:
   mk_codon_align:
     cpus_per_task: 16
     runtime: 1440
+  mk_frequency_filter:
+    cpus_per_task: 1
+    runtime: 480
   mk_polymorphism:
-    cpus_per_task: 8
-    runtime: 1440
+    # per-scaffold bisect index (~20 B/CDS site), not string sets; the awk
+    # prefilter (mk_frequency_filter) keeps the CSV pass at C speed
+    cpus_per_task: 2
+    runtime: 480
   mk_divergence:
     cpus_per_task: 2
     runtime: 480

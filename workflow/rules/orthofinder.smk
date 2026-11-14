@@ -25,21 +25,15 @@ rule orthofinder_unique_prefix:
         """
 
 rule orthofinder_stage:
+    # One staging rule for both proteome sources: in-repo species
+    # (hap1/hap2 -> results/orthofinder/prefixed/<species>.faa) and
+    # external proteomes from config. Previously two rules produced the
+    # same output path, and the external one raised KeyError for hap1/hap2
+    # whenever snakemake evaluated it (fatal for consumers under recent
+    # snakemake versions).
     input:
-        "results/orthofinder/prefixed/{species}.faa"
-    output:
-        "results/orthofinder/proteomes/{species}.faa"
-    localrule: True
-    shell:
-        """
-        mkdir -p results/orthofinder/proteomes
-        cp {input} {output}
-        """
-
-
-rule orthofinder_stage_external:
-    input:
-        lambda wildcards: config["orthofinder_external_proteomes"][wildcards.species]
+        lambda wc: config["orthofinder_external_proteomes"].get(wc.species)
+        or f"results/orthofinder/prefixed/{wc.species}.faa"
     output:
         "results/orthofinder/proteomes/{species}.faa"
     localrule: True
