@@ -55,7 +55,7 @@ rule orthofinder_run:
         expand("results/orthofinder/proteomes/{species}.faa",
                species=list(config["panther_input_fastas"].keys()) + list(config.get("orthofinder_external_proteomes", {}).keys()))
     output:
-        directory("results/orthofinder/proteomes/Orthofinder")
+        directory("results/orthofinder/proteomes/OrthoFinder")
     conda: "../envs/orthofinder.yaml"
     shell:
         """

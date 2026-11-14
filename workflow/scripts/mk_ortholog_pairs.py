@@ -11,6 +11,8 @@ Output columns (tab-separated, header):
 """
 
 import argparse
+import glob
+import os
 import re
 import sys
 
@@ -29,6 +31,32 @@ def gene_of(transcript):
     return re.sub(r"\.t\d+$", "", transcript)
 
 
+def find_orthogroups_tsv(orthofinder_dir):
+    """Resolve Orthogroups.tsv inside an OrthoFinder results directory.
+
+    OrthoFinder writes <dir>/OrthoFinder/Results_<date>/Orthogroups/
+    Orthogroups.tsv. Accept a flattened layout too (<dir>/Orthogroups/
+    Orthogroups.tsv) and, if several Results_* runs exist, take the
+    newest by modification time.
+    """
+    flat = os.path.join(orthofinder_dir, "Orthogroups", "Orthogroups.tsv")
+    if os.path.exists(flat):
+        return flat
+    candidates = sorted(
+        glob.glob(os.path.join(orthofinder_dir, "Results_*", "Orthogroups",
+                               "Orthogroups.tsv")),
+        key=os.path.getmtime, reverse=True)
+    if not candidates:
+        # the --orthofinder argument may itself be the Results_* directory
+        nested = os.path.join(orthofinder_dir, "Orthogroups", "Orthogroups.tsv")
+        if os.path.exists(nested):
+            return nested
+        sys.exit(f"no Orthogroups.tsv under {orthofinder_dir} "
+                 "(looked for Orthogroups/Orthogroups.tsv and "
+                 "Results_*/Orthogroups/Orthogroups.tsv)")
+    return candidates[0]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--orthofinder", required=True,
@@ -38,7 +66,8 @@ def main():
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
 
-    tsv = f"{args.orthofinder}/Orthogroups/Orthogroups.tsv"
+    tsv = find_orthogroups_tsv(args.orthofinder)
+    print(f"using {tsv}")
     try:
         fh = open(tsv)
     except OSError:

@@ -82,7 +82,7 @@ rule panther_all:
 
 rule orthofinder_all:
     input:
-        directory("results/orthofinder/proteomes/Orthofinder")
+        directory("results/orthofinder/proteomes/OrthoFinder")
 
 rule featurecounts_all:
     input:

@@ -8,7 +8,8 @@
 # counts themselves do not use it).
 #
 # Products consumed from upstream branches:
-#   results/orthofinder/proteomes/Orthofinder  (orthofinder_all)
+#   results/orthofinder/proteomes/OrthoFinder   (orthofinder_all; the
+#       results themselves sit in OrthoFinder/Results_<date>/)
 #   results/featurecounts/{hap1}_expressed.faa (featurecounts_all)
 #   results/braker/linanthus/braker_expressed.faa (braker_all)
 #   results/degenotate/hap1/degeneracy-{zero,four}-sites.bed (degenotate_all)
@@ -30,7 +31,7 @@ rule mk_ortholog_pairs:
     # 1:1 orthologs between the ingroup and outgroup proteomes; only .t1
     # transcripts survive (orthofinder proteomes are t1-filtered).
     input:
-        directory("results/orthofinder/proteomes/Orthofinder")
+        directory("results/orthofinder/proteomes/OrthoFinder")
     output:
         "results/mk/ortholog_pairs.tsv"
     conda: "../envs/mk.yaml"
@@ -38,7 +39,7 @@ rule mk_ortholog_pairs:
         """
         mkdir -p results/mk
         python3 scripts/mk_ortholog_pairs.py \\
-            --orthofinder results/orthofinder/proteomes/Orthofinder \\
+            --orthofinder results/orthofinder/proteomes/OrthoFinder \\
             --ingroup {config[mk_ingroup]} \\
             --outgroup {config[mk_outgroup]} \\
             --out {output}
