@@ -9,42 +9,92 @@ convention). Remaining differing codons are scored with
 classify_codon_change (minimum-replacement paths averaged), giving
 fractional Dn/Ds for multi-change codons.
 
+Memory design: the CDS map is streamed once, transcript block by
+transcript block (mk_extract_cds.py writes it transcript-sorted), and
+each block is a few thousand rows; only the block whose transcript has
+an alignment is kept. The polymorphic-site set is held as per-scaffold
+sorted `array('q')` vectors with bisect lookups rather than a set of
+(chrom, pos) tuples. Peak RSS is therefore bounded by the polymorphism
+table alone (~8 B/site), independent of the genome-wide CDS map size —
+the first version loaded every CDS position into a dict of tuples and
+was OOM-killed on the real annotation (412 M positions).
+
 Output TSV: orthogroup gene dn ds n_diff_codons n_excluded_poly
             n_excluded_gap n_stop
 """
 
 import argparse
+import bisect
 import os
 import sys
+from array import array
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mk_common import (classify_codon_change, gene_of, read_fasta,  # noqa: E402
                        split_alignment, translate)
 
 
-def load_map(path):
-    positions = {}
+def load_polymorphic(path):
+    """polymorphic_sites.tsv -> {chrom: sorted array('q') of positions}."""
+    acc = {}
     with open(path) as fh:
         fh.readline()
+        for line in fh:
+            f = line.split()
+            if len(f) < 2:
+                continue
+            acc.setdefault(f[0], array("q")).append(int(f[1]))
+    for chrom, arr in acc.items():
+        acc[chrom] = array("q", sorted(set(arr)))
+    return acc
+
+
+def is_poly(poly, chrom, pos):
+    arr = poly.get(chrom)
+    if not arr:
+        return False
+    i = bisect.bisect_left(arr, pos)
+    return i < len(arr) and arr[i] == pos
+
+
+def iter_map_blocks(path):
+    """Yield (transcript, [(cdspos, chrom, pos), ...]) in file order."""
+    with open(path) as fh:
+        fh.readline()
+        cur = None
+        block = []
         for line in fh:
             f = line.rstrip("\n").split("\t")
             if len(f) < 5:
                 continue
-            tx, cdspos, chrom, pos = f[0], int(f[2]), f[3], int(f[4])
-            positions.setdefault(tx, []).append((cdspos, chrom, pos))
-    for tx in positions:
-        positions[tx].sort()
-    return positions
+            tx = f[0]
+            if tx != cur:
+                if cur is not None:
+                    yield cur, block
+                cur = tx
+                block = []
+            block.append((int(f[2]), f[3], int(f[4])))
+        if cur is not None:
+            yield cur, block
 
 
-def count_gene(ing, out, tx, map_positions, poly):
+def alignment_headers(path, ingroup):
+    """First record's name if this file looks like an ingroup alignment."""
+    with open(path) as fh:
+        for line in fh:
+            if line.startswith(">"):
+                name = line[1:].split()[0]
+                if not name.startswith(ingroup + "|"):
+                    return None
+                return name.split("|", 1)[1]
+    return None
+
+
+def count_gene(ing, out, positions, poly):
     """Return (dn, ds, n_diff, n_poly, n_gap, n_stop) for one alignment."""
-    pos_list = map_positions.get(tx)
-    if pos_list is None:
-        return None
     dn = ds = 0.0
     n_diff = n_poly = n_gap = n_stop = 0
-    in_idx = 0  # number of ingroup bases consumed so far (1-based cdspos)
+    in_idx = 0  # ingroup bases consumed so far (1-based cdspos)
     length = len(ing)
     for start in range(0, length - 2, 3):
         a_codon = ing[start:start + 3]
@@ -57,8 +107,7 @@ def count_gene(ing, out, tx, map_positions, poly):
             in_idx += 3
             n_gap += 1
             continue
-        if translate(a_codon) == "*" or translate(b_codon) == "*" \
-                or translate(a_codon) == "X" or translate(b_codon) == "X":
+        if translate(a_codon) in ("*", "X") or translate(b_codon) in ("*", "X"):
             in_idx += 3
             n_stop += 1
             continue
@@ -66,14 +115,14 @@ def count_gene(ing, out, tx, map_positions, poly):
             diff_positions = [k for k in range(3) if a_codon[k] != b_codon[k]]
             genomic = []
             for k in diff_positions:
-                cdspos = in_idx + k + 1
-                if cdspos > len(pos_list):
+                hit = positions.get(in_idx + k + 1)
+                if hit is None:
                     genomic = None
                     break
-                genomic.append(pos_list[cdspos - 1])
+                genomic.append(hit)
             if genomic is None:
                 n_gap += 1
-            elif any((g[1], g[2]) in poly for g in genomic):
+            elif any(is_poly(poly, chrom, pos) for chrom, pos in genomic):
                 n_poly += 1
             else:
                 syn, nonsyn = classify_codon_change(a_codon, b_codon)
@@ -95,34 +144,49 @@ def main():
     ap.add_argument("--failures", required=True)
     args = ap.parse_args()
 
-    map_positions = load_map(args.map)
-    poly = set()
-    with open(args.polymorphic_sites) as fh:
-        fh.readline()
-        for line in fh:
-            f = line.split()
-            if len(f) >= 2:
-                poly.add((f[0], int(f[1])))
+    poly = load_polymorphic(args.polymorphic_sites)
+    print(f"polymorphic sites: "
+          f"{sum(len(a) for a in poly.values())} in {len(poly)} scaffolds")
 
-    rows = []
+    # pre-pass: transcript -> alignment file (only cheap header reads)
+    wanted = {}
     failures = []
     for name in sorted(os.listdir(args.alignments)):
         if not name.endswith(".fna"):
             continue
         og = name[:-4]
-        seqs = read_fasta(os.path.join(args.alignments, name))
+        path = os.path.join(args.alignments, name)
+        tx = alignment_headers(path, args.ingroup)
+        if tx is None:
+            failures.append((og, "alignment_names"))
+            continue
+        wanted[tx] = (og, path)
+    print(f"{len(wanted)} alignment files, {len(failures)} unusable")
+
+    rows = []
+    seen = set()
+    for tx, block in iter_map_blocks(args.map):
+        if tx not in wanted:
+            continue
+        seen.add(tx)
+        og, path = wanted[tx]
+        positions = {cdspos: (chrom, pos) for cdspos, chrom, pos in block}
+        seqs = read_fasta(path)
         split = split_alignment(seqs, args.ingroup, args.outgroup)
         if split is None:
             failures.append((og, "alignment_names"))
             continue
-        ing, out, tx = split
-        counted = count_gene(ing, out, tx, map_positions, poly)
-        if counted is None:
-            failures.append((og, "no_cds_map"))
-            continue
-        dn, ds, n_diff, n_poly, n_gap, n_stop = counted
+        ing, out, _ = split
+        dn, ds, n_diff, n_poly, n_gap, n_stop = count_gene(
+            ing, out, positions, poly)
         rows.append((og, gene_of(tx), dn, ds, n_diff, n_poly, n_gap, n_stop))
 
+    for tx, (og, path) in wanted.items():
+        if tx not in seen:
+            failures.append((og, "no_cds_map"))
+
+    rows.sort()
+    failures.sort()
     with open(args.out, "w") as out:
         out.write("orthogroup\tgene\tdn\tds\tn_diff_codons\t"
                   "n_excluded_poly\tn_excluded_gap\tn_stop\n")

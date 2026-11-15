@@ -209,11 +209,14 @@ mk_outgroup: "linanthus"
 mk_species_annotations:
   hap1:
     fasta: "../resources/reference/hap1.fasta"
-    gff3: "../resources/annotation/hap1.gff3"
+    # the EXPRESSED (t1) annotation: same gene set as the proteome, so
+    # pal2nal can map proteins onto CDS (resources/annotation/hap1.gff3
+    # is the unfiltered BRAKER output, 280k gene models vs 39.7k expressed)
+    gff3: "results/featurecounts/hap1_expressed.gff3"
     faa: "results/featurecounts/hap1_expressed.faa"
   linanthus:
     fasta: "../resources/reference/Linanthus_parryae_spaceless.fasta"
-    gff3: "results/braker/linanthus/braker.gff3"
+    gff3: "results/braker/linanthus/braker_expressed.gff3"
     faa: "results/braker/linanthus/braker_expressed.faa"
 # degeneracy BED source (prefixed hap1 coords, matches grenedalf CHROM)
 mk_degenotate_species: "hap1"
