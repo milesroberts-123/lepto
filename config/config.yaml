@@ -221,9 +221,11 @@ mk_species_annotations:
 # degeneracy BED source (prefixed hap1 coords, matches grenedalf CHROM)
 mk_degenotate_species: "hap1"
 # polymorphic site in a pool: depth >= mk_min_depth, alt count >=
-# mk_min_alt_count and 0 < alt_freq < 1
+# mk_min_alt_count and 0 < alt_freq < 1 (alt 3 of 20 filters single-read
+# sequencing noise, which at alt 1 marked ~46% of CDS sites polymorphic
+# across the 8 pools)
 mk_min_depth: 10
-mk_min_alt_count: 1
+mk_min_alt_count: 3
 
 # --- freqk ---
 freqk_binary: "/global/scratch/users/milesroberts/moi_lab_projects/freqk/target/release/freqk"
