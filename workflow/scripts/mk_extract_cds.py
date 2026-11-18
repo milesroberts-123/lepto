@@ -98,9 +98,15 @@ def main():
                 else:
                     positions.extend(range(end, start - 1, -1))
 
-            seq = "".join(seq_parts).upper()
             if strand == "-":
-                seq = revcomp(seq)
+                # segs are in descending genomic order = transcript order,
+                # so complement each exon separately; reverse-complementing
+                # the joined plus-strand segments here would reverse the
+                # exon order (the 2026-11-15 pal2nal failure: every
+                # minus-strand multi-exon gene came out scrambled).
+                seq = "".join(revcomp(part) for part in seq_parts).upper()
+            else:
+                seq = "".join(seq_parts).upper()
             if not seq:
                 n_bad += 1
                 continue

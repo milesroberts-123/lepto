@@ -201,9 +201,9 @@ dnds_yn00_ctl: "../config/dnds/yn00.ctl"
 # --- McDonald-Kreitman (MK) tests ---
 # Per-gene MK counts: Dn/Ds from codon alignments of 1:1 orthologs
 # (ingroup = Leptosiphon hap1, outgroup = Linanthus parryae), Pn/Ps from
-# grenedalf per-pool allele frequencies classified with the degenotate
-# degeneracy BEDs (0-fold = nonsynonymous, 4-fold = synonymous; 2-fold
-# sites dropped). Genes are the t1 transcript of each expressed gene.
+# grenedalf per-pool allele frequencies classified by translating the
+# observed ALT allele (synonymous -> Ps, nonsynonymous/stop-gain -> Pn).
+# Genes are the t1 transcript of each expressed gene.
 mk_ingroup: "hap1"
 mk_outgroup: "linanthus"
 mk_species_annotations:
@@ -218,8 +218,8 @@ mk_species_annotations:
     fasta: "../resources/reference/Linanthus_parryae_spaceless.fasta"
     gff3: "results/braker/linanthus/braker_expressed.gff3"
     faa: "results/braker/linanthus/braker_expressed.faa"
-# degeneracy BED source (prefixed hap1 coords, matches grenedalf CHROM)
-mk_degenotate_species: "hap1"
+# degeneracy BED source removed: Pn/Ps is classified by translation of
+# the observed ALT allele, not by 0/4-fold degeneracy
 # polymorphic site in a pool: depth >= mk_min_depth, alt count >=
 # mk_min_alt_count and 0 < alt_freq < 1 (alt 3 of 20 filters single-read
 # sequencing noise, which at alt 1 marked ~46% of CDS sites polymorphic
