@@ -813,6 +813,116 @@ continuous_mode <- density_estimate$x[which.max(density_estimate$y)]
 print(continuous_mode)
 ```
 
+# freqk allele frequencies vs grenedalf allele frequencies
+
+```{r freqk_vs_grenedalf}
+# Two independent estimates of the same quantity: freqk counts allele-
+# specific k-mers directly in the reads (alignment-free, one call per pool
+# per site), while grenedalf pileups the vg-surjected BAM (mapping-based).
+# This is the sanity check for the freqk frequency distribution: if the
+# k-mer estimates are sound, the two agree site by site.
+#
+# The join is a one-off streaming pass over the genome-wide grenedalf CSV
+# (tens of GB per pool, written with --write-invariants), so it is cached
+# as a small TSV; delete the cache to rebuild. Built by
+# scripts/freqk_vs_grenedalf.sh, which keeps only sites where the two
+# callers agree on REF and ALT (the mismatch count is printed on build).
+fk_pool       <- "1"   # pool id; matches the per-pool freqk/grenedalf files
+fk_gren_path  <- paste0("../results/freqk/hap2_vs_hap1/", fk_pool,
+                        "_freqk_vs_grenedalf.tsv")
+if (!file.exists(fk_gren_path)) {
+  # repo script (not workflow/scripts): ../../scripts from workflow/notebooks
+  system2("bash", c("../../scripts/freqk_vs_grenedalf.sh", "..", fk_pool,
+                    fk_gren_path))
+}
+
+fk_gren <- fread(fk_gren_path) %>%
+  # match the polymorphism threshold used everywhere else (mk, LDx SNP lists)
+  filter(gren_depth >= 10, !is.na(freqk_af)) %>%
+  mutate(diff     = freqk_af - gren_af,
+         mean_af  = (freqk_af + gren_af) / 2,
+         depth_bin = cut(gren_depth, c(10, 20, 40, 80, Inf),
+                         right = FALSE))
+
+stopifnot("no freqk/grenedalf overlap to plot" = nrow(fk_gren) > 0)
+
+## concordance summary
+fk_gren_stats <- fk_gren %>%
+  summarize(
+    n          = n(),
+    pearson    = cor(freqk_af, gren_af),
+    spearman   = cor(freqk_af, gren_af, method = "spearman"),
+    mean_freqk = mean(freqk_af),
+    mean_gren  = mean(gren_af),
+    frac_05    = mean(abs(diff) < 0.05),
+    frac_10    = mean(abs(diff) < 0.10),
+    frac_20    = mean(abs(diff) < 0.20)
+  )
+
+print(fk_gren_stats)
+
+fk_gren %>%
+  group_by(af_bin = cut(mean_af, seq(0, 1, 0.2), include.lowest = TRUE)) %>%
+  summarize(n = n(), frac_10 = mean(abs(diff) < 0.10),
+            median_abs_diff = median(abs(diff)), .groups = "drop") %>%
+  print()
+
+fk_gren %>%
+  group_by(depth_bin) %>%
+  summarize(n = n(), frac_10 = mean(abs(diff) < 0.10),
+            median_abs_diff = median(abs(diff)), .groups = "drop") %>%
+  print()
+
+fk_today_dir <- paste0("../../results/by-date/", today)
+dir.create(fk_today_dir, recursive = TRUE, showWarnings = FALSE)
+
+## agreement scatter: grenedalf vs freqk
+fk_stats_lab <- with(fk_gren_stats,
+  paste0("r = ", signif(pearson, 3), "   n = ", format(n, big.mark = ","),
+         "\n", signif(100 * frac_10, 3), "% of sites within 0.10"))
+
+g_fk_hex <- ggplot(fk_gren, aes(x = gren_af, y = freqk_af)) +
+  geom_bin2d(bins = 60) +
+  geom_abline(slope = 1, intercept = 0, colour = "pink", linewidth = 0.8) +
+  scale_fill_viridis_c(trans = "log10", name = "sites") +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(title = paste0("pool ", fk_pool, ": freqk vs grenedalf allele frequency"),
+       subtitle = fk_stats_lab,
+       x = "grenedalf ALT frequency (BAM pileup)",
+       y = "freqk ALT frequency (k-mers)") +
+  theme_minimal() +
+  theme(text = element_text(size = 16))
+
+print(g_fk_hex)
+ggsave(file.path(fk_today_dir, paste0(fk_pool, "_freqk_vs_grenedalf.pdf")),
+       g_fk_hex, device = cairo_pdf, width = 6.5, height = 6)
+ggsave(file.path(fk_today_dir, paste0(fk_pool, "_freqk_vs_grenedalf.png")),
+       g_fk_hex, width = 6.5, height = 6)
+
+## where they disagree: difference vs mean frequency
+g_fk_diff <- ggplot(fk_gren, aes(x = mean_af, y = diff)) +
+  geom_bin2d(bins = c(60, 60)) +
+  geom_hline(yintercept = 0, colour = "pink", linewidth = 0.8) +
+  geom_hline(yintercept = c(-0.10, 0.10), colour = "grey40",
+             linetype = "dashed", linewidth = 0.4) +
+  geom_smooth(method = "loess", formula = y ~ x, colour = "skyblue",
+              linewidth = 1.1, se = FALSE) +
+  scale_fill_viridis_c(trans = "log10", name = "sites") +
+  coord_cartesian(ylim = c(-1, 1)) +
+  labs(title = paste0("pool ", fk_pool, ": freqk minus grenedalf"),
+       subtitle = "dashed lines at ±0.10",
+       x = "mean ALT frequency of the two callers",
+       y = "freqk - grenedalf") +
+  theme_minimal() +
+  theme(text = element_text(size = 16))
+
+print(g_fk_diff)
+ggsave(file.path(fk_today_dir, paste0(fk_pool, "_freqk_vs_grenedalf_diff.pdf")),
+       g_fk_diff, device = cairo_pdf, width = 7, height = 6)
+ggsave(file.path(fk_today_dir, paste0(fk_pool, "_freqk_vs_grenedalf_diff.png")),
+       g_fk_diff, width = 7, height = 6)
+```
+
 # coverage from mpileup
 
 ```{r}
