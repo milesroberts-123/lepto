@@ -37,9 +37,13 @@ paste <(awk -F, '{print $2"\t"$3+2"\t"$5}' "$index") "$calls" |
         {split($3,a,"|"); split($4,c,"|"); print $1, $2, a[1], a[2], c[2]}' \
     > "$out.freqk"
 
-# 2. stream grenedalf once, emit matching rows
-awk -F, -v OFS='\t' -v out="$out" '
+# 2. stream grenedalf once, emit matching rows. The keyed table is
+#    tab-separated and the grenedalf CSV is comma-separated, so FS switches
+#    after the first file (an FS change applies to the next record read).
+awk -v OFS='\t' '
+    BEGIN { FS = "\t" }
     NR == FNR { key = $1 SUBSEP $2; ref[key] = $3; alt[key] = $4; af[key] = $5; next }
+    FNR == 1 { FS = "," }
     $1 == "CHROM" { next }
     {
         key = $1 SUBSEP $2
@@ -50,7 +54,7 @@ awk -F, -v OFS='\t' -v out="$out" '
     }
     END {
         printf "freqk_vs_grenedalf: %d matched rows, %d REF/ALT mismatches\n",
-               n, mismatch + 0 > "/dev/stderr"
+               n + 0, mismatch + 0 > "/dev/stderr"
     }
 ' "$out.freqk" "$gren_csv" > "$out.tmp"
 
