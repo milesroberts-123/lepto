@@ -46,6 +46,7 @@ Do not re-derive these from code archaeology. Read the matching file before edit
 | --- | --- |
 | BUSCO chain, lineage download | `docs/workflows/busco.md` |
 | Sequence tube map (`tubemap.smk`) | `docs/workflows/tubemap.md` |
+| BRAKER3 annotation, AUGUSTUS config rebuild, masking checks | `docs/workflows/braker.md` |
 | McDonald-Kreitman chain, `mk_polymorphism` memory design | `docs/workflows/mk.md` |
 | Grenedalf interval outputs, filename geometry | `docs/workflows/grenedalf.md` |
 | Approaches that were rejected — why, and what not to re-add | `docs/reverted-approaches.md` |

@@ -152,9 +152,14 @@ rule braker_run:
         mkdir -p results/braker/{wildcards.ref}
         rm -rf {params.workdir}
         mkdir -p {params.workdir}
-        if [ ! -d {params.cfg} ]; then
-            cp -r $AUGUSTUS_CONFIG_PATH {params.cfg}
-        fi
+        # Fresh AUGUSTUS config every run: BRAKER's training and
+        # optimize_augustus.pl write parameters into this directory, so
+        # reusing it makes the annotation depend on the history of previous
+        # attempts (a skipped-optimize or failed run leaves untrained
+        # parameters behind). Copy the container default each time;
+        # `braker.pl --species` then creates the species subdirectory.
+        rm -rf {params.cfg}
+        cp -r $AUGUSTUS_CONFIG_PATH {params.cfg}
         bams=$(echo {input.bams} | tr ' ' ',')
         braker.pl --species={params.species} \
             --genome={input.genome} \
