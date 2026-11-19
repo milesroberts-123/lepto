@@ -826,7 +826,12 @@ print(continuous_mode)
 # (tens of GB per pool, written with --write-invariants), so it is cached
 # as a small TSV; delete the cache to rebuild. Built by
 # scripts/freqk_vs_grenedalf.sh, which keeps only sites where the two
-# callers agree on REF and ALT (the mismatch count is printed on build).
+# callers describe the same allele pair. grenedalf labels the observed bases
+# itself (its input is a sequence dictionary, not the genome), so where the
+# VCF ALT is the majority base the pair arrives swapped; the join flips the
+# frequency then and records gren_swapped. Sites whose bases are a third
+# allele or N are dropped and counted per freqk-AF bin in the
+# .ascertainment.tsv sidecar.
 fk_pool       <- "1"   # pool id; matches the per-pool freqk/grenedalf files
 fk_gren_path  <- paste0("../results/freqk/hap2_vs_hap1/", fk_pool,
                         "_freqk_vs_grenedalf.tsv")
@@ -839,12 +844,24 @@ if (!file.exists(fk_gren_path)) {
 fk_gren <- fread(fk_gren_path) %>%
   # match the polymorphism threshold used everywhere else (mk, LDx SNP lists)
   filter(gren_depth >= 10, !is.na(freqk_af)) %>%
+  mutate(freqk_af = as.numeric(freqk_af), gren_af = as.numeric(gren_af)) %>%
   mutate(diff     = freqk_af - gren_af,
          mean_af  = (freqk_af + gren_af) / 2,
          depth_bin = cut(gren_depth, c(10, 20, 40, 80, Inf),
                          right = FALSE))
 
 stopifnot("no freqk/grenedalf overlap to plot" = nrow(fk_gren) > 0)
+
+## ascertainment: grenedalf labels the two observed bases itself, so sites
+## whose bases are a third allele (or N) cannot be compared at all. The join
+## writes how many freqk sites that drops, per freqk-AF bin; without this the
+## scatter looks like freqk invents high frequencies.
+fk_asc_path <- sub("\\.tsv$", ".ascertainment.tsv", fk_gren_path)
+if (file.exists(fk_asc_path)) {
+  fk_asc <- fread(fk_asc_path)
+  fk_asc[, pct_unmatched := round(100 * unmatched / (matched + unmatched), 2)]
+  print(fk_asc)
+}
 
 ## concordance summary
 fk_gren_stats <- fk_gren %>%
@@ -856,7 +873,8 @@ fk_gren_stats <- fk_gren %>%
     mean_gren  = mean(gren_af),
     frac_05    = mean(abs(diff) < 0.05),
     frac_10    = mean(abs(diff) < 0.10),
-    frac_20    = mean(abs(diff) < 0.20)
+    frac_20    = mean(abs(diff) < 0.20),
+    frac_swapped = mean(gren_swapped == 1)
   )
 
 print(fk_gren_stats)
@@ -879,7 +897,9 @@ dir.create(fk_today_dir, recursive = TRUE, showWarnings = FALSE)
 ## agreement scatter: grenedalf vs freqk
 fk_stats_lab <- with(fk_gren_stats,
   paste0("r = ", signif(pearson, 3), "   n = ", format(n, big.mark = ","),
-         "\n", signif(100 * frac_10, 3), "% of sites within 0.10"))
+         "\n", signif(100 * frac_10, 3), "% of sites within 0.10",
+         "\n", signif(100 * frac_swapped, 3),
+         "% of sites allele-swapped by grenedalf (freq flipped)"))
 
 g_fk_hex <- ggplot(fk_gren, aes(x = gren_af, y = freqk_af)) +
   geom_bin2d(bins = 60) +
