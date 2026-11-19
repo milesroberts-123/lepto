@@ -338,7 +338,7 @@ set-resources:
     cpus_per_task: 16
     runtime: 1440
   mk_divergence:
-    cpus_per_task: 2
+    cpus_per_task: 4
     runtime: 480
   mk_codeml:
     cpus_per_task: 16

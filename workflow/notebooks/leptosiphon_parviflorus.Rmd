@@ -2048,6 +2048,23 @@ mk_pooled %>%
             median_alpha = median(alpha),
             frac_alpha_pos = mean(alpha > 0))
 
+ggplot(mk_pooled, aes(x = dos)) +
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = 0, lty = 2) +
+  labs(x = "DoS", y = "Genes")
+
+ggsave(file.path(today_dir, "mk_dos_pooled.pdf"),
+       width = 7, height = 5, device = cairo_pdf)
+
+ggplot(mk_pooled, aes(x = fisher_q)) +
+  geom_histogram(bins = 50) +
+  geom_vline(xintercept = 0.05, lty = 2) +
+  labs(x = "MK test q-values\n(Fisher exact test)", y = "Genes")
+
+ggsave(file.path(today_dir, "mk_q_pooled.pdf"),
+       width = 7, height = 5, device = cairo_pdf)
+
+
 ggplot(mk_pooled |> filter(!is.na(alpha)), aes(x = alpha)) +
   geom_histogram(bins = 50) +
   labs(x = expression(alpha), y = "Genes",
