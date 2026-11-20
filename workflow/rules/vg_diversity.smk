@@ -388,8 +388,7 @@ rule grenedalf_depth_bins:
         bin=grenedalf_depth_bin
     shell:
         """
-        bash ../../scripts/grenedalf_window_depth.sh \
-            {input.csv} {output} {params.bin}
+        bash ./scripts/grenedalf_window_depth.sh {input.csv} {output} {params.bin}
         """
 
 
