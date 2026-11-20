@@ -1,5 +1,6 @@
 import pandas as pd
 import csv
+import io
 
 configfile: "../config/config.yaml"
 
@@ -50,10 +51,31 @@ if pooled_ids:
         )
     ]
 
-with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as file:
-    writer = csv.writer(file)
-    for key, value in sample_sizes.items():
-        writer.writerow([key, value])
+# pool_sizes.csv is consumed by every grenedalf rule. Write it only when the
+# content changes: rewriting it on every parse gives it a fresh mtime, and
+# under `--rerun-triggers mtime` that marks the entire grenedalf branch stale
+# on every invocation (backdating the file does not help, the next parse
+# overwrites it). Content-triggered writes keep the mtime honest, so a real
+# pool-size change still reruns the diversity steps.
+_sizes_buf = io.StringIO()
+_sizes_writer = csv.writer(_sizes_buf, lineterminator="\n")
+for key, value in sample_sizes.items():
+    _sizes_writer.writerow([key, value])
+_sizes_text = _sizes_buf.getvalue()
+try:
+    # newline="" keeps the on-disk bytes comparable to the generated text
+    with open("pool_sizes.csv", encoding="utf-8", newline="") as _fh:
+        _sizes_current = _fh.read()
+except FileNotFoundError:
+    _sizes_current = None
+# compare line-ending-insensitively: files written by older versions of this
+# block carry \r\n, and a byte difference would force one unnecessary rewrite
+# (and therefore one full rerun of the grenedalf branch) on the first run
+if _sizes_current is not None:
+    _sizes_current = _sizes_current.replace("\r\n", "\n")
+if _sizes_current != _sizes_text:
+    with open("pool_sizes.csv", "w", newline="", encoding="utf-8") as _fh:
+        _fh.write(_sizes_text)
 
 wildcard_constraints:
     group="[PW]",
