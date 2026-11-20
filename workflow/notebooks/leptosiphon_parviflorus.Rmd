@@ -2142,6 +2142,113 @@ ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_pi.pdf")),
 ```
 
 
+
+# read depth vs CDS density
+
+```{r depth_vs_cds}
+# Does coverage track CDS density? If CDS-dense windows are simply better
+# covered (mappability, repeat masking, graph construction), then a positive
+# CDS-density/pi correlation can be a bioinformatic artefact rather than
+# biology. Depth comes from the same surjected BAM that produced pi, so it
+# carries the same artefacts -- which is exactly what makes it the right
+# confounder to test.
+#
+# Mean depth per window is rebuilt from 1-kb bins streamed out of the
+# per-pool grenedalf frequency table (one pass per pool, cached; the CSV is
+# written with --write-invariants, so zero-coverage sites are counted and the
+# mean is over all dictionary sites rather than only callable ones).
+depth_pool <- "1"
+depth_bin_path <- paste0("../results/vg/hap2_vs_hap1/", depth_pool,
+                         "/depth_bins_1kb.tsv")
+if (!file.exists(depth_bin_path)) {
+  system2("bash", c("../../scripts/grenedalf_window_depth.sh", "..",
+                    depth_pool, depth_bin_path, "1000"))
+}
+depth_bins <- fread(depth_bin_path)
+
+# rebuild every window size of the linked-selection join from the same bins
+depth_win <- rbindlist(lapply(window_sizes, function(w) {
+  depth_bins[
+    , .(depth_sum = sum(depth_sum), n_sites = sum(n_sites)),
+    by = .(chrom, win = floor((bin_start - 1) / w))
+  ][, .(chrom,
+        start         = as.integer(win * w + 1),
+        window_length = as.character(as.integer(w)),
+        mean_depth    = depth_sum / n_sites)]
+}))
+
+pi_depth <- pi_ld %>%
+  left_join(depth_win, by = c("chrom", "start", "window_length"))
+
+stopifnot("no windows joined to the depth table" =
+            sum(!is.na(pi_depth$mean_depth)) > 0)
+
+pi_depth %>%
+  group_by(window_length) %>%
+  summarize(n = n(), with_depth = sum(!is.na(mean_depth)),
+            mean_depth = mean(mean_depth, na.rm = TRUE),
+            .groups = "drop") %>%
+  print()
+
+## correlations, per window size (windows are nested across sizes)
+depth_cds_corr <- corr_wide(pi_depth, "cds_density", "mean_depth")
+depth_pi_corr  <- corr_wide(pi_depth, "mean_depth", "pooled.theta_pi")
+
+print(depth_cds_corr)
+print(depth_pi_corr)
+
+g_depth_cds <- ggplot(pi_depth, aes(x = cds_density, y = mean_depth)) +
+  geom_bin2d(bins = 50) +
+  geom_smooth(method = "lm", colour = "pink") +
+  scale_fill_viridis_c(trans = "log10", name = "windows") +
+  facet_wrap(~window_length, scales = "free_x",
+             labeller = as_labeller(size_titles(depth_cds_corr))) +
+  labs(x = "CDS density", y = "mean read depth",
+       title = paste0("pool ", depth_pool, ": CDS density vs depth")) +
+  theme_minimal() +
+  theme(text = element_text(size = 16))
+
+print(g_depth_cds)
+ggsave(file.path(today_dir, paste0(depth_pool, "_depth_vs_cds.pdf")),
+       g_depth_cds, device = cairo_pdf, width = 7, height = 6)
+
+g_depth_pi <- ggplot(pi_depth, aes(x = mean_depth, y = pooled.theta_pi)) +
+  geom_bin2d(bins = 50) +
+  geom_smooth(method = "lm", colour = "pink") +
+  scale_fill_viridis_c(trans = "log10", name = "windows") +
+  facet_wrap(~window_length, scales = "free_x",
+             labeller = as_labeller(size_titles(depth_pi_corr))) +
+  labs(x = "mean read depth", y = "\u03c04",
+       title = paste0("pool ", depth_pool, ": depth vs diversity")) +
+  theme_minimal() +
+  theme(text = element_text(size = 16))
+
+print(g_depth_pi)
+ggsave(file.path(today_dir, paste0(depth_pool, "_depth_vs_pi.pdf")),
+       g_depth_pi, device = cairo_pdf, width = 7, height = 6)
+
+## partial regressions on the primary window size: does the CDS-density
+## coefficient survive controlling for depth (and LD)?
+pi_depth_primary <- pi_depth %>% filter(window_length == "500000")
+
+mod_depth <- lm(pooled.theta_pi ~ cds_density + mean_depth + mean_r2_direct,
+                data = pi_depth_primary)
+mod_nodepth <- lm(pooled.theta_pi ~ cds_density + mean_r2_direct,
+                  data = pi_depth_primary)
+
+cat("== pi ~ cds_density + mean_r2_direct\n"); print(summary(mod_nodepth)$coefficients)
+cat("== pi ~ cds_density + mean_depth + mean_r2_direct\n"); print(summary(mod_depth)$coefficients)
+
+boot_depth <- block_bootstrap_lm(
+  pi_depth_primary,
+  pooled.theta_pi ~ cds_density + mean_depth + mean_r2_direct,
+  R = 1000, block_length = 3,
+  scaffold_col = "chrom", order_by = "start"
+)
+print(boot_depth)
+
+```
+
 # McDonald-Kreitman tests
 
 Standard MK per gene: Dn/Ds from codon alignments of 1:1 orthologs
