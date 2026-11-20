@@ -21,6 +21,12 @@ busco_summary_txt = (
     f"results/busco/{{ref}}/busco_proteins/"
     f"short_summary.specific.{busco_lineage}.busco_proteins.txt"
 )
+# genome mode: the ceiling an annotation is judged against (same lineage,
+# same BUSCO version; the mode suffix keeps the two runs from colliding)
+busco_genome_summary_txt = (
+    f"results/busco/{{ref}}/busco_genome/"
+    f"short_summary.specific.{busco_lineage}.busco_genome.txt"
+)
 
 
 rule busco_lineage_download:
@@ -71,4 +77,29 @@ rule busco_proteins:
             --offline --download_path {params.downloads_dir} \
             --out_path results/busco/{wildcards.ref} \
             -o busco_proteins --force
+        """
+
+
+rule busco_genome:
+    # Genome-mode BUSCO on the same assembly BRAKER annotated: the ceiling
+    # for annotation completeness. full_table.tsv from this run and from
+    # busco_proteins can be joined on "# Busco id" to see which conserved
+    # genes the assembly has but the annotation lost.
+    input:
+        genome=lambda wildcards: braker_genomes[wildcards.ref],
+        lineage=directory(f"results/busco/downloads/lineages/{busco_lineage}")
+    output:
+        summary=busco_genome_summary_txt
+    params:
+        lineage=busco_lineage,
+        downloads_dir=busco_downloads_dir
+    conda: "../envs/busco.yaml"
+    shell:
+        """
+        mkdir -p results/busco/{wildcards.ref}
+        busco -i {input.genome} \
+            -l {params.lineage} -m genome -c {threads} \
+            --offline --download_path {params.downloads_dir} \
+            --out_path results/busco/{wildcards.ref} \
+            -o busco_genome --force
         """

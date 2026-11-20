@@ -236,7 +236,8 @@ rule ldx_all:
 
 rule busco_all:
     input:
-        expand(busco_summary_txt, ref=braker_refs)
+        expand(busco_summary_txt, ref=braker_refs),
+        expand(busco_genome_summary_txt, ref=braker_refs)
 
 rule vg_tubemap_all:
     input:
