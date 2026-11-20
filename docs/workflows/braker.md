@@ -4,6 +4,25 @@ Target: `braker_all`. Chain: OrthoDB/SRA download (login node, needs
 internet) → fastp trimming → HISAT2 `--dta` → `braker.pl` in the
 `teambraker/braker3:v3.1.1` container → featureCounts expression filter.
 
+## Running it
+
+The rule declares `container: braker_container`, so **the run needs
+singularity/apptainer in addition to conda**:
+
+```bash
+snkc braker_all --sdm conda singularity    # or: --sdm conda apptainer
+```
+
+The `snkc` alias only enables conda, so without the extra flag snakemake
+prints `Singularity containers: ignored`, the image is skipped, and the
+rule dies immediately with `AUGUSTUS_CONFIG_PATH: unbound variable`
+(the rule now emits an explicit error for this case). The first pull needs
+internet, so cache the image from a login node:
+
+```bash
+apptainer pull docker://teambraker/braker3:v3.1.1   # into .snakemake/singularity/
+```
+
 ## AUGUSTUS config is rebuilt on every run
 
 `augustus_config/` under `results/braker/{ref}/` is **not** a cached

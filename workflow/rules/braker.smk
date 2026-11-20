@@ -152,6 +152,16 @@ rule braker_run:
         mkdir -p results/braker/{wildcards.ref}
         rm -rf {params.workdir}
         mkdir -p {params.workdir}
+        # BRAKER only works inside its container: AUGUSTUS_CONFIG_PATH is set
+        # by the image, and braker.pl/gmetp.pl/etraining live there. Without
+        # `--sdm conda singularity` snakemake ignores `container:` and this
+        # variable is unset, so fail with an actionable message instead of a
+        # bare unbound-variable error.
+        if [ -z "${{AUGUSTUS_CONFIG_PATH:-}}" ]; then
+            echo "ERROR: AUGUSTUS_CONFIG_PATH is unset - the BRAKER container was not used." >&2
+            echo "       Run snakemake with --sdm conda singularity (docs/workflows/braker.md)." >&2
+            exit 1
+        fi
         # Fresh AUGUSTUS config every run: BRAKER's training and
         # optimize_augustus.pl write parameters into this directory, so
         # reusing it makes the annotation depend on the history of previous
@@ -159,7 +169,7 @@ rule braker_run:
         # parameters behind). Copy the container default each time;
         # `braker.pl --species` then creates the species subdirectory.
         rm -rf {params.cfg}
-        cp -r $AUGUSTUS_CONFIG_PATH {params.cfg}
+        cp -r "$AUGUSTUS_CONFIG_PATH" {params.cfg}
         bams=$(echo {input.bams} | tr ' ' ',')
         braker.pl --species={params.species} \
             --genome={input.genome} \
