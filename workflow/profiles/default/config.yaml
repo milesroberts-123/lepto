@@ -37,6 +37,7 @@ set-threads:
   grenedalf_diversity_interval: 4
   grenedalf_diversity_genome: 4
   grenedalf_diversity_interval_pooled: 4
+  grenedalf_depth_bins: 1
   grenedalf_frequency: 4
   grenedalf_fst_interval: 8
   grenedalf_fst_genome: 8
@@ -143,6 +144,10 @@ set-resources:
   grenedalf_diversity_interval:
     cpus_per_task: 4
     runtime: 1440
+  grenedalf_depth_bins:
+    # one streaming pass over the pool's genome-wide frequency CSV (~45 min)
+    cpus_per_task: 1
+    runtime: 180
   grenedalf_diversity_interval_pooled:
     cpus_per_task: 4
     runtime: 1440

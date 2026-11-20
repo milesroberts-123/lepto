@@ -199,6 +199,10 @@ rule vg_diversity_all:
             variant=[config["vg_ref_variant"]],
             backbone=[config["vg_ref_backbone"]],
             ID=sample_ids),
+        expand(f"results/vg/{{variant}}_vs_{{backbone}}/{{ID}}/depth_bins_{grenedalf_depth_bin}bp.tsv",
+            variant=[config["vg_ref_variant"]],
+            backbone=[config["vg_ref_backbone"]],
+            ID=sample_ids),
         *pooled_diversity_inputs
 
 rule sourmash_all:

@@ -2157,12 +2157,16 @@ ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_pi.pdf")),
 # per-pool grenedalf frequency table (one pass per pool, cached; the CSV is
 # written with --write-invariants, so zero-coverage sites are counted and the
 # mean is over all dictionary sites rather than only callable ones).
+# Built by the workflow: `grenedalf_depth_bins` in vg_diversity_all writes
+# results/vg/{variant}_vs_{backbone}/{ID}/depth_bins_{bin}bp.tsv for every
+# pool, one streaming pass over the genome-wide frequency CSV each.
 depth_pool <- "1"
+depth_bin_bp <- 1000   # must match config[["grenedalf_depth_bin"]]
 depth_bin_path <- paste0("../results/vg/hap2_vs_hap1/", depth_pool,
-                         "/depth_bins_1kb.tsv")
+                         "/depth_bins_", depth_bin_bp, "bp.tsv")
 if (!file.exists(depth_bin_path)) {
-  system2("bash", c("../../scripts/grenedalf_window_depth.sh", "..",
-                    depth_pool, depth_bin_path, "1000"))
+  stop("missing ", depth_bin_path,
+       " - run `snkc vg_diversity_all` (grenedalf_depth_bins) first")
 }
 depth_bins <- fread(depth_bin_path)
 

@@ -130,6 +130,10 @@ tubemap_region_pad: 100
 grenedalf_pooled_diversity_name: "pooled"
 grenedalf_pooled_diversity_ids: [1, 3, 5, 7]
 grenedalf_pooled_multi_file_locus_set: "union"
+# bin width for the per-pool read-depth bins consumed by the CDS-density /
+# depth confound check (grenedalf_depth_bins); the notebook rebuilds any
+# window size that is a multiple of this width from the bins
+grenedalf_depth_bin: 1000
 
 # --- sourmash ---
 sourmash_fastas:

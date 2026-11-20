@@ -3,6 +3,9 @@
 # compute diversity/Fst with grenedalf over degenerate-site masks.
 
 
+grenedalf_depth_bin = config["grenedalf_depth_bin"]
+
+
 def count_vcf_contigs(vcfgz):
     """Return the number of contigs in a tabix-indexed VCF."""
     import subprocess
@@ -363,6 +366,30 @@ rule grenedalf_frequency:
             --allow-file-overwriting \\
             --threads {threads} \\
             --sam-path {input.bam}
+        """
+
+
+rule grenedalf_depth_bins:
+    # Per-bin read depth from the per-site frequency table, one file per
+    # pool. One streaming pass over the genome-wide CSV (it has a row per
+    # dictionary site because of --write-invariants), so window-level depth
+    # never needs another pass: any window size that is a multiple of the bin
+    # width is rebuilt from the bins. Depth is post-filter, i.e. the same
+    # base/map-quality thresholds that produced theta_pi, which is what makes
+    # it the right covariate for the CDS-density / diversity confound.
+    # The bin width is baked into the filename (grenedalf naming lesson) and
+    # deliberately NOT a wildcard: a global {bin} would collide with other
+    # rules' naming.
+    input:
+        csv="results/vg/{variant}_vs_{backbone}/{ID}/grenedalf_results_frequency.csv"
+    output:
+        f"results/vg/{{variant}}_vs_{{backbone}}/{{ID}}/depth_bins_{grenedalf_depth_bin}bp.tsv"
+    params:
+        bin=grenedalf_depth_bin
+    shell:
+        """
+        bash ../../scripts/grenedalf_window_depth.sh \
+            {input.csv} {output} {params.bin}
         """
 
 
