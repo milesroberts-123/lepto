@@ -2160,15 +2160,22 @@ ggsave(file.path(today_dir, paste0(id_pool, "_ld_vs_pi.pdf")),
 # Built by the workflow: `grenedalf_depth_bins` in vg_diversity_all writes
 # results/vg/{variant}_vs_{backbone}/{ID}/depth_bins_{bin}bp.tsv for every
 # pool, one streaming pass over the genome-wide frequency CSV each.
-depth_pool <- "1"
-depth_bin_bp <- 1000   # must match config[["grenedalf_depth_bin"]]
-depth_bin_path <- paste0("../results/vg/hap2_vs_hap1/", depth_pool,
-                         "/depth_bins_", depth_bin_bp, "bp.tsv")
-if (!file.exists(depth_bin_path)) {
-  stop("missing ", depth_bin_path,
-       " - run `snkc vg_diversity_all` (grenedalf_depth_bins) first")
+# Average over the same pools that make up the pooled pi4 superpool
+# (config: grenedalf_pooled_diversity_ids), so depth and diversity describe
+# the same samples.
+depth_pools   <- c("1", "3", "5", "7")
+depth_bin_bp  <- 1000   # must match config[["grenedalf_depth_bin"]]
+depth_pattern <- paste0("../results/vg/hap2_vs_hap1/", depth_pools,
+                        "/depth_bins_", depth_bin_bp, "bp.tsv")
+depth_files   <- Sys.glob(depth_pattern)
+if (length(depth_files) != length(depth_pools)) {
+  stop("missing depth bins - run `snkc vg_diversity_all` (grenedalf_depth_bins) first:\n",
+       paste(depth_pattern[!file.exists(depth_pattern)], collapse = "\n"))
 }
-depth_bins <- fread(depth_bin_path)
+depth_bins <- rbindlist(lapply(depth_files, fread))[
+  , .(depth_sum = sum(depth_sum), n_sites = sum(n_sites)),
+  by = .(chrom, bin_start)
+]
 
 # rebuild every window size of the linked-selection join from the same bins
 depth_win <- rbindlist(lapply(window_sizes, function(w) {
@@ -2208,12 +2215,12 @@ g_depth_cds <- ggplot(pi_depth, aes(x = cds_density, y = mean_depth)) +
   facet_wrap(~window_length, scales = "free_x",
              labeller = as_labeller(size_titles(depth_cds_corr))) +
   labs(x = "CDS density", y = "mean read depth",
-       title = paste0("pool ", depth_pool, ": CDS density vs depth")) +
+       title = paste0("pools ", paste(depth_pools, collapse = "+"), ": CDS density vs depth")) +
   theme_minimal() +
   theme(text = element_text(size = 16))
 
 print(g_depth_cds)
-ggsave(file.path(today_dir, paste0(depth_pool, "_depth_vs_cds.pdf")),
+ggsave(file.path(today_dir, "depth_vs_cds.pdf"),
        g_depth_cds, device = cairo_pdf, width = 7, height = 6)
 
 g_depth_pi <- ggplot(pi_depth, aes(x = mean_depth, y = pooled.theta_pi)) +
@@ -2223,12 +2230,12 @@ g_depth_pi <- ggplot(pi_depth, aes(x = mean_depth, y = pooled.theta_pi)) +
   facet_wrap(~window_length, scales = "free_x",
              labeller = as_labeller(size_titles(depth_pi_corr))) +
   labs(x = "mean read depth", y = "\u03c04",
-       title = paste0("pool ", depth_pool, ": depth vs diversity")) +
+       title = paste0("pools ", paste(depth_pools, collapse = "+"), ": depth vs diversity")) +
   theme_minimal() +
   theme(text = element_text(size = 16))
 
 print(g_depth_pi)
-ggsave(file.path(today_dir, paste0(depth_pool, "_depth_vs_pi.pdf")),
+ggsave(file.path(today_dir, "depth_vs_pi.pdf"),
        g_depth_pi, device = cairo_pdf, width = 7, height = 6)
 
 ## partial regressions on the primary window size: does the CDS-density
