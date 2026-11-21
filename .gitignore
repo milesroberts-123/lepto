@@ -65,3 +65,6 @@ workflow/yn
 # python bytecode (workflow/scripts)
 __pycache__/
 *.pyc
+
+# session transcripts are archived to Google Drive now
+transcripts/
