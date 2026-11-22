@@ -220,8 +220,8 @@ mk_species_annotations:
     faa: "results/featurecounts/hap1_expressed.faa"
   linanthus:
     fasta: "../resources/reference/Linanthus_parryae_spaceless.fasta"
-    gff3: "results/braker/linanthus/braker_expressed.gff3"
-    faa: "results/braker/linanthus/braker_expressed.faa"
+    gff3: "results/braker/linanthus/braker.gff3"
+    faa: "results/braker/linanthus/braker.aa"
 # degeneracy BED source removed: Pn/Ps is classified by translation of
 # the observed ALT allele, not by 0/4-fold degeneracy
 # polymorphic site in a pool: depth >= mk_min_depth, alt count >=
