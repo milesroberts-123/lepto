@@ -6,8 +6,15 @@ dependencies:
   - python=3.12
   - orthofinder=3.1.5
   - seqkit=2.13.0
-  # orthofinder imports ete4 at startup and ete4's smartview submodule imports
-  # brotli eagerly, but the bioconda closure leaves it unsatisfied
-  # (ete4 4.4.0 declares Requires-Dist: brotli). Without this the rule dies
-  # with ModuleNotFoundError before OrthoFinder prints anything.
-  - brotli
+  # orthofinder imports ete4 at startup, and ete4.smartview imports its whole
+  # web-view stack eagerly (ete4/smartview/explorer.py: cheroot, brotli,
+  # bottle) before OrthoFinder prints anything. The bioconda closure leaves
+  # all three unsatisfied. `brotli` alone is the C library + CLI; the Python
+  # module is brotli-python (PyPI: Brotli).
+  - brotli-python
+  - bottle
+  - cheroot
+  # OrthoFinder imports rich inside a bare `except ImportError: ...` and then
+  # uses rich.console.Console unconditionally, so a missing rich surfaces as
+  # `NameError: name 'Console' is not defined` rather than an ImportError.
+  - rich
