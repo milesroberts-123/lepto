@@ -59,6 +59,10 @@ Observed on the full `hap2_vs_hap1` panel (10,522,223 variants → 4,644,674
 | jellyfish threads then | 4 |
 | wall time then | exceeded the 24 h limit |
 
-The hash size is left at the default on purpose: `-m 31 -s 100M` is ~1 byte
-per distinct k-mer per entry and the observed peak fits comfortably inside
-the 64 GB allocation, so raising it buys nothing and risks the allocation.
+The hash size is left at the default (`-s 100M`) because it was out of scope
+for this change, not because it is right-sized: a ~2 Gbp segment set has far
+more than 100 M distinct k-mers, so jellyfish grows the table and rehashes.
+That growth is now cheap (node-local disk), but `-s` should be sized from the
+segment FASTA (`bp / 0.8`) once per-stage timings exist. By jellyfish's
+`2^l × (2k − l + r + 1) / 8` formula, 2 G entries is ~9.5 GB at k=31 — it fits
+the ~20 GB of headroom left by the 43.8 GB Python-side peak, but not by much.
