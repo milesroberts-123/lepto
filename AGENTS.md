@@ -49,6 +49,7 @@ Do not re-derive these from code archaeology. Read the matching file before edit
 | BRAKER3 annotation, AUGUSTUS config rebuild, masking checks | `docs/workflows/braker.md` |
 | McDonald-Kreitman chain, `mk_polymorphism` memory design | `docs/workflows/mk.md` |
 | Grenedalf interval outputs, filename geometry | `docs/workflows/grenedalf.md` |
+| kMate panel build: node-local temp, htc memory derivation | `docs/workflows/kmate.md` |
 | Approaches that were rejected — why, and what not to re-add | `docs/reverted-approaches.md` |
 | Full pre-2026-11-19 AGENTS.md, for anything missing | `docs/legacy/AGENTS-2026-11-19.md` |
 

@@ -124,12 +124,21 @@ checkpoint kmate_build_index:
         k=config["kmate_k"]
     shell:
         """
+        # Stage on node-local disk: build-index puts its jellyfish hash at
+        # <out>_tmp/panel.jf and queries it through an mmap, so on Lustre the
+        # random reads stall for hours (kMate BUILDING_A_PANEL.md, Step 1).
+        # kmate 0.1.2 has no --tmp-dir, so --out itself is redirected and the
+        # per-chromosome TSVs are copied back to the declared output dir.
+        mkdir -p ${{SLURM_TMPDIR:-/tmp}}/kmate_index
         kmate build-index \\
             --vcf {input.vcf} \\
             --ref {input.fasta} \\
-            --out $(dirname {output})/index/panel \\
+            --out ${{SLURM_TMPDIR:-/tmp}}/kmate_index/panel \\
             -k {params.k} \\
+            --jellyfish-threads {threads} \\
             --haploid
+        mkdir -p $(dirname {output})/index && \\
+            cp ${{SLURM_TMPDIR:-/tmp}}/kmate_index/panel_*_kmers.tsv.gz $(dirname {output})/index/
         """
 
 
