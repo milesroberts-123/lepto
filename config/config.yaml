@@ -43,10 +43,20 @@ panther_hmmsearch_ince: 0.001
 panther_hmmsearch_incdome: 1e-8
 
 # --- OrthoFinder ---
+# Proteomes from outside the workflow: staged verbatim, no t1 filtering and
+# no species prefixing.
 orthofinder_external_proteomes:
   arabidopsis: "../resources/proteomes/arabidopsis_thaliana.faa"
-  linanthus: "results/braker/linanthus/braker_expressed.faa"
   #phlox: "../resources/proteomes/phlox_drummondii/phlox_drummondii.faa"
+# Proteomes produced by this workflow: filtered to the .t1 representative
+# transcript and prefixed with "<species>." like hap1/hap2. Anything that
+# also feeds mk_species_annotations belongs here, so the orthology input and
+# the CDS used for dN/dS come from the same gene models. The linanthus entry
+# is the unfiltered BRAKER proteome (40,395 .t1 genes); it must stay
+# isoform-filtered because extra isoforms would be read as paralogs and
+# shrink the 1:1 ortholog set used for MK.
+orthofinder_local_proteomes:
+  linanthus: "results/braker/linanthus/braker.aa"
 
 # --- featureCounts ---
 featurecounts_annotations:

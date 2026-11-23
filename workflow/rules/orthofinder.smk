@@ -1,9 +1,16 @@
 # OrthoFinder pipeline: filter transcripts, prefix sequences by species,
 # stage proteomes, and run OrthoFinder to produce orthogroups.
+# Inputs are single-isoform (.t1) proteomes: hap1/hap2 from the expressed
+# featureCounts sets, linanthus from the unfiltered BRAKER genes (see
+# config: orthofinder_local_proteomes).
 
 rule orthofinder_filter_t1:
+    # hap1/hap2 come from the featureCounts-expressed proteomes; species in
+    # config["orthofinder_local_proteomes"] (linanthus) point at their own
+    # source so the orthology input matches mk_species_annotations.
     input:
-        "results/featurecounts/{species}_expressed.faa"
+        lambda wc: config.get("orthofinder_local_proteomes", {}).get(wc.species)
+        or f"results/featurecounts/{wc.species}_expressed.faa"
     output:
         "results/orthofinder/filtered/{species}.t1.faa"
     conda: "../envs/orthofinder.yaml"
