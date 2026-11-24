@@ -2209,22 +2209,25 @@ print(depth_cds_corr)
 print(depth_pi_corr)
 
 g_depth_cds <- ggplot(pi_depth, aes(x = cds_density, y = mean_depth)) +
-  geom_bin2d(bins = 50) +
+  #geom_bin2d(bins = 50) +
+  geom_point(alpha = 0.2)+
   geom_smooth(method = "lm", colour = "pink") +
-  scale_fill_viridis_c(trans = "log10", name = "windows") +
+  #scale_fill_viridis_c(trans = "log10", name = "windows") +
   facet_wrap(~window_length, scales = "free_x",
              labeller = as_labeller(size_titles(depth_cds_corr))) +
-  labs(x = "CDS density", y = "mean read depth",
+  labs(x = "CDS density", y = "Mean read depth",
        title = paste0("pools ", paste(depth_pools, collapse = "+"), ": CDS density vs depth")) +
   theme_minimal() +
+  scale_y_log10() +
   theme(text = element_text(size = 16))
 
 print(g_depth_cds)
 ggsave(file.path(today_dir, "depth_vs_cds.pdf"),
-       g_depth_cds, device = cairo_pdf, width = 7, height = 6)
+       g_depth_cds, device = cairo_pdf, width = 8, height = 5)
 
 g_depth_pi <- ggplot(pi_depth, aes(x = mean_depth, y = pooled.theta_pi)) +
-  geom_bin2d(bins = 50) +
+  #geom_bin2d(bins = 50) +
+  geom_point(alpha = 0.2)+
   geom_smooth(method = "lm", colour = "pink") +
   scale_fill_viridis_c(trans = "log10", name = "windows") +
   facet_wrap(~window_length, scales = "free_x",
@@ -2232,11 +2235,13 @@ g_depth_pi <- ggplot(pi_depth, aes(x = mean_depth, y = pooled.theta_pi)) +
   labs(x = "mean read depth", y = "\u03c04",
        title = paste0("pools ", paste(depth_pools, collapse = "+"), ": depth vs diversity")) +
   theme_minimal() +
+  scale_x_log10()+
+  scale_y_log10()+
   theme(text = element_text(size = 16))
 
 print(g_depth_pi)
 ggsave(file.path(today_dir, "depth_vs_pi.pdf"),
-       g_depth_pi, device = cairo_pdf, width = 7, height = 6)
+       g_depth_pi, device = cairo_pdf, width =8, height = 5)
 
 ## partial regressions on the primary window size: does the CDS-density
 ## coefficient survive controlling for depth (and LD)?

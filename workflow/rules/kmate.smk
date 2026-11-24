@@ -268,7 +268,7 @@ rule kmate_run:
             --kmer-db {input.jf} \\
             --reads {input.reads} \\
             --sample {wildcards.ID} \\
-            --out {params.out_prefix} \\
+            --out {params.out_prefix}.tsv \\
             --chroms {wildcards.chrom} \\
             --unit {params.unit}
         """
