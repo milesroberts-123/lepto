@@ -230,7 +230,7 @@ rule kmate_kmer_db:
             -s {params.hash_size} \\
             -t {threads} \\
             -C \\
-            --min-count 2 \\
+            --lower-count=2 \\
             --bf-size {params.bf_size} \\
             -o {output} /dev/fd/0
         """
