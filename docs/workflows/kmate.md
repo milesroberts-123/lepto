@@ -72,32 +72,33 @@ which is why the peak (43.8 GB) is far above the 100 M initial allocation.
 zcat -f <reads> | jellyfish count -m 31 -s <hash> -t <threads> -C -o <db>
 ```
 
-and exposes neither `--min-count` nor `--bf-size`, so the rule calls
-`jellyfish count` directly with the same flags plus:
+and exposes none of the switches needed to make that tractable, so the rule
+calls `jellyfish count` directly with the same binary and the same `-C`, which
+keeps the DB readable by `kmate run --kmer-db` unchanged.
 
-```
---min-count 2 --bf-size 4G
-```
+Two flags matter:
 
-Singleton k-mers in a pool library are overwhelmingly sequencing error, and
-they dominate the distinct-k-mer count (a 456 GB FASTQ has ~10^11 distinct
-31-mers if every error counts). Keeping them out of the table is what makes a
-small hash viable at all: the table then holds only the count ≥ 2 set, which
-is roughly the real k-mer space. `query_kmer_db` maps absent k-mers to count
-0, so the consumer needs no change, and the DB format is unchanged because it
-is the same binary with the same `-C`.
+| flag | why |
+| --- | --- |
+| `--disk` | when the table fills, write a partial hash and keep going instead of doubling the table in RAM. Peak RSS stays near `-s`; the price is spill files plus a merge pass, both under `SLURM_TMPDIR`. |
+| `--lower-count 2` | keeps singleton k-mers out of the written DB. This is an **output** filter — it shrinks the DB that `kmate run` mmaps, it does not reduce peak RSS. |
 
-`-s` is the **initial** allocation (~4.6 B/entry: `8G` ≈ 37 GB) and jellyfish
-doubles it when the load factor runs out. Under-sizing therefore costs a
-rehash pass and a transient ~1.5× peak, never wrong counts — a small counter
-width (`--counter-len`, `-c`) is what would silently saturate counts, which is
-why `-c` is left alone and `--min-count` is the flag used.
+`-s` is the hash size in entries, ~4.6 B each (`8G` ≈ 37 GB). With `--disk` an
+undersized table costs extra spill files, not a resize and not a wrong answer.
 
-48 cores (192 GB) is retained for `kmate_kmer_db` until the first pool is
-measured; with singletons excluded the expected peak is ~40 GB, at which
-point `cpus_per_task: 16` (64 GB) is the right request.
+**Do not use `--bf-size`.** It enables jellyfish's one-pass Bloom filter, which
+looks like the obvious fix and is not:
 
-That growth is now cheap (node-local disk), but `-s` should be sized from the
-segment FASTA (`bp / 0.8`) once per-stage timings exist. By jellyfish's
-`2^l × (2k − l + r + 1) / 8` formula, 2 G entries is ~9.5 GB at k=31 — it fits
-the ~20 GB of headroom left by the 43.8 GB Python-side peak, but not by much.
+- the bloom filter must be sized to the *total* k-mer count, ~3×10¹¹ for a
+  456 GB pool, i.e. hundreds of GB of filter — larger than the hash it replaces;
+- at a smaller size it saturates, so nothing is filtered and the cost is pure
+  overhead;
+- and the one-pass method reports every surviving count **one lower than
+  actual** (`count 2` k-mers come back as 1), which biases the k-mer weights
+  that `kmate run` feeds to its EM.
+
+Note also that `-c` is `--counter-len` (bits per counter, default 7), not a
+minimum count: `-c 2` would silently cap every count at 3.
+
+`cpus_per_task: 16` for this rule gives 64 GB of derived memory, comfortable
+for a ~37 GB table plus spill buffers.

@@ -267,17 +267,11 @@ kmate_k: 31
 kmate_min_ac: 1
 kmate_invariant_margin: 1
 kmate_unit: "chrom"
-# jellyfish settings for kmate_kmer_db. --min-count 2 (below) drops k-mers
-# seen once (sequencing error) before they enter the table, so the table only
-# holds the count >= 2 set; that is what makes 8G viable instead of 32G.
-# -s is the INITIAL allocation (~4.6 B/entry: 8G ~ 37 GB) and jellyfish
-# doubles it when the load factor runs out, so under-sizing costs a rehash
-# pass and a transient ~1.5x peak, never wrong counts. 48 cores = 192 GB
-# covers one doubling (16G ~ 74 GB) with room for the resize.
+# jellyfish hash size for kmate_kmer_db (-s, ~4.6 B/entry: 8G ~ 37 GB).
+# The rule runs with --disk, so the table is not doubled when it fills: partial
+# hashes spill to SLURM_TMPDIR and are merged, which bounds peak RSS near -s.
+# Raising this trades RAM for fewer spill files/merge passes.
 kmate_hash_size: "8G"
-# bloom filter for --min-count; too small lets singletons leak through
-# (smaller savings, still correct counts). 4G = 4 Gbit = 512 MB.
-kmate_bf_size: "4G"
 
 # --- CDS windows ---
 # One assembly fasta + one matching GFF3 annotation; output is a BED of

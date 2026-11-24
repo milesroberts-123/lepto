@@ -16,8 +16,8 @@
 # per-chromosome), so runs are one job PER CHROM and a final concat
 # rule assembles the per-pool TSV. Pool k-mers are counted once per
 # sample into a temporary jellyfish DB (kmate_kmer_db), which is
-# deleted after the concat; its --hash-size must be generous (pool 1 is
-# 456 GB of fastq, config kmate_hash_size 32G). The wiki warns
+# deleted after the concat (pool 1 is 456 GB of fastq; see
+# kmate_kmer_db for the --disk/hash-size design). The wiki warns that
 # shared-filesystem DB reads are slow at scale — acceptable at 4 pools.
 
 import os
@@ -214,25 +214,35 @@ rule kmate_kmer_db:
         "benchmarks/kmate/kmate_kmer_db_{ID}.bench"
     params:
         k=config["kmate_k"],
-        hash_size=config["kmate_hash_size"],
-        bf_size=config["kmate_bf_size"]
+        hash_size=config["kmate_hash_size"]
     shell:
         """
-        mkdir -p $(dirname {output})
         # jellyfish directly: `kmate build-kmer-db` is a thin wrapper over
-        # `jellyfish count` and exposes neither --min-count nor --bf-size.
-        # Same binary, same -C canonical hash, same k, so the DB is readable
-        # by `kmate run --kmer-db` unchanged. --min-count 2 keeps singleton
-        # k-mers (sequencing error) out of the table, which is what makes the
-        # smaller hash size viable; query_kmer_db defaults absent k-mers to 0.
+        # `jellyfish count` and exposes none of these switches. Same binary,
+        # same -C canonical hash, same k, so `kmate run --kmer-db` reads it
+        # unchanged.
+        #   --disk        spill partial hashes to disk instead of doubling the
+        #                 table, so peak RSS stays near -s (~4.6 B/entry)
+        #                 instead of growing to hold every distinct k-mer.
+        #   --lower-count 2
+        #                 keep singleton k-mers (pure sequencing error) out of
+        #                 the written DB. This is an output filter, so it is a
+        #                 size/query win, not a memory one.
+        # Do NOT add --bf-size: the one-pass Bloom method needs bf-size ~= the
+        # total k-mer count (~3e11 here), and it reports every surviving count
+        # one lower than actual, which biases kmate's EM weights.
+        # The spill files and the merge happen under SLURM_TMPDIR so only the
+        # finished DB touches Lustre.
+        mkdir -p ${{SLURM_TMPDIR:-/tmp}}/kmerdb
         zcat -f {input} | jellyfish count \\
             -m {params.k} \\
             -s {params.hash_size} \\
             -t {threads} \\
             -C \\
-            --lower-count=2 \\
-            --bf-size {params.bf_size} \\
-            -o {output} /dev/fd/0
+            --disk \\
+            --lower-count 2 \\
+            -o ${{SLURM_TMPDIR:-/tmp}}/kmerdb/{wildcards.ID}.jf /dev/fd/0
+        cp ${{SLURM_TMPDIR:-/tmp}}/kmerdb/{wildcards.ID}.jf {output}
         """
 
 

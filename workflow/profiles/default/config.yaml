@@ -300,11 +300,11 @@ set-resources:
     cpus_per_task: 2
     runtime: 120
   kmate_kmer_db:
-    # jellyfish allocates the whole -s 32G hash upfront: measured MaxRSS
-    # 163.5 GB (2^35 entries x ~4.8 B/entry; 40-core/160 GB probe OOM'd).
-    # Memory derives from cores (savio4 htc DefMemPerCPU=4000 MB), so
-    # 48 cores -> 192 GB, never mem_mb
-    cpus_per_task: 48
+    # jellyfish runs with --disk, so the table is not doubled when it fills:
+    # partial hashes spill and merge, bounding peak RSS near -s 8G (~37 GB,
+    # 2^33 entries x ~4.6 B). 16 cores -> 64 GB derived memory leaves room for
+    # the hash plus spill buffers. Never pass mem_mb on savio4_htc.
+    cpus_per_task: 16
     runtime: "max(4*input.size_mb/1024, 240)"
   kmate_run:
     # loads the ~163 GB jf back in; 48 cores -> 192 GB derived memory
