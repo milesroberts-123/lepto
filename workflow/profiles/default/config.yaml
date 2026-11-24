@@ -308,7 +308,7 @@ set-resources:
     runtime: "max(4*input.size_mb/1024, 240)"
   kmate_run:
     # loads the ~163 GB jf back in; 48 cores -> 192 GB derived memory
-    cpus_per_task: 48
+    cpus_per_task: 16
     runtime: "max(4*input.size_mb/1024, 480)"
   ldx_run:
     cpus_per_task: 4

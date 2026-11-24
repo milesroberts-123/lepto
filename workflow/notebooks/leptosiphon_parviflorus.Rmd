@@ -669,6 +669,81 @@ ggplot(div_scans %>% filter(chrom == "hap1_scaffold_25", end %% 50e3 == 0, end >
 ggsave(paste0("../../results/by-date/", today, "/hap1_scaffold_25_tajimas_d_scans.pdf"), width = 6, height = 7, device = cairo_pdf)
 ```
 
+### PBS (population branch statistic)
+
+```{r pbs}
+
+# calculate divergence times
+T_scans <- fst_scans |>
+    mutate(across(ends_with(".fst"), ~ -log(1 - .x)))
+  
+triplets <- combn(1:8, 3, simplify = FALSE)
+
+pbs_results <- fst_scans |> select(chrom, start, end)
+
+for(triplet in triplets){
+  print(triplet)
+  triplet <- as.character(unlist(triplet))
+  
+  A <- triplet[1]
+  B <- triplet[2]
+  C <- triplet[3]
+  
+  fst_abc <- T_scans |>
+    select(ends_with(".fst")) |>
+    select(starts_with(paste0(A, ":", B)), starts_with(paste0(A, ":", C)), starts_with(paste0(B, ":", C)))
+  
+  fst_abc$pbs_A_B_C <- (fst_abc[,1] + fst_abc[,2] - fst_abc[,3])/2
+  fst_abc$pbs_B_A_C <- (fst_abc[,1] + fst_abc[,3] - fst_abc[,2])/2
+  fst_abc$pbs_C_A_B <- (fst_abc[,2] + fst_abc[,3] - fst_abc[,1])/2
+  
+  pbs_result <- fst_abc |>
+    rename(!!paste0("pbs_", A, "_", B, "_", C) := !!"pbs_A_B_C",
+           !!paste0("pbs_", B, "_", A, "_", C) := !!"pbs_B_A_C",
+           !!paste0("pbs_", C, "_", A, "_", B) := !!"pbs_C_A_B") 
+  
+  pbs_results <- cbind(pbs_results, pbs_result |> select(starts_with("pbs")))
+  
+}
+
+dir.create(paste0("../../results/by-date/", today))
+fwrite(pbs_results, paste0("../../results/by-date/", today, "/pbs.tsv"))
+
+```
+
+### PBS plot by chromosome
+
+```{r}
+
+pbs_long <- pbs_results |> pivot_longer(starts_with("pbs"), values_to = "PBS", names_to = "triplet")
+
+rm(pbs_results); gc()
+
+data_list <- split(pbs_long, list(pbs_long$chrom, pbs_long$triplet), drop = T)
+
+# 2. Open the PDF device
+pdf(paste0("../../results/by-date/", today, "/pbs_scans.pdf"), width = 8, height = 6)
+
+# 3. Map over the list, generate a standard plot for each subset, and print
+walk(data_list, function(sub_data) {
+p <- ggplot(sub_data,  aes(x = (start + end)/2, y = PBS)) +
+  geom_point(shape = 16) +
+  geom_smooth(method = "loess", span = 0.2, se = FALSE) +
+  labs(x = "Window midpoint (bp)", 
+       y = "PBS", 
+       title = paste0(unique(sub_data$chrom), 
+                      ", Triplet: ", 
+                      unique(sub_data$triplet))
+  )
+
+  print(p)
+})
+
+# 4. Close the PDF device
+dev.off()
+
+```
+
 # differentiation matrix
 
 ```{r}
@@ -2316,6 +2391,29 @@ ggplot(mk_pooled, aes(x = fisher_q)) +
 
 ggsave(file.path(today_dir, "mk_q_pooled.pdf"),
        width = 7, height = 5, device = cairo_pdf)
+
+## qq-plot of pvalues
+
+qqplot_data <- tibble(
+  obs_p_vals = -1*log10(sort(mk_pooled$fisher_p)),
+  exp_p_vals = -1*log10(ppoints(length(mk_pooled$fisher_p)))
+)
+
+ggplot(qqplot_data, aes(x = exp_p_vals, y = obs_p_vals)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0) +
+  labs(y = "-log10(Observed p-values)\n(MK Fisher exact test)", x = "-log10(Expected p-values)\n(uniform distribution)")
+
+ggsave(file.path(today_dir, "mk_qqplot.pdf"),
+       width = 6, height = 6, device = cairo_pdf)
+
+# Remove NA values and sort
+p_vals <- sort(p_vals[!is.na(p_vals)])
+n <- length(p_vals)
+
+# Calculate expected and observed -log10(p)
+expected <- -log10(ppoints(n))
+observed <- -log10(p_vals)
 
 
 ggplot(mk_pooled |> filter(!is.na(alpha)), aes(x = alpha)) +
