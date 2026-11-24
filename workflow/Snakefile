@@ -78,6 +78,10 @@ if _sizes_current != _sizes_text:
         _fh.write(_sizes_text)
 
 wildcard_constraints:
+    # kmate per-chrom tables are {ID}_{chrom}_af.tsv with ID the pool number;
+    # without this, scaffold names containing underscores let {ID} absorb
+    # part of {chrom} and re-expansion recurses (PeriodicWildcardError).
+    ID="[0-9]+",
     group="[PW]",
     acc="SRR[0-9]+",
     # grenedalf interval window naming (see vg_diversity.smk); note

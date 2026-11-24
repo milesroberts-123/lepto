@@ -100,8 +100,14 @@ def kmate_chroms_from_checkpoint(checkpoint_output):
     # build_index has run, so downstream consumers re-evaluate against
     # whatever kmers.tsv.gz files the checkpoint produced.
     base = os.path.dirname(str(checkpoint_output))
-    kmers = sorted(glob.glob(os.path.join(base, "index", "*_kmers.tsv.gz")))
-    chroms = [os.path.basename(p)[:-len("_kmers.tsv.gz")] for p in kmers]
+    # kmate names the tables <out>_<chrom>_kmers.tsv.gz, and --out ends in
+    # "index/panel", so the prefix must come off before the value is used as
+    # the {chrom} wildcard: downstream asks for index/panel_{chrom}_... and
+    # passes {chrom} straight to `kmate run --chroms`, both of which want the
+    # bare FASTA scaffold name.
+    kmers = sorted(glob.glob(os.path.join(base, "index", "panel_*_kmers.tsv.gz")))
+    chroms = [os.path.basename(p)[len("panel_"):-len("_kmers.tsv.gz")]
+              for p in kmers]
     if not chroms:
         raise WorkflowError(
             "kmate_build_index produced no *_kmers.tsv.gz under "
