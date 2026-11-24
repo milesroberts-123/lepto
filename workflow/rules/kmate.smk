@@ -213,15 +213,26 @@ rule kmate_kmer_db:
     benchmark:
         "benchmarks/kmate/kmate_kmer_db_{ID}.bench"
     params:
-        hash_size=config["kmate_hash_size"]
+        k=config["kmate_k"],
+        hash_size=config["kmate_hash_size"],
+        bf_size=config["kmate_bf_size"]
     shell:
         """
         mkdir -p $(dirname {output})
-        kmate build-kmer-db \\
-            --reads {input} \\
-            --out {output} \\
-            --threads {threads} \\
-            --hash-size {params.hash_size}
+        # jellyfish directly: `kmate build-kmer-db` is a thin wrapper over
+        # `jellyfish count` and exposes neither --min-count nor --bf-size.
+        # Same binary, same -C canonical hash, same k, so the DB is readable
+        # by `kmate run --kmer-db` unchanged. --min-count 2 keeps singleton
+        # k-mers (sequencing error) out of the table, which is what makes the
+        # smaller hash size viable; query_kmer_db defaults absent k-mers to 0.
+        zcat -f {input} | jellyfish count \\
+            -m {params.k} \\
+            -s {params.hash_size} \\
+            -t {threads} \\
+            -C \\
+            --min-count 2 \\
+            --bf-size {params.bf_size} \\
+            -o {output} /dev/fd/0
         """
 
 
