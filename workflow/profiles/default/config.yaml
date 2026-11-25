@@ -66,6 +66,7 @@ set-threads:
   vigs_target: 2
   vigs_kmers: 8
   vigs_locate: 4
+  vigs_mummer: 8
   vigs_map: 4
   kmate_build_index: 8
   kmate_build_kmer_pa: 2
@@ -286,6 +287,11 @@ set-resources:
   vigs_locate:
     cpus_per_task: 4
     runtime: 120
+  vigs_mummer:
+    # MUMmer4 builds a suffix array over the 424 Mb CDS set: a few GB for the
+    # array plus overhead. 8 cores -> 32 GB of derived memory on savio4_htc.
+    cpus_per_task: 8
+    runtime: 240
   vigs_map:
     # bwa index + mem of the small k-mer fasta, then samtools sort+index
     cpus_per_task: 4

@@ -159,6 +159,7 @@ include: "rules/mk.smk"
 rule vigs_all:
     input:
         expand("results/vigs/match_list_{k}.txt",k=config["vigs_k"]),
+        expand("results/vigs/mummer_{k}.tsv",k=config["vigs_k"]),
         "results/vigs/kmers_mapped.bam",
         "results/vigs/kmers_mapped.bam.bai"
 

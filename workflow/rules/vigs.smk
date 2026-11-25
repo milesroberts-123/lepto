@@ -91,6 +91,32 @@ rule vigs_locate:
     shell:
         "seqkit locate --threads {threads} -f {input.kmers} {input.trans} > {output}"
 
+
+rule vigs_mummer:
+    # Maximal exact matches between the target transcript and the whole
+    # transcriptome. One row per shared stretch instead of one row per
+    # (k-mer, hit), which is both far smaller and strictly more informative:
+    # the VIGS criterion (a >= vigs_k contiguous match with a non-target
+    # transcript) is exactly a maximal match of length >= vigs_k. The
+    # per-stretch bookkeeping lives in the notebook, which reads this tsv.
+    input:
+        trans=config["vigs_transcriptome_fasta"],
+        target="results/vigs/target.fasta"
+    output:
+        "results/vigs/mummer_" + str(config["vigs_k"]) + ".tsv"
+    conda: "../envs/vigs.yaml"
+    params:
+        k=config["vigs_k"]
+    shell:
+        """
+        # -maxmatch: every maximal match, not just unique ones (-mum would
+        #     hide the repeats that disqualify a target)
+        # -b: both strands  -n: ACGT only (ignore N in soft-masked CDS)
+        # -c: report reverse-strand hits with forward-reference query coords
+        mummer -maxmatch -l {params.k} -b -n -c -threads {threads} \\
+            {input.trans} {input.target} > {output}
+        """
+
 rule vigs_map:
     # bwa mem over the whole transcriptome; -T k makes every reported
     # alignment of a k-nt query a full-length exact match (any mismatch

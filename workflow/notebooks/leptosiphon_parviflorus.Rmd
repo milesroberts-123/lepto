@@ -2444,25 +2444,95 @@ ggsave(file.path(today_dir, "mk_alpha_vs_omega.pdf"),
 # VIGS: virus induced gene silencing
 
 ```{r}
+## Input is the `vigs_mummer` rule: `mummer -maxmatch -l <k> -b -n -c` with the
+## target transcript as query and the whole transcriptome as reference. One row
+## per maximal exact match (a shared stretch that cannot be extended either
+## way), which is both smaller and more informative than one row per
+## (k-mer, hit) from seqkit locate: a match of length L covers L - k + 1 k-mers.
 
-vigs <- read.table("C:/Users/miles/Downloads/match_list.txt", header = T)
+read_mummer <- function(path) {
+  lines <- readLines(path)
+  lines <- lines[nzchar(trimws(lines))]
+  hdr  <- startsWith(trimws(lines), ">")
+  qnames <- sub("^>\\s*", "", trimws(lines[hdr]))
+  idx  <- cumsum(hdr)[!hdr]
+  parts <- strsplit(trimws(lines[!hdr]), "\\s+")
+  tibble(
+    query     = qnames[idx],
+    ref       = vapply(parts, `[`, "", 1),
+    ref_start = as.integer(vapply(parts, `[`, "", 2)),
+    qry_start = as.integer(vapply(parts, `[`, "", 3)),
+    len       = as.integer(vapply(parts, `[`, "", 4))
+  )
+}
 
-target <- vigs |>
-  filter(seqID == "g166507.t1")
+target_id <- "g217197.t1"
+vigs_k    <- 19
+min_len   <- 100
 
-off_target <-  vigs |>
-  filter(seqID != "g166507.t1")
+mm <- read_mummer(paste0("../results/vigs/mummer_", vigs_k, ".tsv")) |>
+  mutate(ref_gene = sub("\\..*$", "", ref))
 
-x <- target |> 
-  filter(!(patternName %in% off_target$patternName)) |>
-  arrange(start, end) %>%
-  mutate(diff = c(1, diff(start))) |>
-  filter(diff == 1) |>
-  pull(start)
+own_gene <- sub("\\..*$", "", target_id)
 
-stretches <- split(x, cumsum(c(1, diff(sort(x)) > 1)))
+## query length comes from the target's own self-match
+qlen <- mm |>
+  filter(ref_gene == own_gene) |>
+  summarise(qlen = max(len)) |>
+  pull(qlen)
 
-lapply(stretches, length)
+## every hit outside the target's own gene disqualifies a stretch; sister
+## isoforms share the gene ID so they do not disqualify their own sequence
+blocks <- mm |>
+  filter(ref_gene != own_gene) |>
+  transmute(start = qry_start, end = qry_start + len - 1) |>
+  arrange(start) |>
+  mutate(grp = cumsum(start > lag(end, default = -Inf) + 1)) |>
+  group_by(grp) |>
+  summarise(start = min(start), end = max(end), .groups = "drop")
+
+## a k-mer start is usable only if the whole k-mer lies outside every block
+blocked <- logical(qlen - vigs_k + 1)
+for (i in seq_len(nrow(blocks))) {
+  lo <- blocks$start[i]
+  hi <- blocks$end[i] - vigs_k + 1
+  if (hi >= lo) blocked[lo:hi] <- TRUE
+}
+
+rle_b  <- rle(blocked)
+ends   <- cumsum(rle_b$lengths)
+starts <- c(1, head(ends, -1) + 1)
+
+stretches <- tibble(
+    blocked    = rle_b$values,
+    kmer_start = starts,
+    n_kmer     = rle_b$lengths
+  ) |>
+  filter(!blocked) |>
+  mutate(
+    nt_start = kmer_start,
+    nt_end   = kmer_start + n_kmer - 1 + vigs_k - 1,
+    nt_len   = nt_end - nt_start + 1
+  ) |>
+  filter(nt_len >= min_len) |>
+  arrange(desc(nt_len)) |>
+  select(nt_start, nt_end, nt_len, n_kmer)
+
+stretches
+
+## layout of off-target matches (grey) and clean stretches (red)
+ggplot() +
+  geom_segment(data = blocks,
+               aes(x = start, xend = end, y = 1, yend = 1),
+               colour = "grey70", linewidth = 6) +
+  geom_segment(data = stretches,
+               aes(x = nt_start, xend = nt_end, y = 2, yend = 2),
+               colour = "firebrick", linewidth = 6) +
+  scale_y_continuous(breaks = 1:2,
+                     labels = c("off-target match", "clean stretch"),
+                     limits = c(0.5, 2.5)) +
+  labs(x = paste0(target_id, " position (nt)"), y = NULL) +
+  theme_minimal(base_size = 14)
 ```
 
 # Conceptual diagrams of k-mer arithmetic
