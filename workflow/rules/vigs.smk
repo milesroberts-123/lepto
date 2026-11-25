@@ -60,7 +60,7 @@ rule vigs_kmers:
     input:
         "results/vigs/target.fasta"
     output:
-        kmers=temp("results/vigs/kmers.fasta")
+        kmers="results/vigs/kmers.fasta"
     log:
         "logs/vigs/kmers.log"
     conda: "../envs/kmc.yaml"

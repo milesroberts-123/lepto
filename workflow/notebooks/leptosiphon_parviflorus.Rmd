@@ -2450,6 +2450,7 @@ ggsave(file.path(today_dir, "mk_alpha_vs_omega.pdf"),
 ## way), which is both smaller and more informative than one row per
 ## (k-mer, hit) from seqkit locate: a match of length L covers L - k + 1 k-mers.
 
+<<<<<<< Updated upstream
 read_mummer <- function(path) {
   lines <- readLines(path)
   lines <- lines[nzchar(trimws(lines))]
@@ -2472,6 +2473,17 @@ min_len   <- 100
 
 mm <- read_mummer(paste0("../results/vigs/mummer_", vigs_k, ".tsv")) |>
   mutate(ref_gene = sub("\\..*$", "", ref))
+=======
+vigs <- read.table("../results/vigs/match_list_19.txt", header = T)
+
+target <- vigs |>
+  filter(seqID == "g217197.t1")
+  #filter(seqID == "g166507.t1")
+
+off_target <-  vigs |>
+  filter(seqID != "g217197.t1")
+  #filter(seqID != "g166507.t1")
+>>>>>>> Stashed changes
 
 own_gene <- sub("\\..*$", "", target_id)
 

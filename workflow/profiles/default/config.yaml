@@ -65,8 +65,12 @@ set-threads:
   anchorwave_pair_genoali: 2
   vigs_target: 2
   vigs_kmers: 8
+<<<<<<< Updated upstream
   vigs_locate: 4
   vigs_mummer: 8
+=======
+  vigs_locate: 8
+>>>>>>> Stashed changes
   vigs_map: 4
   kmate_build_index: 8
   kmate_build_kmer_pa: 2
@@ -285,6 +289,7 @@ set-resources:
     cpus_per_task: 8
     runtime: 120
   vigs_locate:
+<<<<<<< Updated upstream
     cpus_per_task: 4
     runtime: 120
   vigs_mummer:
@@ -292,6 +297,10 @@ set-resources:
     # array plus overhead. 8 cores -> 32 GB of derived memory on savio4_htc.
     cpus_per_task: 8
     runtime: 240
+=======
+    cpus_per_task: 8
+    runtime: 480
+>>>>>>> Stashed changes
   vigs_map:
     # bwa index + mem of the small k-mer fasta, then samtools sort+index
     cpus_per_task: 4
